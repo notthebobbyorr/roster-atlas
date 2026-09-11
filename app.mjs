@@ -1,6 +1,6 @@
 import {config} from './config.mjs';
 import {Cloud} from './api.mjs';
-import {fields,validate_ids,append_matching,move_rank,merge_visible,filter_players,parse_import,format_value,make_draft,csv_export,sync_draft} from './core.mjs';
+import {fields,table_columns,table_value,validate_ids,append_matching,move_rank,merge_visible,filter_players,parse_import,format_value,make_draft,csv_export,sync_draft} from './core.mjs';
 const $=id=>document.getElementById(id);
 const local_preview=['localhost','127.0.0.1','[::1]'].includes(location.hostname)&&new URLSearchParams(location.search).has('preview');
 const cloud=new Cloud(config);
@@ -40,6 +40,7 @@ async function start(user){state.user=user;
  const snapshot=local_preview?await (await fetch('/__preview_snapshot')).json():await cloud.snapshot(config.snapshot_id);
  if(!Array.isArray(snapshot.players)||new Set(snapshot.players.map(p=>p.player_key)).size!==snapshot.players.length)throw Error('Invalid projection snapshot.');
  state.snapshot=snapshot;state.rows=snapshot.players;state.players=new Map(snapshot.players.map(p=>[p.player_key,p]));
+ $('skill-note').hidden=false;
  $('snapshot-label').textContent=`${snapshot.season} projections · through ${snapshot.source_through}`;
  $('position').innerHTML='<option value="">All positions</option>'+[...new Set(snapshot.players.flatMap(p=>(p.positions||'').split('/')).concat('OF'))].filter(Boolean).sort().map(p=>`<option>${escape(p)}</option>`).join('');
  $('login').hidden=true;$('workspace').hidden=false;$('navigation').hidden=false;$('account').hidden=false;$('account').textContent=local_preview?'Local preview':'Sign out';$('account').disabled=local_preview;
@@ -62,14 +63,18 @@ function render(){render_status();if(state.view==='library'){render_library();re
  $('add-matching').hidden=state.view!=='discover';
  $('add-matching').disabled=additions===0;
  $('add-matching').textContent=`Add all matching players (${additions.toLocaleString()} new)`;
- $('players').innerHTML=state.shown.slice(0,state.limit).map(p=>player_card(p,d)).join('')||'<div class="empty">'+(state.view==='ranking'?'Your ranking is empty. Add players from Discover.':'No players match these filters.')+'</div>';
+ $('players').innerHTML=render_table(state.shown.slice(0,state.limit),d);
  $('more').hidden=state.shown.length<=state.limit;
 }
-function stat(key,label,p){return `<div class="stat${key.startsWith('sgp')?' highlight':''}"><b>${format_value(key,p[key])}</b><span>${escape(label)}</span></div>`;}
-function player_card(p,d){const added=d?.ids.includes(p.player_key);const rank=added?d.ids.indexOf(p.player_key)+1:0;
- const stats=p.role==='Hitter'?[['projected_HR','HR'],['projected_SB','SB'],['projected_AVG','AVG']]:[['projected_IP','IP'],['projected_ERA','ERA'],['projected_K','K']];
- const controls=state.view==='ranking'?`<div class="rank-controls"><label>Rank<input data-rank="${escape(p.player_key)}" aria-label="Rank for ${escape(p.player_name)}" inputmode="numeric" type="number" min="1" max="${d.ids.length}" value="${rank}"></label><button data-action="up" aria-label="Move ${escape(p.player_name)} up" ${rank===1?'disabled':''}>↑</button><button data-action="down" aria-label="Move ${escape(p.player_name)} down" ${rank===d.ids.length?'disabled':''}>↓</button><button data-action="remove" class="secondary remove" aria-label="Remove ${escape(p.player_name)}">Remove</button></div>`:'';
- return `<article class="player" data-player="${escape(p.player_key)}"><div class="player-head"><div class="player-identity"><h2 class="player-name">${escape(p.player_name)}</h2><div class="player-meta">${escape(p.positions)} · ${escape(p.team||'—')} · ${escape(p.role)}</div></div>${state.view==='discover'?`<button class="add ${added?'secondary':''}" data-action="add" aria-label="Add ${escape(p.player_name)}" ${added?'disabled':''}>${added?'Added':'＋ Add'}</button>`:''}</div><div class="stats">${stat('sgp_ex_sv','SGP ex SV',p)+stats.map(([k,l])=>stat(k,l,p)).join('')}</div>${controls}<details><summary>All projections & SGP</summary><div class="details-grid">${fields.map(([k,l])=>`<div><span>${escape(l)}</span><b>${format_value(k,p[k])}</b></div>`).join('')}</div><p class="hint">${escape(p.pool||'')} · Source ${escape(p.source_season)} · ${format_value('sample_size',p.sample_size)} ${escape(p.sample_unit||'')}</p></details></article>`;
+function render_table(rows,d){
+ const headers=table_columns.map(([key,label])=>`<th scope="col">${['player_name','positions','team','workload'].includes(key)?escape(label):`<button class="quiet" data-sort="${key}">${escape(label)}${$('sort').value===key?($('direction').value==='asc'?' ↑':' ↓'):''}</button>`}</th>`).join('');
+ const body=rows.map(p=>{const rank=d?.ids.indexOf(p.player_key)+1;const added=rank>0;
+  const cells=table_columns.map(([key])=>{if(key==='player_name')return `<th scope="row"><strong>${escape(p.player_name)}</strong><small>${escape(p.role)}</small></th>`;
+   const value=table_value(p,key);return `<td>${['positions','team'].includes(key)?escape(value):format_value(key,value)}${key==='workload'?` <small>${p.role==='Hitter'?'PA':'IP'}</small>`:''}</td>`;}).join('');
+  const controls=state.view==='ranking'?`<label>Rank<input data-rank="${escape(p.player_key)}" aria-label="Rank for ${escape(p.player_name)}" type="number" inputmode="numeric" min="1" max="${d.ids.length}" value="${rank}"></label><button data-action="up" aria-label="Move ${escape(p.player_name)} up" ${rank===1?'disabled':''}>↑</button><button data-action="down" aria-label="Move ${escape(p.player_name)} down" ${rank===d.ids.length?'disabled':''}>↓</button><button data-action="remove" class="secondary">Remove</button>`:`<button data-action="add" ${added?'disabled':''}>${added?'Added':'＋ Add'}</button>`;
+  return `<tr data-player="${escape(p.player_key)}">${cells}<td><div class="rank-controls">${controls}</div></td></tr>`;
+ }).join('');
+ return `<table class="projection-table"><caption class="sr-only">${state.view==='ranking'?'Your ranking':'Matching players'} — scroll horizontally for all statistics</caption><thead><tr>${headers}<th scope="col">${state.view==='ranking'?'Rank / Manage':'Add to list'}</th></tr></thead><tbody>${body||`<tr><td colspan="${table_columns.length+1}">No players to display. Add players from Discover or adjust your filters.</td></tr>`}</tbody></table>`;
 }
 function render_status(){const d=selected();$('rank-count').textContent=d?.ids.length||0;if(!d)return;
  $('save-status').textContent=local_preview?(d.dirty?'Unsaved local preview changes':'Saved on this computer · preview only'):state.busy?'Saving…':state.blocked.has(d.id)?'Draft on this device · cloud sync needs attention':d.dirty?'Draft on this device · waiting to sync':`Saved to cloud · ${new Date(d.updated_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
@@ -93,6 +98,7 @@ document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()
 for(const id of ['search','role','position','sort','direction','sample','stat-min','stat-max'])$(id).addEventListener(id==='search'?'input':'change',()=>{state.limit=40;render();});
 $('sort').addEventListener('change',()=>{$('direction').value=['projected_ERA','projected_WHIP'].includes($('sort').value)?'asc':'desc';render();});
 $('more').onclick=()=>{state.limit+=40;render();};
+$('players').addEventListener('click',event=>{const button=event.target.closest('[data-sort]');if(!button)return;const key=button.dataset.sort;$('direction').value=$('sort').value===key?($('direction').value==='asc'?'desc':'asc'):['projected_ERA','projected_WHIP'].includes(key)?'asc':'desc';$('sort').value=key;render();});
 $('new-list').onclick=safely(()=>new_list());
 $('add-matching').onclick=safely(()=>{
  const matches=[...state.shown];let d=selected();

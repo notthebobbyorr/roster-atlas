@@ -1,7 +1,12 @@
+export const skill_fields = []; // Individual py_damage stat forecasts are not in the current snapshot.
+export const category_fields = ['R','HR','RBI','SB','AVG','K','W','SV','ERA','WHIP'].map(s=>['sgp_'+s,'SGP '+s]);
+export const raw_fields = ['PA','IP','AB','H','HR','SB','AVG','R','RBI','TBF','K','W','SV','BB','HA','ER','ERA','WHIP'].map(s=>['projected_'+s,s]);
 export const fields = [
  ['sgp_ex_sv','SGP ex SV'],['sgp_total','SGP total'],['sgp_standard','Standard SGP'],['sgp_rate','SGP / Chance'],
- ...['PA','HR','SB','AVG','R','RBI','IP','K','W','SV','ERA','WHIP'].map(s=>['projected_'+s,s]),['sample_size','Source sample']
+ ...category_fields,...raw_fields,...skill_fields,['sample_size','Source sample']
 ];
+export const table_columns = [['player_name','Player'],['positions','Position'],['team','Team'],['workload','PA / IP'],['sgp_total','Total SGP'],['sgp_standard','Standard SGP'],...category_fields,...raw_fields.filter(([k])=>!['projected_PA','projected_IP'].includes(k)),...skill_fields];
+export function table_value(player,key){return key==='workload'?player[player.role==='Hitter'?'projected_PA':'projected_IP']:player[key];}
 export function validate_ids(ids, allowed) {
  if (!Array.isArray(ids) || ids.length>10000 || ids.some(id=>typeof id!=='string' || !allowed.has(id))) throw Error('This ranking contains players outside this projection snapshot.');
  if (new Set(ids).size!==ids.length) throw Error('This ranking contains duplicate players.');
