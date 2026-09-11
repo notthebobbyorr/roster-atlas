@@ -7,6 +7,9 @@ export function validate_ids(ids, allowed) {
  if (new Set(ids).size!==ids.length) throw Error('This ranking contains duplicate players.');
  return [...ids];
 }
+export function append_matching(ids, matches) {
+ return [...new Set([...ids, ...matches.map(p=>p.player_key)])];
+}
 export function move_rank(ids, player, rank) {
  if (!Number.isInteger(rank) || rank<1 || rank>ids.length || !ids.includes(player)) throw Error('Choose a rank between 1 and '+ids.length+'.');
  const result=ids.filter(id=>id!==player);result.splice(rank-1,0,player);return result;

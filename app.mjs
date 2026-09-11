@@ -1,6 +1,6 @@
 import {config} from './config.mjs';
 import {Cloud} from './api.mjs';
-import {fields,validate_ids,move_rank,merge_visible,filter_players,parse_import,format_value,make_draft,csv_export,sync_draft} from './core.mjs';
+import {fields,validate_ids,append_matching,move_rank,merge_visible,filter_players,parse_import,format_value,make_draft,csv_export,sync_draft} from './core.mjs';
 const $=id=>document.getElementById(id);
 const local_preview=['localhost','127.0.0.1','[::1]'].includes(location.hostname)&&new URLSearchParams(location.search).has('preview');
 const cloud=new Cloud(config);
@@ -58,6 +58,10 @@ function render(){render_status();if(state.view==='library'){render_library();re
  const d=selected();let rows=state.view==='ranking'?(d?.ids||[]).map(id=>state.players.get(id)):state.rows;
  state.shown=filter_players(rows,filters());$('result-count').textContent=`${state.shown.length.toLocaleString()} players`;
  $('target-label').textContent=d?'Adding to '+d.name:'Start a list with any player';
+ const additions=append_matching(d?.ids||[],state.shown).length-(d?.ids.length||0);
+ $('add-matching').hidden=state.view!=='discover';
+ $('add-matching').disabled=additions===0;
+ $('add-matching').textContent=`Add all matching players (${additions.toLocaleString()} new)`;
  $('players').innerHTML=state.shown.slice(0,state.limit).map(p=>player_card(p,d)).join('')||'<div class="empty">'+(state.view==='ranking'?'Your ranking is empty. Add players from Discover.':'No players match these filters.')+'</div>';
  $('more').hidden=state.shown.length<=state.limit;
 }
@@ -90,6 +94,14 @@ for(const id of ['search','role','position','sort','direction','sample','stat-mi
 $('sort').addEventListener('change',()=>{$('direction').value=['projected_ERA','projected_WHIP'].includes($('sort').value)?'asc':'desc';render();});
 $('more').onclick=()=>{state.limit+=40;render();};
 $('new-list').onclick=safely(()=>new_list());
+$('add-matching').onclick=safely(()=>{
+ const matches=[...state.shown];let d=selected();
+ const ids=append_matching(d?.ids||[],matches);const added=ids.length-(d?.ids.length||0);
+ if(!added)return;
+ if(d){d.ids=ids;update(d);render();}
+ else{d=new_list('My 2027 ranking',ids);set_view('discover');}
+ tell(`Added ${added.toLocaleString()} players to ${d.name}. Existing ranks were preserved; new players follow the current sort order.`);
+});
 $('players').addEventListener('click',safely(event=>{const button=event.target.closest('button[data-action]');if(!button)return;
  const id=button.closest('[data-player]').dataset.player;let d=selected();const action=button.dataset.action;
  if(action==='add'){if(!d){d=new_list();set_view('discover');}if(!d.ids.includes(id))d.ids.push(id);}
