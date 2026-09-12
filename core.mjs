@@ -1,4 +1,5 @@
-export const skill_fields = []; // Individual py_damage stat forecasts are not in the current snapshot.
+import {skill_fields} from './skill_fields.mjs';
+export {skill_fields};
 export const category_fields = ['R','HR','RBI','SB','AVG','K','W','SV','ERA','WHIP'].map(s=>['sgp_'+s,'SGP '+s]);
 export const raw_fields = ['PA','IP','AB','H','HR','SB','AVG','R','RBI','TBF','K','W','SV','BB','HA','ER','ERA','WHIP'].map(s=>['projected_'+s,s]);
 export const fields = [

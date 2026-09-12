@@ -39,8 +39,11 @@ async function refresh_library(report=true){try{state.lists=local_preview?Object
 async function start(user){state.user=user;
  const snapshot=local_preview?await (await fetch('/__preview_snapshot')).json():await cloud.snapshot(config.snapshot_id);
  if(!Array.isArray(snapshot.players)||new Set(snapshot.players.map(p=>p.player_key)).size!==snapshot.players.length)throw Error('Invalid projection snapshot.');
- state.snapshot=snapshot;state.rows=snapshot.players;state.players=new Map(snapshot.players.map(p=>[p.player_key,p]));
- $('skill-note').hidden=false;
+ let skills={};
+ try{if(local_preview){const response=await fetch('/__preview_skills');if(response.ok)skills=await response.json();}
+ else{const result=await cloud.data('projection_skills?id=eq.'+encodeURIComponent(config.snapshot_id)+'&select=payload');skills=result[0]?.payload||{};}}catch{}
+ state.snapshot=snapshot;state.rows=snapshot.players.map(p=>({...p,...Object.fromEntries(Object.entries(skills[p.player_key]||{}).filter(([key])=>key.startsWith('projected_skill_')))}));state.players=new Map(state.rows.map(p=>[p.player_key,p]));
+ $('skill-note').hidden=Object.keys(skills).length>0;
  $('snapshot-label').textContent=`${snapshot.season} projections · through ${snapshot.source_through}`;
  $('position').innerHTML='<option value="">All positions</option>'+[...new Set(snapshot.players.flatMap(p=>(p.positions||'').split('/')).concat('OF'))].filter(Boolean).sort().map(p=>`<option>${escape(p)}</option>`).join('');
  $('login').hidden=true;$('workspace').hidden=false;$('navigation').hidden=false;$('account').hidden=false;$('account').textContent=local_preview?'Local preview':'Sign out';$('account').disabled=local_preview;
