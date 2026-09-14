@@ -1,4 +1,4 @@
-// Forecast stat dictionary. Percentages use 0–100; pp means percentage points.
+// Projected underlying py_damage metrics. Percentages use 0–100.
 export const skill_fields = [
   [
     "projected_skill_hitter_damage_rate",
@@ -143,5 +143,13 @@ export const skill_fields = [
   [
     "projected_skill_pitcher_takeoff_rate",
     "P · Takeoff allowed (%)"
+  ],
+  [
+    "projected_skill_pitcher_stuff",
+    "P · Pitch Grade"
+  ],
+  [
+    "projected_skill_pitcher_grade_v13",
+    "P · Execution Grade"
   ]
 ];

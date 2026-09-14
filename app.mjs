@@ -1,6 +1,6 @@
 import {config} from './config.mjs';
 import {Cloud} from './api.mjs';
-import {fields,table_columns,table_value,validate_ids,append_matching,move_rank,merge_visible,filter_players,parse_import,format_value,make_draft,csv_export,sync_draft} from './core.mjs';
+import {fields,table_columns,table_value,validate_ids,append_matching,move_rank,merge_visible,filter_players,parse_import,format_value,make_draft,csv_export,sync_draft} from './core.mjs?v=pitch-grades-1';
 const $=id=>document.getElementById(id);
 const local_preview=['localhost','127.0.0.1','[::1]'].includes(location.hostname)&&new URLSearchParams(location.search).has('preview');
 const cloud=new Cloud(config);
@@ -39,11 +39,13 @@ async function refresh_library(report=true){try{state.lists=local_preview?Object
 async function start(user){state.user=user;
  const snapshot=local_preview?await (await fetch('/__preview_snapshot')).json():await cloud.snapshot(config.snapshot_id);
  if(!Array.isArray(snapshot.players)||new Set(snapshot.players.map(p=>p.player_key)).size!==snapshot.players.length)throw Error('Invalid projection snapshot.');
- let skills={};
+ let skills={};let skill_error="";
  try{if(local_preview){const response=await fetch('/__preview_skills');if(response.ok)skills=await response.json();}
- else{const result=await cloud.data('projection_skills?id=eq.'+encodeURIComponent(config.snapshot_id)+'&select=payload');skills=result[0]?.payload||{};}}catch{}
+ else{const result=await cloud.data('projection_skills?id=eq.'+encodeURIComponent(config.snapshot_id)+'&select=payload');skills=result[0]?.payload||{};}}catch(error){skill_error=error.message||'Request failed';}
  state.snapshot=snapshot;state.rows=snapshot.players.map(p=>({...p,...Object.fromEntries(Object.entries(skills[p.player_key]||{}).filter(([key])=>key.startsWith('projected_skill_')))}));state.players=new Map(state.rows.map(p=>[p.player_key,p]));
- $('skill-note').hidden=Object.keys(skills).length>0;
+ const skill_count=Object.values(skills).filter(row=>Object.values(row).some(v=>v!=null)).length;
+ $('skill-note').hidden=false;
+ $('skill-note').textContent=skill_count?`Projected skills loaded for ${skill_count.toLocaleString()} player entries. Tap Jump to skills to view them.`:skill_error?`Skill data could not load: ${skill_error}`:'No skill supplement is visible to this account for this snapshot. Confirm the upload completed for this project.';
  $('snapshot-label').textContent=`${snapshot.season} projections · through ${snapshot.source_through}`;
  $('position').innerHTML='<option value="">All positions</option>'+[...new Set(snapshot.players.flatMap(p=>(p.positions||'').split('/')).concat('OF'))].filter(Boolean).sort().map(p=>`<option>${escape(p)}</option>`).join('');
  $('login').hidden=true;$('workspace').hidden=false;$('navigation').hidden=false;$('account').hidden=false;$('account').textContent=local_preview?'Local preview':'Sign out';$('account').disabled=local_preview;
@@ -70,7 +72,7 @@ function render(){render_status();if(state.view==='library'){render_library();re
  $('more').hidden=state.shown.length<=state.limit;
 }
 function render_table(rows,d){
- const headers=table_columns.map(([key,label])=>`<th scope="col">${['player_name','positions','team','workload'].includes(key)?escape(label):`<button class="quiet" data-sort="${key}">${escape(label)}${$('sort').value===key?($('direction').value==='asc'?' ↑':' ↓'):''}</button>`}</th>`).join('');
+ const headers=table_columns.map(([key,label])=>`<th scope="col" data-column="${key}">${['player_name','positions','team','workload'].includes(key)?escape(label):`<button class="quiet" data-sort="${key}">${escape(label)}${$('sort').value===key?($('direction').value==='asc'?' ↑':' ↓'):''}</button>`}</th>`).join('');
  const body=rows.map(p=>{const rank=d?.ids.indexOf(p.player_key)+1;const added=rank>0;
   const cells=table_columns.map(([key])=>{if(key==='player_name')return `<th scope="row"><strong>${escape(p.player_name)}</strong><small>${escape(p.role)}</small></th>`;
    const value=table_value(p,key);return `<td>${['positions','team'].includes(key)?escape(value):format_value(key,value)}${key==='workload'?` <small>${p.role==='Hitter'?'PA':'IP'}</small>`:''}</td>`;}).join('');
@@ -100,6 +102,8 @@ const safely=fn=>async event=>{try{await fn(event);}catch(e){tell(e.message);}};
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>set_view(b.dataset.view)));
 for(const id of ['search','role','position','sort','direction','sample','stat-min','stat-max'])$(id).addEventListener(id==='search'?'input':'change',()=>{state.limit=40;render();});
 $('sort').addEventListener('change',()=>{$('direction').value=['projected_ERA','projected_WHIP'].includes($('sort').value)?'asc':'desc';render();});
+$('jump-skills').onclick=()=>{const box=$('players');const target=box.querySelector('th[data-column^="projected_skill_"]');const first=box.querySelector('th');if(target)box.scrollTo({left:box.scrollLeft+target.getBoundingClientRect().left-box.getBoundingClientRect().left-(first?.offsetWidth||0),behavior:'auto'});};
+$('jump-player').onclick=()=>{$('players').scrollTo({left:0,behavior:'auto'});};
 $('more').onclick=()=>{state.limit+=40;render();};
 $('players').addEventListener('click',event=>{const button=event.target.closest('[data-sort]');if(!button)return;const key=button.dataset.sort;$('direction').value=$('sort').value===key?($('direction').value==='asc'?'desc':'asc'):['projected_ERA','projected_WHIP'].includes(key)?'asc':'desc';$('sort').value=key;render();});
 $('new-list').onclick=safely(()=>new_list());

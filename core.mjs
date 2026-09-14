@@ -1,4 +1,4 @@
-import {skill_fields} from './skill_fields.mjs';
+import {skill_fields} from './skill_fields.mjs?v=pitch-grades-1';
 export {skill_fields};
 export const category_fields = ['R','HR','RBI','SB','AVG','K','W','SV','ERA','WHIP'].map(s=>['sgp_'+s,'SGP '+s]);
 export const raw_fields = ['PA','IP','AB','H','HR','SB','AVG','R','RBI','TBF','K','W','SV','BB','HA','ER','ERA','WHIP'].map(s=>['projected_'+s,s]);
@@ -49,7 +49,7 @@ export function parse_import(raw, snapshot, allowed) {
 }
 export function format_value(key,value) {
  if(value==null || !Number.isFinite(Number(value)))return '—';
- const digits=key==='projected_AVG'||key==='projected_WHIP'?3:key==='sgp_rate'?4:key==='sample_size'?0:2;
+ const digits=key==='projected_AVG'||key==='projected_WHIP'?3:key==='projected_ERA'?2:1;
  return Number(value).toFixed(digits);
 }
 export function make_draft(name,snapshot,ids=[]) {
