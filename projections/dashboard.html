@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MLB Roster + Projections</title>
+<link rel="stylesheet" href="dashboard.css"></head><body>
+<header><div class="eyebrow">Baseball research / unified workflow</div><h1>MLB Roster + Projections</h1><p id="subtitle"></p><p>Current team context, next-season production, and player control in one place.</p></header>
+<main><div class="metrics" id="metrics"></div>
+<section id="environmentSummary" class="note" style="background:white;border:1px solid #c5d7cc;border-radius:8px;padding:14px 18px"></section>
+<div class="toolbar">
+<label>PROJECTED SEASON<select id="projectedSeason"></select></label>
+<label>DISPLAY<select id="display"><option value="outcomes">Projected Outcomes</option><option value="skills">Projected Skills</option></select></label>
+<label>PLAYER / MLB ID<input id="search" placeholder="Search players or MLB ID" type="search"></label>
+<label>TEAM<select id="team"><option value="">All teams / non-roster</option></select></label>
+<label>ROSTER STATUS<select id="membership"><option value="">All entries</option><option>40-man</option><option>Non-roster IL</option><option>Non-roster history</option></select></label>
+<label>POSITION<select id="position"><option value="">All positions</option></select></label>
+<label>MODEL ROLE<select id="role"><option value="">All roles</option><option>Hitter</option><option>SP</option><option>RP</option><option>Unavailable</option></select></label>
+<label>DEPTH-CHART ROLE<select id="depth"><option value="">All depth roles</option></select></label>
+<label>FREE-AGENT YEAR<select id="fa"><option value="">All years / scenarios</option><option value="unknown">Not listed</option></select></label>
+<label>MINOR-LEAGUE OPTIONS<select id="options"><option value="">Any</option><option value="unknown">Not listed / n/a</option></select></label>
+<label>COVERAGE<select id="coverage"><option value="">All players</option><option>Available</option><option>Projection unavailable</option></select></label>
+<button id="reset" class="secondary">Reset</button></div>
+<p class="note" id="skillViewNote" hidden>Projected Skills are forecast in seasonal z units, then translated into the selected pre-season reference distribution. Missing measurements remain blank. The player detail shows each skill’s z-score. The 2025–2027 HR adjustment uses projected pulled FB%; other skill forecasts remain independent of the historical-skill outcome model.</p>
+<div class="viewbar"><button data-view="all" class="active">Overview</button><button data-view="hit" class="secondary">Hitting</button><button data-view="pitch" class="secondary">Pitching</button><button data-view="control" class="secondary">Contracts & control</button><button id="csv" class="secondary">Export filtered CSV</button><a class="download" href="roster_projection_seasons.parquet" download>All display rows · Parquet</a><span id="shown"></span></div>
+<div class="tablewrap"><table><thead id="head"></thead><tbody id="body"></tbody></table></div>
+<p class="note">HR/PA = HR ÷ PA, displayed as a percentage. Player cards show projected and actual comparisons. Pitcher HR/TBF = HR allowed ÷ batters faced. Hitter K% uses a history-based estimate reconciled to the league strikeout budget. Select a player for prior-season actuals, projection sample sizes, contract timelines, and source links. Team and depth-chart roles are roster observations; they do not change the model’s workload. Conditional free-agent years are scenarios, not guarantees. “—” means unavailable or not applicable. Saves require an opportunity assignment. IP uses decimal innings. Ohtani has a row for each role.</p>
+<p class="note" id="freshness"></p>
+<p class="note"><a href="missing_projections.parquet" download>Missing-projection audit</a> · <a href="team_coverage.parquet" download>Team coverage</a> · <a href="all_projections_with_roster.parquet" download>Full model universe, including non-roster players</a> · <a href="manifest.json">Run provenance</a></p>
+</main><footer id="footer"></footer>
+<dialog id="detail"><button class="close secondary" id="close">Close</button><h2 id="detailName"></h2><p id="detailContext"></p><div id="detailStats"></div>
+<section><h3>Historical projections and actual results</h3><p class="note">Current methodology reconstructed using only seasons before each target. These are not archived forecasts issued at the time. Team, IL and contract information shows the current roster snapshot.</p><div id="historicalLines" style="overflow:auto"></div></section>
+<section id="explanationPanel"><h3>What contributes to this outcome?</h3><label>OUTCOME<select id="explainOutcome"></select></label><div id="waterfall"></div><p class="note" id="explainNote"></p></section>
+<section id="parkScenarioPanel" hidden><h3>Try a different team / park</h3><label>HYPOTHETICAL TEAM<select id="parkScenarioTeam"></select></label><button id="parkScenarioReset" class="secondary">Reset to published</button><p id="parkScenarioVenue" class="note"></p><div id="parkScenarioStats" style="overflow:auto"></div><p id="parkScenarioNote" class="note">2027 hitter park-only scenario. HR, SLG and OPS change; hits, workload and other projections stay fixed. The saved roster and contribution chart remain the published baseline. A single-player scenario does not rebalance every other player's HR. Kansas City uses only its 2026-and-later wall configuration.</p></section>
+<details><summary>Projected process stats</summary><div id="detailSkills"></div></details>
+<h3>Player control and source details</h3><table><tbody id="detailRows"></tbody></table><h3>Contract timeline</h3><div id="timeline"></div></dialog>
+
+
+
+
+<script type="module" src="dashboard.mjs"></script></body></html>
