@@ -1,7 +1,7 @@
 import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
-import {skillSnapshot} from './skill-snapshot.mjs';
+import {skillSnapshot} from './skill-snapshot.mjs?v=minor-history-1';
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
 const selectedView=()=>location.hash==='#skills'?'skills':'outcomes';
