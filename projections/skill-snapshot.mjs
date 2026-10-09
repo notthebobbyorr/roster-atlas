@@ -1,1 +1,1 @@
-export const skillSnapshot="skills-2027-1d7fb7b37778";
+export const skillSnapshot="skills-2027-67f2d7f8ae1a";
