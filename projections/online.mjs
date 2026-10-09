@@ -61,7 +61,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=skills?'skills.html?v='+encodeURIComponent(skillSnapshot)+'&ui=sum-sort-1':'dashboard.html';
+  $('dashboard').src=skills?'skills.html?v='+encodeURIComponent(skillSnapshot)+'&ui=model-explainer-1':'dashboard.html';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
