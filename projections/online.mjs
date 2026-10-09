@@ -1,7 +1,7 @@
 import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
-import {skillSnapshot} from './skill-snapshot.mjs?v=year-weights-1';
+import {skillSnapshot} from './skill-snapshot.mjs?v=outcome-minimums-1';
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
 const selectedView=()=>location.hash==='#skills'?'skills':'outcomes';
@@ -61,7 +61,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=skills?'skills.html?v='+encodeURIComponent(skillSnapshot)+'&ui=year-weights-1':'dashboard.html';
+  $('dashboard').src=skills?'skills.html?v='+encodeURIComponent(skillSnapshot)+'&ui=outcome-minimums-1':'dashboard.html';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
