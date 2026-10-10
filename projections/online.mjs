@@ -2,8 +2,19 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
+import {skillModels} from './skill-models.mjs?v=model-comparison-1';
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
+let modelKey='original',modelEpoch=0,comparisonLoaded=null;
+const activeModel=()=>skillModels[modelKey];
+window.skillGradesState=null;
+window.skillGradesModel=()=>modelKey;
+window.skillGradesComparisonLoad=()=>{
+ if(!authenticated)return Promise.reject(Error('Sign in to compare models.'));
+ const epoch=sessionEpoch;
+ if(!comparisonLoaded)comparisonLoaded=(async()=>{const data=await(await privateFetch(skillModels.research.snapshot,'comparison.json')).json();if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;})().catch(error=>{comparisonLoaded=null;throw error;});
+ return comparisonLoaded;
+};
 const selectedView=()=>location.hash==='#skills'?'skills':'outcomes';
 
 async function privateFetch(version,path){
@@ -31,11 +42,14 @@ window.dashboardLoad=()=>{
 };
 window.skillGradesLoad=()=>{
  if(!authenticated)return Promise.reject(Error('Sign in to view skill grades.'));
+ const version=activeModel().snapshot,epoch=sessionEpoch,generation=modelEpoch;
  if(!skillsLoaded)skillsLoaded=(async()=>{
-  const ready=await (await privateFetch(skillSnapshot,'index.json')).json();
-  if(ready.kind!=='fantasy-skill-grades'||ready.version!==skillSnapshot)throw Error('The skill snapshot is not ready.');
-  return (await privateFetch(skillSnapshot,'grades.json')).json();
- })().catch(error=>{skillsLoaded=null;throw error;});
+  const ready=await (await privateFetch(version,'index.json')).json();
+  if(ready.kind!=='fantasy-skill-grades'||ready.version!==version)throw Error('The skill snapshot is not ready.');
+  const data=await (await privateFetch(version,'grades.json')).json();
+  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
+  return data;
+ })().catch(error=>{if(generation===modelEpoch)skillsLoaded=null;throw error;});
  return skillsLoaded;
 };
 async function download(version,path){
@@ -44,16 +58,17 @@ async function download(version,path){
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 window.dashboardDownload=path=>download(snapshot,path);
-window.skillGradesDownload=path=>download(skillSnapshot,path);
+window.skillGradesDownload=path=>download(activeModel().snapshot,path);
 
 function clear(){
- authenticated=false;sessionEpoch++;requestId++;loaded=null;skillsLoaded=null;
+ authenticated=false;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;window.skillGradesState=null;modelKey='original';$('model').value='original';$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
 }
 async function showView(){
  if(!authenticated)return;
  const id=++requestId,skills=selectedView()==='skills';
+ $('modelControls').hidden=!skills;
  $('outcomesTab').setAttribute('aria-pressed',String(!skills));$('skillsTab').setAttribute('aria-pressed',String(skills));
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');$('retry').hidden=true;
  $('status').textContent=skills?'Loading skill grades…':'Loading projection snapshot…';
@@ -61,7 +76,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=skills?'skills.html?v='+encodeURIComponent(skillSnapshot)+'&ui=standardized-recency-1':'dashboard.html';
+  $('dashboard').src=skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=model-comparison-1':'dashboard.html';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -79,6 +94,7 @@ $('logout').onclick=async()=>{clear();$('status').textContent='Signing out…';t
 $('outcomesTab').onclick=()=>{if(selectedView()==='outcomes')showView();else location.hash='outcomes';};
 $('skillsTab').onclick=()=>{if(selectedView()==='skills')showView();else location.hash='skills';};
 $('retry').onclick=showView;
+$('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;skillsLoaded=null;showView();};
 window.addEventListener('hashchange',showView);
 window.addEventListener('storage',event=>{if(event.key===cloud.session_key&&!cloud.session){clear();$('status').textContent='Signed out.';}});
 if(cloud.session)open();

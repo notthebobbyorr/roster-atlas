@@ -24,6 +24,27 @@ if(standardizedModel){
  setText('validation-description',standardizedModel.evaluation?.description||'MASE and NRMSE compare forecasts with regressed, park-neutral future outcomes, using harmonic actual playing-time weights and 200 AB / 40 IP minimums. Historical folds use only earlier information. Rolling selection errors are out of sample; errors for the final 2027 weights across the same history are retrospective. Overall rows pool the entire player-season sample. Lower is better.');
 }
 const overrides=new Map();let selected=null, displayed=[], page=0;const pageSize=100;
+const modelHost=typeof window!=='undefined'&&window.parent!==window?window.parent:null;
+let comparisonData=null,comparisonError='';
+function rememberModelState(){if(modelHost?.skillGradesModel)modelHost.skillGradesState={selected,page,overrides:[...overrides],filters:Object.fromEntries(['kind','population','park','view','sort','order','search'].map(id=>[id,$(id).value]))};}
+function modelComparison(p){
+ if(!modelHost?.skillGradesComparisonLoad)return '';
+ if(!comparisonData)return '<p class="note">'+(comparisonError?esc(comparisonError):'Loading model comparison…')+'</p>';
+ const models=[['original','Original live'],['research','Bayesian features']],workload=loads[role(p)],view=$('view').value,park=$('park').value;
+ const values={};
+ for(const [id] of models){const m=comparisonData[id],other=m.players[key(p)];values[id]={};if(!other)continue;
+  const profile={...p,rates:other.rates},neutral=rates(profile,'neutral'),scenario=rates(profile,park);
+  for(const c of cats[p.kind]){const raw=category(scenario,c),base=category(neutral,c),environment=m.environment[c],st=m.standards[c],sign=['ERA','WHIP'].includes(c)?-1:1;let z=null;
+   if(view==='quality'&&finite(other.category_standardized?.[c])&&finite(raw)&&finite(base))z=other.category_standardized[c]+sign*(raw-base)/environment.sd;
+   else if(view!=='quality'&&finite(raw)){let contribution;if(['Power','Speed','K'].includes(c))contribution=raw*workload;else if(c==='AVG')contribution=(raw-st.reference_rate)*workload;else contribution=(st.reference_rate-raw)*workload/(c==='ERA'?9:1);z=(contribution-st.contribution_mean)/st.contribution_sd;}
+   values[id][c]={z,raw};
+  }
+ }
+ let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+workload+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is Bayesian minus original; positive favors the Bayesian grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th><th>Original live</th><th>Bayesian features</th><th>Δ SD</th></tr></thead><tbody>';
+ for(const c of [...cats[p.kind],'Sum']){const get=id=>c==='Sum'?{z:cats[p.kind].every(x=>finite(values[id][x]?.z))?cats[p.kind].reduce((sum,x)=>sum+values[id][x].z,0):null}:values[id][c]||{};const a=get('original'),b=get('research'),delta=finite(a.z)&&finite(b.z)?b.z-a.z:null;html+='<tr><td>'+c+'</td>'+[a,b].map(v=>'<td class="number">'+fmt(v.z)+' SD'+(c==='Sum'?'':'<br><small>'+esc(statText(v.raw,c,workload))+'</small>')+'</td>').join('')+'<td class="number '+color(delta)+'">'+fmt(delta)+'</td></tr>';}
+ return html+'</tbody></table></div>';
+}
+
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=p=>`${p.mlbid}:${p.kind}`;
 function role(p){return overrides.get(key(p))||p.assigned_role}
@@ -47,10 +68,11 @@ $('head').innerHTML=`<tr><th>Player</th><th>Role / workload</th>${[...cats[kind]
 document.querySelectorAll('#head button[data-sort]').forEach(button=>button.addEventListener('click',()=>{if($('sort').value===button.dataset.sort)$('order').value=$('order').value==='asc'?'desc':'asc';else{$('sort').value=button.dataset.sort;$('order').value='desc'}render()}));
 page=Math.max(0,Math.min(page,Math.ceil(displayed.length/pageSize)-1));const pageRows=displayed.slice(page*pageSize,(page+1)*pageSize);$('pageStatus').textContent=`${displayed.length? page*pageSize+1:0}–${Math.min((page+1)*pageSize,displayed.length)} of ${displayed.length.toLocaleString()}`;$('previousPage').disabled=page===0;$('nextPage').disabled=(page+1)*pageSize>=displayed.length;
 $('rows').innerHTML=pageRows.map(p=>`<tr data-key="${key(p)}" class="${key(p)===selected?'active':''}" tabindex="0"><td>${esc(p.player_name)}<div class="meta">${esc(p.team)}</div></td><td>${esc(role(p))}<div class="meta">${loads[role(p)]||'—'} ${kind==='Hitter'?'AB':'IP'}</div></td>${[...cats[kind],'Sum'].map(c=>{const x=value(p,c);return`<td class="number ${color(x)}">${fmt(x)}</td>`}).join('')}</tr>`).join('');
-document.querySelectorAll('#rows tr').forEach(tr=>{const choose=()=>{selected=tr.dataset.key;render()};tr.addEventListener('click',choose);tr.addEventListener('keydown',e=>{if(e.key==='Enter')choose()})});renderDetail();}
+document.querySelectorAll('#rows tr').forEach(tr=>{const choose=()=>{selected=tr.dataset.key;render()};tr.addEventListener('click',choose);tr.addEventListener('keydown',e=>{if(e.key==='Enter')choose()})});renderDetail();rememberModelState();}
 function renderDetail(){const p=displayed.find(p=>key(p)===selected);if(!p){$('detail').innerHTML='<div class="empty">No matching players.</div>';return}const neutral=rates(p,'neutral'),scenario=rates(p,$('park').value),view=$('view').value,load=loads[role(p)],id=$('park').value==='current'?p.team_id:$('park').value;
 let html=`<h2 class="playername">${esc(p.player_name)}</h2><div class="subline">${esc(p.team)} · ${esc(p.depth_role||p.assigned_role)}</div><span class="tag">Prior 3 seasons: ${Math.round(p.mlb_history_sample).toLocaleString()} MLB ${p.kind==='Hitter'?'AB':'IP'}</span>`;
 html+=`<h2 style="margin-top:16px">Projected MLB-equivalent line</h2><p>${cats[p.kind].map(c=>esc(statText(category(scenario,c),c,load))).join(' · ')}</p><p class="note">At ${load||'—'} ${p.kind==='Hitter'?'AB':'IP'} · ${!p.team_id&&$('park').value==='current'&&!p.on_roster?'Neutral park (no projected MLB role)':esc($('park').selectedOptions[0].text)}. Standard-workload skill expectation, not expected actual playing time.</p>`;
+html+=modelComparison(p);
 if(standardizedModel)html+='<p class="note">These raw stats translate the standardized forecast through the assumed 2027 league environment, then apply the selected park. Each category uses its selected weights for the preceding three league means and spreads. In neutral park: rate = league mean + forecast SD × league SD; subtract for ERA and WHIP. Extreme rates may be bounded to keep a feasible stat line.</p>';
 if(standardizedModel&&p.rate_bounds_applied&&Object.values(p.rate_bounds_applied).some(Boolean))html+='<p class="notice">Display bounds were applied to the stat line. The grade retains the standardized skill forecast; park changes add their rate effect to that same forecast. A bounded displayed stat may therefore not convert back to the displayed grade.</p>';
 if(standardizedModel?.uncertainty&&typeof standardizedModel.uncertainty==='string')html+=`<p class="note">${esc(standardizedModel.uncertainty)}</p>`;
@@ -64,6 +86,7 @@ if(p.last_input_season)html+=`<div class="meta">Latest input season: ${p.last_in
 if(p.park_mix_source)html+=`<div class="meta">Park mix: ${esc(p.park_mix_source)}</div>`;
 if(p.minor_history_sample>0)html+=`<div class="tag">${Math.round(p.minor_history_sample).toLocaleString()} minor-league ${p.kind==='Hitter'?'PA':'TBF'} included · ${Math.round(p.proxy_history_sample||0).toLocaleString()} from outcome-only records</div>`;
 if(p.input_skills)html+=`<details><summary>Forecast process inputs and sources</summary><div class="scroll"><table><thead><tr><th>Input</th><th>Forecast</th><th>Source</th></tr></thead><tbody>${Object.entries(p.input_skills).filter(([k,v])=>finite(v)).map(([k,v])=>`<tr><td>${esc(({contact_vs_avg:'Contact vs expected',damage_rate:'Damage rate',EV90th:'EV90',z_con:'Zone contact',secondary_whiff_pct:'Secondary whiff',whiffs_vs_95:'Whiff vs 95+',SwStr:'Swinging strikes',Ball_pct:'Balls',Z_Contact:'Zone contact allowed'})[k]||k)}</td><td>${v.toFixed(1)}${k==='contact_vs_avg'?' pp':['EV90th','fastball_velo'].includes(k)?' mph':['SEAGER','stuff','grade_v13'].includes(k)?'':'%'}</td><td>${esc(DATA.input_source_labels?.[p.input_sources?.[k]]||p.input_sources?.[k]||'Forecast input; see methodology')}</td></tr>`).join('')}</tbody></table></div></details>`;
+if(p.additional_process_z)html+='<details><summary>Additional process inputs · annual SD units</summary><p class="note">Regressed annual standardized measurements blended with the K recency weights. Zero includes unmeasured MLB priors; these physical traits are not inferred from minor-league outcomes.</p><div class="scroll"><table><tbody>'+Object.entries(p.additional_process_z).map(([name,z])=>'<tr><td>'+esc(name.replace(/^extra_/,''))+'</td><td>'+fmt(z)+' SD</td></tr>').join('')+'</tbody></table></div></details>';
 if(p.evidence_group==='Limited MLB history')html+='<p class="notice">Limited MLB history. Translated minor-league measurements and estimated inputs inform this profile. The pooled MLB outcome range is not calibrated for this evidence level.</p>';
 if(p.kind==='Pitcher')html+=`<label>Workload role<select id="override"><option value="">Assigned: ${esc(p.assigned_role)}</option>${['SP','RP','Swingman'].map(r=>`<option ${overrides.get(key(p))===r?'selected':''}>${r}</option>`).join('')}</select></label><p class="note">${esc(p.role_source)}. Override changes workload, not rate skill.</p>`;
 if($('park').value!=='neutral'&&!scenario)html+='<p class="notice">No current team is assigned. Select a neutral or named park to compare this player.</p>';
@@ -88,7 +111,10 @@ if(standardizedModel){
  if(finalSeason.length||finalOverall.length)$('validation').innerHTML+='<h2 style="margin-top:20px">Final 2027 weights on the same historical sample</h2><p class="note">Retrospective fit after selecting weights from all completed folds; this is not an independent test of the selected weights.</p>'+validationTable([...finalSeason,...finalOverall]);
 }else $('validation').innerHTML='<table><thead><tr><th>Year</th><th>Category</th><th>Players</th><th>RMSE vs baseline</th><th>Rank correlation</th></tr></thead><tbody>'+(DATA.validation||[]).map(r=>`<tr><td>${r.season}</td><td>${r.category}</td><td>${r.n}</td><td>${((r.model_rmse/r.baseline_rmse-1)*100).toFixed(1)}%</td><td>${r.rank_correlation.toFixed(2)}</td></tr>`).join('')+'</tbody></table>';
 $('previousPage').onclick=()=>{page--;render()};$('nextPage').onclick=()=>{page++;render()};for(const id of ['search','population','kind','park','view','sort','order'])$(id).addEventListener(id==='search'?'input':'change',()=>{page=0;render()});
-setSort();render();
+const savedState=modelHost?.skillGradesState;
+if(savedState){for(const [id,v] of Object.entries(savedState.filters))if(id!=='sort')$(id).value=v;selected=savedState.selected;page=savedState.page||0;for(const [id,r] of savedState.overrides||[])overrides.set(id,r);}
+setSort();if(savedState?.filters.sort)$('sort').value=savedState.filters.sort;render();
+if(modelHost?.skillGradesComparisonLoad)modelHost.skillGradesComparisonLoad().then(data=>{comparisonData=data;renderDetail();}).catch(error=>{comparisonError='Comparison unavailable: '+error.message;renderDetail();});
 
 document.addEventListener('click',event=>{
  const link=event.target.closest('a[href]');
