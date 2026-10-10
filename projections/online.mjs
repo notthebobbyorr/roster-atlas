@@ -2,13 +2,24 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import {skillModels} from './skill-models.mjs?v=model-comparison-1';
+import {skillModels,skillWorkloads} from './skill-models.mjs?v=playing-time-1';
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
-let modelKey='original',modelEpoch=0,comparisonLoaded=null;
+let modelKey='original',modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null;
 const activeModel=()=>skillModels[modelKey];
 window.skillGradesState=null;
 window.skillGradesModel=()=>modelKey;
+window.skillGradesWorkloadsLoad=()=>{
+ if(!authenticated)return Promise.reject(Error('Sign in to view projected playing time.'));
+ const epoch=sessionEpoch;
+ if(!workloadsLoaded)workloadsLoaded=(async()=>{
+  const ready=await(await privateFetch(skillWorkloads,'index.json')).json();
+  if(ready.kind!=='fantasy-playing-time'||ready.version!==skillWorkloads)throw Error('The playing-time snapshot is not ready.');
+  const data=await(await privateFetch(skillWorkloads,'workloads.json')).json();
+  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;
+ })().catch(error=>{workloadsLoaded=null;throw error;});
+ return workloadsLoaded;
+};
 window.skillGradesComparisonLoad=()=>{
  if(!authenticated)return Promise.reject(Error('Sign in to compare models.'));
  const epoch=sessionEpoch;
@@ -58,10 +69,10 @@ async function download(version,path){
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 window.dashboardDownload=path=>download(snapshot,path);
-window.skillGradesDownload=path=>download(activeModel().snapshot,path);
+window.skillGradesDownload=path=>path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
 
 function clear(){
- authenticated=false;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;window.skillGradesState=null;modelKey='original';$('model').value='original';$('modelControls').hidden=true;
+ authenticated=false;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;window.skillGradesState=null;modelKey='original';$('model').value='original';$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
 }
@@ -76,7 +87,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=model-comparison-1':'dashboard.html';
+  $('dashboard').src=skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=playing-time-1':'dashboard.html';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
