@@ -44,6 +44,7 @@ if(finite(p.surface_anchor_share)&&p.surface_anchor_share>0)html+=`<p class="not
 if(p.stabilization)html+=`<p class="note">${esc(p.stabilization)}. Ballast is excluded from observed sample counts.</p>`;
 if(p.sparse_input_policy)html+=`<p class="note">${esc(p.sparse_input_policy)} Missing physical-input uncertainty is not fully captured by the sensitivity range.</p>`;
 if(finite(p.projection_age))html+=`<div class="meta">Projection age: ${p.projection_age.toFixed(1)} · ${esc(p.age_source)}</div>`;
+if(p.missing_season_inputs?.length)html+=`<div class="meta">Missing-season inputs: ${p.missing_season_inputs.map(s=>`${s.season}: MLB-equivalent ${esc(s.level)} baseline (${(100*s.weight).toFixed(1)}%)`).join(' · ')}. No observed playing time added.</div>`;
 if(p.last_input_season)html+=`<div class="meta">Latest input season: ${p.last_input_season}</div>`;
 if(p.park_mix_source)html+=`<div class="meta">Park mix: ${esc(p.park_mix_source)}</div>`;
 if(p.minor_history_sample>0)html+=`<div class="tag">${Math.round(p.minor_history_sample).toLocaleString()} minor-league ${p.kind==='Hitter'?'PA':'TBF'} included · ${Math.round(p.proxy_history_sample||0).toLocaleString()} from outcome-only records</div>`;
