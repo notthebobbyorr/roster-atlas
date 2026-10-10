@@ -11,13 +11,14 @@
 <label>PLAYER / MLB ID<input id="search" placeholder="Search players or MLB ID" type="search"></label>
 <label>TEAM<select id="team"><option value="">All teams / non-roster</option></select></label>
 <label>ROSTER STATUS<select id="membership"><option value="">All entries</option><option>40-man</option><option>Non-roster IL</option><option>Non-roster history</option></select></label>
-<label>POSITION<select id="position"><option value="">All positions</option></select></label>
+<label>POSITION · 20+ G<select id="position"><option value="">All positions</option></select></label>
 <label>MODEL ROLE<select id="role"><option value="">All roles</option><option>Hitter</option><option>SP</option><option>RP</option><option>Unavailable</option></select></label>
 <label>DEPTH-CHART ROLE<select id="depth"><option value="">All depth roles</option></select></label>
 <label>FREE-AGENT YEAR<select id="fa"><option value="">All years / scenarios</option><option value="unknown">Not listed</option></select></label>
 <label>MINOR-LEAGUE OPTIONS<select id="options"><option value="">Any</option><option value="unknown">Not listed / n/a</option></select></label>
 <label>COVERAGE<select id="coverage"><option value="">All players</option><option>Available</option><option>Projection unavailable</option></select></label>
 <button id="reset" class="secondary">Reset</button></div>
+<p class="note" id="positionEligibilityNote"></p>
 <p class="note" id="skillViewNote" hidden>Projected Skills are forecast in seasonal z units, then translated into the selected pre-season reference distribution. Missing measurements remain blank. The player detail shows each skill’s z-score. The 2025–2027 HR adjustment uses projected pulled FB%; other skill forecasts remain independent of the historical-skill outcome model.</p>
 <div class="viewbar"><button data-view="all" class="active">Overview</button><button data-view="hit" class="secondary">Hitting</button><button data-view="pitch" class="secondary">Pitching</button><button data-view="control" class="secondary">Contracts & control</button><button id="csv" class="secondary">Export filtered CSV</button><a class="download" href="roster_projection_seasons.parquet" download>All display rows · Parquet</a><span id="shown"></span></div>
 <div class="tablewrap"><table><thead id="head"></thead><tbody id="body"></tbody></table></div>
@@ -35,4 +36,4 @@
 
 
 
-<script type="module" src="dashboard.mjs"></script></body></html>
+<script type="module" src="dashboard.mjs?v=positions-1"></script></body></html>

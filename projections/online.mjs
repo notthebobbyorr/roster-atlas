@@ -1,3 +1,4 @@
+import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
@@ -7,6 +8,7 @@ const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
 let modelKey='original',modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null;
 const activeModel=()=>skillModels[modelKey];
+window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
 window.skillGradesState=null;
 window.skillGradesModel=()=>modelKey;
 window.skillGradesWorkloadsLoad=()=>{
@@ -87,7 +89,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=playing-time-1':'dashboard.html';
+  $('dashboard').src=skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=positions-1':'dashboard.html?v=positions-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
