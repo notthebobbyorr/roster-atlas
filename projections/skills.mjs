@@ -3,10 +3,11 @@
 let DATA;
 try {
  if(window.parent===window || typeof window.parent.skillGradesLoad!=='function')throw Error('Open the Projections page and sign in to view skill grades.');
+ const loadedModel=window.parent.skillGradesModel?.()||'original';
  DATA=await window.parent.skillGradesLoad();
  if(typeof window.parent.skillGradesWorkloadsLoad==='function'){
   const pt=await window.parent.skillGradesWorkloadsLoad();
-  DATA.playing_time_model=pt.metadata;DATA.playing_time_standards={...pt.standards,...(DATA.projected_contribution_standards?{native:DATA.projected_contribution_standards}:{})};
+  DATA.playing_time_model=pt.metadata;DATA.playing_time_standards={...pt.standards,...(DATA.projected_contribution_standards?{[loadedModel]:DATA.projected_contribution_standards}:{})};
   for(const p of DATA.players)p.playing_time=pt.players[`${p.mlbid}:${p.kind}`]||null;
  }
 } catch(error) {
@@ -35,7 +36,7 @@ function rememberModelState(){if(modelHost?.skillGradesModel)modelHost.skillGrad
 function modelComparison(p){
  if(!modelHost?.skillGradesComparisonLoad)return '';
  if(!comparisonData)return '<p class="note">'+(comparisonError?esc(comparisonError):'Loading model comparison…')+'</p>';
- const models=[['original','Original live'],['research','Bayesian features'],['native','Native sample regression']].filter(([id])=>comparisonData[id]),workload=playerLoad(p),view=$('view').value,park=$('park').value;
+ const models=[['original','Original live'],['research','Bayesian features'],['native','Native sample regression'],['recommended','Recommended cutoffs']].filter(([id])=>comparisonData[id]),workload=playerLoad(p),view=$('view').value,park=$('park').value;
  const values={};
  for(const [id] of models){const m=comparisonData[id],other=m.players[key(p)];values[id]={};if(!other)continue;
   const profile={...p,rates:other.rates},neutral=rates(profile,'neutral'),scenario=rates(profile,park);
@@ -45,8 +46,8 @@ function modelComparison(p){
    values[id][c]={z,raw};
   }
  }
- const before=comparisonData.native?'research':'original',after=comparisonData.native?'native':'research';
- let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+loadText(p)+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is '+(comparisonData.native?'native regression minus Bayesian':'Bayesian minus original')+'; positive favors the newer grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th>'+models.map(([,label])=>'<th>'+label+'</th>').join('')+'<th>Δ SD</th></tr></thead><tbody>';
+ const before=comparisonData.recommended?'native':comparisonData.native?'research':'original',after=comparisonData.recommended?'recommended':comparisonData.native?'native':'research';
+ let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+loadText(p)+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is '+(comparisonData.recommended?'recommended cutoffs minus native regression':comparisonData.native?'native regression minus Bayesian':'Bayesian minus original')+'; positive favors the newer grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th>'+models.map(([,label])=>'<th>'+label+'</th>').join('')+'<th>Δ SD</th></tr></thead><tbody>';
  for(const c of [...cats[p.kind],'Sum']){const get=id=>c==='Sum'?{z:cats[p.kind].every(x=>finite(values[id][x]?.z))?cats[p.kind].reduce((sum,x)=>sum+values[id][x].z,0):null}:values[id][c]||{};const a=get(before),b=get(after),delta=finite(a.z)&&finite(b.z)?b.z-a.z:null;html+='<tr><td>'+c+'</td>'+models.map(([id])=>get(id)).map(v=>'<td class="number">'+fmt(v.z)+' SD'+(c==='Sum'?'':'<br><small>'+esc(statText(v.raw,c,workload))+'</small>')+'</td>').join('')+'<td class="number '+color(delta)+'">'+fmt(delta)+'</td></tr>';}
  return html+'</tbody></table></div>';
 }

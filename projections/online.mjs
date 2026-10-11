@@ -3,12 +3,13 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import {skillModels,skillWorkloads} from './skill-models.mjs?v=native-regression-1';
+import {skillModels,skillWorkloads} from './skill-models.mjs?v=recommended-cutoffs-1';
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
-const defaultModel=Object.hasOwn(skillModels,'native')?'native':'original';
-let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null;
+const defaultModel=['recommended','native','original'].find(id=>Object.hasOwn(skillModels,id));
+let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null,contractsLoaded=null;
 const activeModel=()=>skillModels[modelKey];
+$('model').value=defaultModel;
 window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
 window.projectionRankingOwner=null;
 window.skillGradesState=null;
@@ -27,8 +28,21 @@ window.skillGradesWorkloadsLoad=()=>{
 window.skillGradesComparisonLoad=()=>{
  if(!authenticated)return Promise.reject(Error('Sign in to compare models.'));
  const epoch=sessionEpoch;
- if(!comparisonLoaded)comparisonLoaded=(async()=>{const data=await(await privateFetch((skillModels.native||skillModels.research).snapshot,'comparison.json')).json();if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;})().catch(error=>{comparisonLoaded=null;throw error;});
+ if(!comparisonLoaded)comparisonLoaded=(async()=>{const data=await(await privateFetch((skillModels.recommended||skillModels.native||skillModels.research).snapshot,'comparison.json')).json();if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;})().catch(error=>{comparisonLoaded=null;throw error;});
  return comparisonLoaded;
+};
+window.projectionContractsLoad=()=>{
+ if(!authenticated)return Promise.reject(Error('Sign in to view contract information.'));
+ const version=skillModels.recommended?.snapshot,epoch=sessionEpoch;
+ if(!version)return Promise.reject(Error('Contract information is not available in this model registry.'));
+ if(!contractsLoaded)contractsLoaded=(async()=>{
+  const ready=await(await privateFetch(version,'index.json')).json();
+  if(ready.kind!=='fantasy-skill-grades'||ready.version!==version)throw Error('The contract snapshot is not ready.');
+  const data=await(await privateFetch(version,'contracts.json')).json();
+  if(data.kind!=='roster-atlas-free-agent-years'||data.schema_version!==1||!data.players||typeof data.players!=='object'||Array.isArray(data.players))throw Error('The contract data format is not supported.');
+  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;
+ })().catch(error=>{if(epoch===sessionEpoch)contractsLoaded=null;throw error;});
+ return contractsLoaded;
 };
 const selectedView=()=>location.hash==='#rankings'?'rankings':location.hash==='#skills'?'skills':'outcomes';
 
@@ -76,7 +90,7 @@ window.dashboardDownload=path=>download(snapshot,path);
 window.skillGradesDownload=path=>path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
 
 function clear(){
- authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
+ authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;contractsLoaded=null;window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
 }
@@ -91,7 +105,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=rankings?'rankings.html?v=native-regression-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=positions-1':'dashboard.html?v=positions-1';
+  $('dashboard').src=rankings?'rankings.html?v=recommended-cutoffs-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=positions-1':'dashboard.html?v=positions-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
