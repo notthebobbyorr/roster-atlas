@@ -3,11 +3,15 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import {skillModels,skillWorkloads} from './skill-models.mjs?v=recommended-cutoffs-1';
+import * as skillRegistry from './skill-models.mjs?v=saves-model-1';
+import * as savesRegistry from './saves-snapshot.mjs?v=saves-model-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=saves-model-1';
+const {skillModels,skillWorkloads}=skillRegistry;
+const {skillSaves}=savesRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
 const defaultModel=['recommended','native','original'].find(id=>Object.hasOwn(skillModels,id));
-let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null,contractsLoaded=null;
+let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null,contractsLoaded=null,savesLoaded=null,savesRoles={};
 const activeModel=()=>skillModels[modelKey];
 $('model').value=defaultModel;
 window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
@@ -44,6 +48,38 @@ window.projectionContractsLoad=()=>{
  })().catch(error=>{if(epoch===sessionEpoch)contractsLoaded=null;throw error;});
  return contractsLoaded;
 };
+window.projectionSavesLoad=()=>{
+ if(!authenticated)return Promise.reject(Error('Sign in to view saves projections.'));
+ if(!skillSaves)return Promise.resolve(null);
+ const epoch=sessionEpoch;
+ if(!savesLoaded)savesLoaded=(async()=>{
+  const ready=await(await privateFetch(skillSaves,'index.json')).json();
+  if(ready.kind!=='fantasy-saves-projections'||ready.version!==skillSaves)throw Error('The saves snapshot is not ready.');
+  const data=await(await privateFetch(skillSaves,'saves.json')).json();
+  if(data.kind!=='roster-atlas-save-projections'||data.schema_version!==1||!data.players||typeof data.players!=='object'||Array.isArray(data.players))throw Error('The saves data format is not supported.');
+  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;
+ })().catch(error=>{if(epoch===sessionEpoch)savesLoaded=null;throw error;});
+ return savesLoaded;
+};
+window.projectionSavesRoleOptions=saveRoleOptions;
+window.projectionSavesRole=mlbid=>authenticated?savesRoles[String(mlbid)]||'auto':'auto';
+window.projectionSavesRoleOverrides=()=>authenticated?{...savesRoles}:{};
+window.projectionSaveForecast=(data,mlbid,IP)=>projectSaves(data,mlbid,IP,window.projectionSavesRole(mlbid));
+window.projectionSavesExplainer=savesExplainer;
+window.projectionSetSavesRole=(mlbid,role)=>{
+ if(!authenticated||!window.projectionRankingOwner)throw Error('Sign in to change saves scenarios.');
+ const id=String(mlbid);
+ if(!/^\d+$/.test(id)||!saveRoleOptions.some(([code])=>code===role))throw Error('Invalid saves role.');
+ if(role==='auto')delete savesRoles[id];else savesRoles[id]=role;
+ try{localStorage.setItem('ra-save-role-overrides:v1:'+window.projectionRankingOwner,JSON.stringify(savesRoles));return true;}
+ catch{$('status').textContent='Saves role changed for this session; device storage is unavailable.';return false;}
+};
+function restoreSavesRoles(owner){
+ savesRoles={};
+ try{const stored=JSON.parse(localStorage.getItem('ra-save-role-overrides:v1:'+owner)||'{}');
+  if(stored&&typeof stored==='object'&&!Array.isArray(stored))for(const [id,role] of Object.entries(stored))if(/^\d+$/.test(id)&&role!=='auto'&&saveRoleOptions.some(([code])=>code===role))savesRoles[id]=role;
+ }catch{}
+}
 const selectedView=()=>location.hash==='#rankings'?'rankings':location.hash==='#skills'?'skills':'outcomes';
 
 async function privateFetch(version,path){
@@ -87,10 +123,10 @@ async function download(version,path){
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 window.dashboardDownload=path=>download(snapshot,path);
-window.skillGradesDownload=path=>path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
+window.skillGradesDownload=path=>path.startsWith('saves/')?skillSaves?download(skillSaves,path.slice(6)):Promise.reject(Error('Saves projections are unavailable.')):path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
 
 function clear(){
- authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;contractsLoaded=null;window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
+ authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;contractsLoaded=null;savesLoaded=null;savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
 }
@@ -105,7 +141,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=rankings?'rankings.html?v=recommended-cutoffs-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=positions-1':'dashboard.html?v=positions-1';
+  $('dashboard').src=rankings?'rankings.html?v=saves-model-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=positions-1':'dashboard.html?v=positions-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -114,7 +150,7 @@ async function open(){
  $('status').textContent='Checking sign-in…';
  try{
   const user=await cloud.user();if(epoch!==sessionEpoch)return;window.projectionRankingOwner=user.id;
-  authenticated=true;$('login').hidden=true;$('logout').hidden=false;$('views').hidden=false;
+  authenticated=true;restoreSavesRoles(user.id);$('login').hidden=true;$('logout').hidden=false;$('views').hidden=false;
   await showView();
  }catch(error){if(epoch===sessionEpoch){clear();$('status').textContent=error.message;}}
 }
