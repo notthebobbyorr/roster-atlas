@@ -67,7 +67,7 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  for(const c of categories){
   const rate=cat(r,c),base=cat(p.rates,c),env=core.standardized_model.environment[c],sign=['ERA','WHIP'].includes(c)?-1:1;
   stats[c]=finite(rate)?rate:null;
-  const st=method==='standard'?core.standards[c]:pt.standards[model]?.[method]?.[c];
+  const st=method==='standard'?core.standards[c]:pt.standards[model]?.[method]?.[c]??core.projected_contribution_standards?.[method]?.[c];
   let z=null;
   if(view==='quality'&&finite(rate)&&finite(base)&&finite(p.category_standardized?.[c]))z=p.category_standardized[c]+sign*(rate-base)/env.sd;
   if(view==='contribution'&&st&&finite(rate)&&finite(load)){

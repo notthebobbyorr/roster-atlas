@@ -6,7 +6,7 @@ try {
  DATA=await window.parent.skillGradesLoad();
  if(typeof window.parent.skillGradesWorkloadsLoad==='function'){
   const pt=await window.parent.skillGradesWorkloadsLoad();
-  DATA.playing_time_model=pt.metadata;DATA.playing_time_standards=pt.standards;
+  DATA.playing_time_model=pt.metadata;DATA.playing_time_standards={...pt.standards,...(DATA.projected_contribution_standards?{native:DATA.projected_contribution_standards}:{})};
   for(const p of DATA.players)p.playing_time=pt.players[`${p.mlbid}:${p.kind}`]||null;
  }
 } catch(error) {
@@ -35,18 +35,19 @@ function rememberModelState(){if(modelHost?.skillGradesModel)modelHost.skillGrad
 function modelComparison(p){
  if(!modelHost?.skillGradesComparisonLoad)return '';
  if(!comparisonData)return '<p class="note">'+(comparisonError?esc(comparisonError):'Loading model comparison…')+'</p>';
- const models=[['original','Original live'],['research','Bayesian features']],workload=playerLoad(p),view=$('view').value,park=$('park').value;
+ const models=[['original','Original live'],['research','Bayesian features'],['native','Native sample regression']].filter(([id])=>comparisonData[id]),workload=playerLoad(p),view=$('view').value,park=$('park').value;
  const values={};
  for(const [id] of models){const m=comparisonData[id],other=m.players[key(p)];values[id]={};if(!other)continue;
   const profile={...p,rates:other.rates},neutral=rates(profile,'neutral'),scenario=rates(profile,park);
-  for(const c of cats[p.kind]){const raw=category(scenario,c),base=category(neutral,c),environment=m.environment[c],st=workloadMode()==='standard'?m.standards[c]:contributionStandard(c,id),sign=['ERA','WHIP'].includes(c)?-1:1;let z=null;
+  for(const c of cats[p.kind]){const raw=category(scenario,c),base=category(neutral,c),environment=m.environment[c],st=workloadMode()==='standard'?m.standards[c]:m.projected_contribution_standards?.[workloadMode()]?.[c]||contributionStandard(c,id),sign=['ERA','WHIP'].includes(c)?-1:1;let z=null;
    if(view==='quality'&&finite(other.category_standardized?.[c])&&finite(raw)&&finite(base))z=other.category_standardized[c]+sign*(raw-base)/environment.sd;
    else if(view!=='quality'&&finite(raw)&&finite(workload)){let contribution;if(['Power','Speed','K'].includes(c))contribution=raw*workload;else if(c==='AVG')contribution=(raw-st.reference_rate)*workload;else contribution=(st.reference_rate-raw)*workload/(c==='ERA'?9:1);z=(contribution-st.contribution_mean)/st.contribution_sd;}
    values[id][c]={z,raw};
   }
  }
- let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+loadText(p)+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is Bayesian minus original; positive favors the Bayesian grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th><th>Original live</th><th>Bayesian features</th><th>Δ SD</th></tr></thead><tbody>';
- for(const c of [...cats[p.kind],'Sum']){const get=id=>c==='Sum'?{z:cats[p.kind].every(x=>finite(values[id][x]?.z))?cats[p.kind].reduce((sum,x)=>sum+values[id][x].z,0):null}:values[id][c]||{};const a=get('original'),b=get('research'),delta=finite(a.z)&&finite(b.z)?b.z-a.z:null;html+='<tr><td>'+c+'</td>'+[a,b].map(v=>'<td class="number">'+fmt(v.z)+' SD'+(c==='Sum'?'':'<br><small>'+esc(statText(v.raw,c,workload))+'</small>')+'</td>').join('')+'<td class="number '+color(delta)+'">'+fmt(delta)+'</td></tr>';}
+ const before=comparisonData.native?'research':'original',after=comparisonData.native?'native':'research';
+ let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+loadText(p)+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is '+(comparisonData.native?'native regression minus Bayesian':'Bayesian minus original')+'; positive favors the newer grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th>'+models.map(([,label])=>'<th>'+label+'</th>').join('')+'<th>Δ SD</th></tr></thead><tbody>';
+ for(const c of [...cats[p.kind],'Sum']){const get=id=>c==='Sum'?{z:cats[p.kind].every(x=>finite(values[id][x]?.z))?cats[p.kind].reduce((sum,x)=>sum+values[id][x].z,0):null}:values[id][c]||{};const a=get(before),b=get(after),delta=finite(a.z)&&finite(b.z)?b.z-a.z:null;html+='<tr><td>'+c+'</td>'+models.map(([id])=>get(id)).map(v=>'<td class="number">'+fmt(v.z)+' SD'+(c==='Sum'?'':'<br><small>'+esc(statText(v.raw,c,workload))+'</small>')+'</td>').join('')+'<td class="number '+color(delta)+'">'+fmt(delta)+'</td></tr>';}
  return html+'</tbody></table></div>';
 }
 
@@ -100,7 +101,7 @@ if(p.missing_season_inputs?.length)html+=`<div class="meta">Missing-season input
 if(p.last_input_season)html+=`<div class="meta">Latest input season: ${p.last_input_season}</div>`;
 if(p.park_mix_source)html+=`<div class="meta">Park mix: ${esc(p.park_mix_source)}</div>`;
 if(p.minor_history_sample>0)html+=`<div class="tag">${Math.round(p.minor_history_sample).toLocaleString()} minor-league ${p.kind==='Hitter'?'PA':'TBF'} included · ${Math.round(p.proxy_history_sample||0).toLocaleString()} from outcome-only records</div>`;
-if(p.input_skills)html+=`<details><summary>Forecast process inputs and sources</summary><div class="scroll"><table><thead><tr><th>Input</th><th>Forecast</th><th>Source</th></tr></thead><tbody>${Object.entries(p.input_skills).filter(([k,v])=>finite(v)).map(([k,v])=>`<tr><td>${esc(({contact_vs_avg:'Contact vs expected',damage_rate:'Damage rate',EV90th:'EV90',z_con:'Zone contact',secondary_whiff_pct:'Secondary whiff',whiffs_vs_95:'Whiff vs 95+',SwStr:'Swinging strikes',Ball_pct:'Balls',Z_Contact:'Zone contact allowed'})[k]||k)}</td><td>${v.toFixed(1)}${k==='contact_vs_avg'?' pp':['EV90th','fastball_velo'].includes(k)?' mph':['SEAGER','stuff','grade_v13'].includes(k)?'':'%'}</td><td>${esc(DATA.input_source_labels?.[p.input_sources?.[k]]||p.input_sources?.[k]||'Forecast input; see methodology')}</td></tr>`).join('')}</tbody></table></div></details>`;
+if(p.input_skills)html+=`<details><summary>Forecast process inputs and sources</summary><div class="scroll"><table><thead><tr><th>Input</th><th>Forecast</th><th>Source</th></tr></thead><tbody>${Object.entries(p.input_skills).filter(([k,v])=>finite(v)).map(([k,v])=>`<tr><td>${esc(({stuff:'Pitch grade (stuff)',grade_v13:'Execution grade',contact_vs_avg:'Contact vs expected',damage_rate:'Damage rate',EV90th:'EV90',z_con:'Zone contact',secondary_whiff_pct:'Secondary whiff',whiffs_vs_95:'Whiff vs 95+',SwStr:'Swinging strikes',Ball_pct:'Balls',Z_Contact:'Zone contact allowed'})[k]||k)}</td><td>${v.toFixed(1)}${k==='contact_vs_avg'?' pp':['EV90th','fastball_velo'].includes(k)?' mph':['SEAGER','stuff','grade_v13'].includes(k)?'':'%'}</td><td>${esc(DATA.input_source_labels?.[p.input_sources?.[k]]||p.input_sources?.[k]||'Forecast input; see methodology')}</td></tr>`).join('')}</tbody></table></div></details>`;
 if(p.additional_process_z)html+='<details><summary>Additional process inputs · annual SD units</summary><p class="note">Regressed annual standardized measurements blended with the K recency weights. Zero includes unmeasured MLB priors; these physical traits are not inferred from minor-league outcomes.</p><div class="scroll"><table><tbody>'+Object.entries(p.additional_process_z).map(([name,z])=>'<tr><td>'+esc(name.replace(/^extra_/,''))+'</td><td>'+fmt(z)+' SD</td></tr>').join('')+'</tbody></table></div></details>';
 if(p.evidence_group==='Limited MLB history')html+='<p class="notice">Limited MLB history. Translated minor-league measurements and estimated inputs inform this profile. The pooled MLB outcome range is not calibrated for this evidence level.</p>';
 if(p.kind==='Pitcher')html+=`<label>Workload role<select id="override"><option value="">Assigned: ${esc(p.assigned_role)}</option>${['SP','RP','Swingman'].map(r=>`<option ${overrides.get(key(p))===r?'selected':''}>${r}</option>`).join('')}</select></label><p class="note">${esc(p.role_source)}. Override uses the selected role’s standard workload; rate skill stays fixed.</p>`;
