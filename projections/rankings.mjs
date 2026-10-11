@@ -1,7 +1,8 @@
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=saves-model-2';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=saves-model-2';
-import {attachContracts,compareFreeAgentYears} from './rankings-contracts.mjs?v=recommended-contracts-1';
+import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=rankings-sort-1';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=x=>typeof x==='number'&&Number.isFinite(x),fmt=(x,d=1)=>finite(x)?x.toFixed(d):'—';
 const parent=window.parent;
@@ -24,9 +25,10 @@ $('role').innerHTML=fantasyRoles.map(role=>'<option>'+role+'</option>').join('')
 const rrSelections=Object.fromEntries(fantasyRoles.map(role=>{const values=rrRoleOptions(lists[role]).map(o=>o.value),previous=saved?.rrRoles?.[role];return [role,new Set((Array.isArray(previous)?previous:values).filter(v=>values.includes(v)))];}));
 const exclusions=Object.fromEntries(fantasyRoles.map(role=>[role,new Set((Array.isArray(saved?.excluded?.[role])?saved.excluded[role]:[]).filter(id=>available[role].includes(id)))]));
 $('team').innerHTML+=[...new Set(starterRoles.players.map(p=>p.team))].sort().map(t=>'<option value="'+esc(t)+'">'+esc(t.replaceAll('-',' '))+'</option>').join('');
-for(const id of ['role','workload','view','park','search','team','sort'])if(saved?.preferences?.[id]!=null)$(id).value=saved.preferences[id];
+for(const id of ['role','workload','view','park','search','team'])if(saved?.preferences?.[id]!=null)$(id).value=saved.preferences[id];
 if(!fantasyRoles.includes($('role').value))$('role').value='SP';
-if(!['rank','fa-asc','fa-desc'].includes($('sort').value))$('sort').value='rank';
+const restoredSort=normalizeRankingSort($('role').value,saved?.preferences?.sort,saved?.preferences?.['sort-direction']);
+renderSortOptions(restoredSort.value,restoredSort.direction);
 $('source').innerHTML='2027 projections · RosterResource roles retrieved '+esc(new Date(starterRoles.retrieved_at).toLocaleDateString('en-US',{timeZone:'America/New_York'}))+' · <a href="'+esc(starterRoles.source)+'" target="_blank" rel="noopener">RosterResource roster grid</a>. New lists start in projected contribution Sum order; your edits then keep their own order.';
 $('policy').textContent=parent.projectionPositionNote(2026)+' Pitcher lists follow RR rotation/bullpen roles, independently of the model’s workload classification.';
 $('contract-policy').textContent='FA year is the first season of free agency: 2027 means after 2026; 2028 means after the projected 2027 season. * marks conditional option or opt-out scenarios. Source-listed service-time control years may change with service time. No control end is inferred when absent. Payroll contracts retrieved '+contracts.as_of+'. FA sorting uses the earliest listed scenario; unknown years stay last. Your saved ranking order is preserved.';
@@ -34,7 +36,7 @@ if($('saves-methodology'))$('saves-methodology').innerHTML=savesError?'<p>'+esc(
 let displayed=[],columns=[],processColumns=[],dragged=null;
 function persist(message='Saved on this device · export a backup to transfer lists.'){
  if(parent.projectionRankingOwner!==owner)throw Error('Session changed. Sign in again.');
- const preferences=Object.fromEntries(['role','workload','view','park','search','team','sort'].map(id=>[id,$(id).value]));
+ const preferences=Object.fromEntries(['role','workload','view','park','search','team','sort','sort-direction'].map(id=>[id,$(id).value]));
  try{localStorage.setItem(storageKey,JSON.stringify({orders,preferences,rrRoles:Object.fromEntries(fantasyRoles.map(role=>[role,[...rrSelections[role]]])),excluded:Object.fromEntries(fantasyRoles.map(role=>[role,[...exclusions[role]]])),updated_at:new Date().toISOString()}));$('status').textContent=message;}
  catch{$('status').textContent='Device storage unavailable. Your changes are in this page only; export a JSON backup before leaving.';}
 }
@@ -61,13 +63,20 @@ function statCell(f,c,d){
  const title=c==='SV'&&f.saves?.detailText?' title="'+esc(f.saves.detailText)+'"':'';
  return '<td class="number"'+title+'>'+value+before+'</td>';
 }
+function renderSortOptions(value=$('sort').value,direction=$('sort-direction').value){
+ const selected=normalizeRankingSort($('role').value,value,direction);
+ $('sort').innerHTML=rankingSortOptions($('role').value).map(option=>'<option value="'+esc(option.value)+'">'+esc(option.label)+'</option>').join('');
+ $('sort').value=selected.value;$('sort-direction').value=selected.direction;
+ $('sort-direction').disabled=selected.value==='rank';
+}
 function render(){
+ renderSortOptions();
  renderRRRoles();
  renderExcluded();
  const role=$('role').value,entries=new Map(lists[role].map(p=>[p.key,p])),query=$('search').value.trim().toLowerCase(),team=$('team').value;
  displayed=orders[role].map((key,index)=>({entry:entries.get(key),rank:index+1})).filter(({entry:p})=>!exclusions[role].has(p.key)&&rrSelections[role].has(p.rr_role||'Unlisted')&&(!team||p.team===team)&&(!query||`${p.name} ${p.mlbid||''}`.toLowerCase().includes(query))).map(row=>({...row,forecast:projection(core,pt,row.entry,parameters(row.entry))}));
  const sorting=$('sort').value,reordering=sorting==='rank';
- if(!reordering)displayed.sort((a,b)=>compareFreeAgentYears(a.entry,b.entry,sorting==='fa-desc'?-1:1));
+ displayed=sortRankingRows(displayed,sorting,$('sort-direction').value);
  const hitter=!['SP','RP'].includes(role);processColumns=hitter?[['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:[['stuff','Pitch grade'],['SwStr','SwStr %']];const cats=hitter?['Power','Speed','AVG']:['K','ERA','WHIP'];
  columns=hitter?[['PA','PA',0],['AB','AB',0],['HR','HR',0],['SB','SB',0],['AVG','AVG',3]]:[['IP','IP',1],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]];
  $('head').innerHTML='<tr><th class="player">Player</th><th>Rank / reorder</th><th>Team</th><th>RR role</th><th>FA year</th><th>Eligibility</th>'+(!hitter?'<th>Saves role</th>':'')+columns.map(([,name])=>'<th>'+name+'</th>').join('')+cats.map(c=>'<th>'+c+' SD</th>').join('')+'<th>Sum SD</th>'+processColumns.map(([,label])=>'<th>'+label+'</th>').join('')+'</tr>';
@@ -83,14 +92,14 @@ $('rows').addEventListener('click',event=>{
 $('rows').addEventListener('change',event=>{const scenario=event.target.closest('select[data-save-role]');if(scenario){parent.projectionSetSavesRole(scenario.dataset.saveRole,scenario.value);render();return;}const input=event.target.closest('input[data-rank]');if(!input)return;const rank=Number(input.value);if(!Number.isInteger(rank)||rank<1||rank>orders[$('role').value].length){$('status').textContent='Enter a rank within this list.';render();return;}change(input.dataset.rank,rank-1);});
 $('rows').addEventListener('dragstart',event=>{if($('sort').value!=='rank'){event.preventDefault();return;}const row=event.target.closest('tr[data-key]');if(!row)return;dragged=row.dataset.key;event.dataTransfer.setData('text/plain',dragged);event.dataTransfer.effectAllowed='move';});
 $('rows').addEventListener('dragover',event=>{if(event.target.closest('tr[data-key]'))event.preventDefault();});
-$('rows').addEventListener('drop',event=>{event.preventDefault();const row=event.target.closest('tr[data-key]');if(row&&dragged&&row.dataset.key!==dragged)change(dragged,orders[$('role').value].indexOf(row.dataset.key));dragged=null;});
+$('rows').addEventListener('drop',event=>{event.preventDefault();if($('sort').value!=='rank'){dragged=null;return;}const row=event.target.closest('tr[data-key]');if(row&&dragged&&row.dataset.key!==dragged)change(dragged,orders[$('role').value].indexOf(row.dataset.key));dragged=null;});
 $('rows').addEventListener('dragend',()=>{dragged=null;});
 $('excluded-rows').addEventListener('click',event=>{const button=event.target.closest('button[data-restore]');if(button)restorePlayer(button.dataset.restore);});
 $('restore-all').onclick=()=>{exclusions[$('role').value].clear();persist('All excluded players restored in this position list.');render();};
 $('rr-checks').addEventListener('change',event=>{const input=event.target,code=input.dataset?.rrRole;if(!code||!rrRoleOptions(lists[$('role').value]).some(o=>o.value===code))return;const selected=rrSelections[$('role').value];if(input.checked)selected.add(code);else selected.delete(code);persist();render();document.querySelector?.('input[data-rr-role="'+code+'"]')?.focus();});
 $('rr-all').onclick=()=>{rrSelections[$('role').value]=new Set(rrRoleOptions(lists[$('role').value]).map(o=>o.value));persist();render();};
 $('rr-none').onclick=()=>{rrSelections[$('role').value]=new Set();persist();render();};
-for(const id of ['role','search','team','workload','view','park','sort'])$(id).addEventListener(id==='search'?'input':'change',()=>{persist();render();});
+for(const id of ['role','search','team','workload','view','park','sort','sort-direction'])$(id).addEventListener(id==='search'?'input':'change',()=>{dragged=null;render();persist();});
 function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 $('backup').onclick=()=>download('starter-rankings.json',JSON.stringify({kind:'roster-atlas-starter-rankings',version:1,source_retrieved_at:starterRoles.retrieved_at,orders,excluded:Object.fromEntries(fantasyRoles.map(role=>[role,[...exclusions[role]]]))},null,2),'application/json');
 $('import').onchange=async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>2_000_000)throw Error('Ranking backup is too large.');const data=JSON.parse(await file.text()),imported=readBackup(data,available),removed=readExclusions(data,available);Object.assign(orders,imported);for(const role of fantasyRoles)exclusions[role]=new Set(removed[role]);persist('Imported lists and saved on this device. Inactive players were removed; new starters appended.');render();}catch(error){$('status').textContent=error.message;}finally{event.target.value='';}};
