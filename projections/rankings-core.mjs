@@ -1,5 +1,11 @@
 export const fantasyRoles=['SP','RP','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
+export function rrRoleOptions(entries){
+ const counts=new Map();for(const p of entries){const role=p.rr_role||'Unlisted';counts.set(role,(counts.get(role)||0)+1);}
+ const priority=['CL','SU8','SU7','MID','LR'];
+ const label=role=>({CL:'Closers / closer committees (CL)',SU8:'Setup · 8th inning (SU8)',SU7:'Setup · 7th inning (SU7)',MID:'Middle relief (MID)',LR:'Long relief (LR)',Bench:'Platoon starter (Bench)'})[role]||(/^SP\d+$/.test(role)?'Rotation slot '+role.slice(2)+' ('+role+')':/^\d+$/.test(role)?'Lineup slot '+role:role);
+ return [...counts].sort(([a],[b])=>{const ai=priority.indexOf(a),bi=priority.indexOf(b);return ai>=0||bi>=0?(ai<0?99:ai)-(bi<0?99:bi):a.localeCompare(b,undefined,{numeric:true});}).map(([value,count])=>({value,label:label(value),count}));
+}
 export function listRoles(rr,positions){
  if(rr.kind==='Pitcher')return [rr.role];
  const roles=['C','1B','2B','3B','SS','OF'].filter(p=>positions.includes(p));
@@ -34,6 +40,15 @@ export function readBackup(data,available){
   const ids=data.orders[role];
   if(!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)throw Error('Invalid '+role+' ranking.');
   result[role]=reconcileOrder(ids,available[role]);
+ }
+ return result;
+}
+export function readExclusions(data,available){
+ const result={};
+ for(const role of fantasyRoles){
+  const ids=data.excluded?.[role]??[];
+  if(!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)throw Error('Invalid '+role+' exclusions.');
+  result[role]=ids.filter(id=>available[role].includes(id));
  }
  return result;
 }
