@@ -9,6 +9,7 @@ let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0
 let modelKey='original',modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null;
 const activeModel=()=>skillModels[modelKey];
 window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
+window.projectionRankingOwner=null;
 window.skillGradesState=null;
 window.skillGradesModel=()=>modelKey;
 window.skillGradesWorkloadsLoad=()=>{
@@ -28,7 +29,7 @@ window.skillGradesComparisonLoad=()=>{
  if(!comparisonLoaded)comparisonLoaded=(async()=>{const data=await(await privateFetch(skillModels.research.snapshot,'comparison.json')).json();if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;})().catch(error=>{comparisonLoaded=null;throw error;});
  return comparisonLoaded;
 };
-const selectedView=()=>location.hash==='#skills'?'skills':'outcomes';
+const selectedView=()=>location.hash==='#rankings'?'rankings':location.hash==='#skills'?'skills':'outcomes';
 
 async function privateFetch(version,path){
  if(!/^[a-zA-Z0-9_./-]+$/.test(path)||path.includes('..'))throw Error('Invalid data path');
@@ -74,22 +75,22 @@ window.dashboardDownload=path=>download(snapshot,path);
 window.skillGradesDownload=path=>path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
 
 function clear(){
- authenticated=false;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;window.skillGradesState=null;modelKey='original';$('model').value='original';$('modelControls').hidden=true;
+ authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;window.skillGradesState=null;modelKey='original';$('model').value='original';$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
 }
 async function showView(){
  if(!authenticated)return;
- const id=++requestId,skills=selectedView()==='skills';
+ const id=++requestId,view=selectedView(),skills=view!=='outcomes',rankings=view==='rankings';
  $('modelControls').hidden=!skills;
- $('outcomesTab').setAttribute('aria-pressed',String(!skills));$('skillsTab').setAttribute('aria-pressed',String(skills));
+ $('outcomesTab').setAttribute('aria-pressed',String(!skills));$('skillsTab').setAttribute('aria-pressed',String(view==='skills'));$('rankingsTab').setAttribute('aria-pressed',String(rankings));
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');$('retry').hidden=true;
  $('status').textContent=skills?'Loading skill grades…':'Loading projection snapshot…';
  try{
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
-  $('dashboard').title=skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=positions-1':'dashboard.html?v=positions-1';
+  $('dashboard').title=rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
+  $('dashboard').src=rankings?'rankings.html?v=starter-rankings-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=positions-1':'dashboard.html?v=positions-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -97,7 +98,7 @@ async function open(){
  const epoch=sessionEpoch;
  $('status').textContent='Checking sign-in…';
  try{
-  await cloud.user();if(epoch!==sessionEpoch)return;
+  const user=await cloud.user();if(epoch!==sessionEpoch)return;window.projectionRankingOwner=user.id;
   authenticated=true;$('login').hidden=true;$('logout').hidden=false;$('views').hidden=false;
   await showView();
  }catch(error){if(epoch===sessionEpoch){clear();$('status').textContent=error.message;}}
@@ -106,6 +107,7 @@ $('loginForm').onsubmit=async e=>{e.preventDefault();try{await cloud.sign_in($('
 $('logout').onclick=async()=>{clear();$('status').textContent='Signing out…';try{await cloud.sign_out();$('status').textContent='';}catch{$('status').textContent='Signed out on this device.';}};
 $('outcomesTab').onclick=()=>{if(selectedView()==='outcomes')showView();else location.hash='outcomes';};
 $('skillsTab').onclick=()=>{if(selectedView()==='skills')showView();else location.hash='skills';};
+$('rankingsTab').onclick=()=>{if(selectedView()==='rankings')showView();else location.hash='rankings';};
 $('retry').onclick=showView;
 $('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;skillsLoaded=null;showView();};
 window.addEventListener('hashchange',showView);
