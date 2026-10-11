@@ -1,6 +1,6 @@
-import {saveRoleOptions,savesExplainer} from './saves.mjs?v=saves-model-2';
+import {saveRoleOptions,savesExplainer} from './saves.mjs?v=saves-actual-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=saves-model-2';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=saves-actual-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=rankings-sort-1';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -59,9 +59,9 @@ function savesRoleCell(p){
  return '<td><select data-save-role="'+esc(p.mlbid)+'" aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' · '+auto:''))+'</option>').join('')+'</select></td>';
 }
 function statCell(f,c,d){
- const value=fmt(f[c]??f.stats[c],d),before=c==='SV'&&finite(f.saves?.baselineSV)?'<small>Initial '+fmt(f.saves.baselineSV,0)+' SV</small>':'';
+ const value=fmt(f[c]??f.stats[c],d);
  const title=c==='SV'&&f.saves?.detailText?' title="'+esc(f.saves.detailText)+'"':'';
- return '<td class="number"'+title+'>'+value+before+'</td>';
+ return '<td class="number"'+title+'>'+value+'</td>';
 }
 function renderSortOptions(value=$('sort').value,direction=$('sort-direction').value){
  const selected=normalizeRankingSort($('role').value,value,direction);

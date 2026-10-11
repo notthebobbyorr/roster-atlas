@@ -4,8 +4,8 @@ import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
 import * as skillRegistry from './skill-models.mjs?v=saves-model-2';
-import * as savesRegistry from './saves-snapshot.mjs?v=saves-model-2';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=saves-model-2';
+import * as savesRegistry from './saves-snapshot.mjs?v=saves-actual-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=saves-actual-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const {skillSaves}=savesRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
@@ -141,7 +141,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=rankings?'rankings.html?v=rankings-sort-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=saves-model-2':'dashboard.html?v=positions-1';
+  $('dashboard').src=rankings?'rankings.html?v=saves-actual-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=saves-actual-1':'dashboard.html?v=positions-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
