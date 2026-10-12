@@ -58,7 +58,7 @@ export function normalizeCustomLists(raw,entries,strict=false){
  if(Object.keys(raw).length>200){if(strict)throw Error('A backup can contain at most 200 custom lists.');return {};}
  for(const [id,item] of Object.entries(raw)){
   try{
-   if(!validId(id)||!item||typeof item!=='object'||item.id!==id||!kinds.includes(item.kind)||!Array.isArray(item.keys)||item.keys.some(key=>typeof key!=='string')||item.keys.length>5000)throw Error('Invalid custom list.');
+   if(!validId(id)||!item||typeof item!=='object'||item.id!==id||!kinds.includes(item.kind)||!Array.isArray(item.keys)||item.keys.some(key=>typeof key!=='string')||item.keys.length>50000)throw Error('Invalid custom list.');
    const clean=validateName(result,item.name);
    if(strict&&new Set(item.keys).size!==item.keys.length)throw Error('Duplicate player in custom list.');
    const keys=[...new Set(item.keys)].filter(key=>available.has(key));

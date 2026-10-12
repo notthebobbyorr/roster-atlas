@@ -5,11 +5,11 @@ const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
  const counts=new Map();for(const p of entries){const role=p.rr_role||'Unlisted';counts.set(role,(counts.get(role)||0)+1);}
  const priority=['CL','SU8','SU7','MID','LR'];
- const label=role=>({CL:'Closers / closer committees (CL)',SU8:'Setup · 8th inning (SU8)',SU7:'Setup · 7th inning (SU7)',MID:'Middle relief (MID)',LR:'Long relief (LR)',Bench:'Platoon starter (Bench)'})[role]||(/^SP\d+$/.test(role)?'Rotation slot '+role.slice(2)+' ('+role+')':/^\d+$/.test(role)?'Lineup slot '+role:role);
+ const label=role=>({CL:'Closers / closer committees (CL)',SU8:'Setup · 8th inning (SU8)',SU7:'Setup · 7th inning (SU7)',MID:'Middle relief (MID)',LR:'Long relief (LR)',Bench:'Platoon starter (Bench)',Unassigned:'Unassigned / FA'})[role]||(/^SP\d+$/.test(role)?'Rotation slot '+role.slice(2)+' ('+role+')':/^\d+$/.test(role)?'Lineup slot '+role:role);
  return [...counts].sort(([a],[b])=>{const ai=priority.indexOf(a),bi=priority.indexOf(b);return ai>=0||bi>=0?(ai<0?99:ai)-(bi<0?99:bi):a.localeCompare(b,undefined,{numeric:true});}).map(([value,count])=>({value,label:label(value),count}));
 }
 export function listRoles(rr,positions){
- if(rr.kind==='Pitcher')return [rr.role,'All P'];
+ if(rr.kind==='Pitcher')return rr.role==='Swingman'?['SP','RP','All P']:[rr.role,'All P'];
  const roles=['C','1B','2B','3B','SS','OF'].filter(p=>positions.includes(p));
  if(positions.some(p=>['1B','3B'].includes(p)))roles.push('CI');
  if(positions.some(p=>['2B','SS'].includes(p)))roles.push('MI');
@@ -23,6 +23,16 @@ export function compileLists(rr,players,eligible){
   const profile=profiles.get(row.key)||null,positions=eligible(row.mlbid,row.kind,2026);
   const entry={...row,profile,name:profile?.player_name||row.name,positions};
   for(const role of listRoles(row,positions))lists[role].push(entry);
+ }
+ const assigned=new Set(rr.players.map(row=>row.key));
+ for(const [key,profile] of profiles){
+  const categories=profile.kind==='Pitcher'?['K_rate','ER_rate','H_rate','BB_rate']:['HR_rate','SB_rate','H_rate'];
+  if(assigned.has(key)||!categories.every(field=>finite(profile.rates?.[field])))continue;
+  const role=profile.kind==='Pitcher'?profile.assigned_role:'Hitter';
+  if(!['Hitter','SP','RP','Swingman'].includes(role))continue;
+  const positions=eligible(profile.mlbid,profile.kind,2026);
+  const entry={key,mlbid:profile.mlbid,kind:profile.kind,role,name:profile.player_name,profile,positions,team:'unassigned',team_id:null,rr_role:'Unassigned',section:'unassigned',source_url:rr.source};
+  for(const position of listRoles(entry,positions))lists[position].push(entry);
  }
  for(const rows of Object.values(lists))if(new Set(rows.map(r=>r.key)).size!==rows.length)throw Error('Duplicate player in a role list.');
  return lists;
@@ -63,7 +73,7 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
   if(p.kind==='Pitcher'&&finite(r.ER_rate))r.ER_rate=Math.max(0,r.ER_rate+core.run_weights.HR*(r.HR_rate-hr)+core.run_weights.NH*(nh*factor.NH-nh));
  }
  const record=pt.players[entry.key],variant=method==='standard'?null:roundWorkloadVariant(record?.variants[method==='projected'?record.selected.replace(/_age$/,''):method]);
- const workload=method==='standard'?(p.kind==='Hitter'?600:entry.role==='SP'?175:60):(p.kind==='Hitter'?variant?.AB:variant?.IP),load=p.kind==='Pitcher'?roundInnings(workload):workload;
+ const workload=method==='standard'?(p.kind==='Hitter'?600:entry.role==='SP'?175:entry.role==='Swingman'?100:60):(p.kind==='Hitter'?variant?.AB:variant?.IP),load=p.kind==='Pitcher'?roundInnings(workload):workload;
  const cat=(rates,c)=>({Power:rates.HR_rate,Speed:rates.SB_rate,AVG:rates.H_rate,K:rates.K_rate,ERA:finite(rates.ER_rate)?9*rates.ER_rate:null,WHIP:finite(rates.H_rate)&&finite(rates.BB_rate)?rates.H_rate+rates.BB_rate:null})[c];
  const categories=p.kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'],grades={},stats={};
  for(const c of categories){
