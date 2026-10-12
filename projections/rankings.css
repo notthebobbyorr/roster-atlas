@@ -3,3 +3,5 @@
 .exclude-player{float:right;margin:0 0 6px 8px;padding:5px 10px;font-size:22px;line-height:1;color:#f0aa8e}#excluded-panel{border:1px solid #496072;border-radius:8px;padding:12px;margin:14px 0}#excluded-panel summary{cursor:pointer;color:#83dbc4}#excluded-rows>div{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0}#excluded-panel[hidden]{display:none}
 
 .fa{max-width:245px;min-width:165px;white-space:normal}.fa small{display:block;color:#a8bac9;font-size:11px}.fa strong{display:block;font-size:11px;color:#f2cc83;font-weight:600}.fa-upcoming{background:#40362042}
+
+.controls label[hidden]{display:none}

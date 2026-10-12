@@ -5,7 +5,8 @@ import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
 import * as skillRegistry from './skill-models.mjs?v=team-saves-1';
 import * as savesRegistry from './saves-snapshot.mjs?v=team-saves-1';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=team-saves-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=handedness-1';
+import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeRow,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const {skillSaves}=savesRegistry;
@@ -16,6 +17,7 @@ let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=nul
 const activeModel=()=>skillModels[modelKey];
 $('model').value=defaultModel;
 window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
+window.projectionPitcherHand=pitcherHand;window.projectionPitcherHandLabel=pitcherHandLabel;
 window.projectionRankingOwner=null;
 window.projectionRoundInnings=roundInnings;window.projectionRoundPA=roundPA;window.projectionFormatInnings=formatInnings;
 window.projectionRoundWorkloadVariant=roundWorkloadVariant;window.projectionRoundOutcomeExplanation=roundOutcomeExplanation;
@@ -152,7 +154,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=rankings?'rankings.html?v=team-saves-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=team-saves-1':'dashboard.html?v=workload-rounding-1';
+  $('dashboard').src=rankings?'rankings.html?v=handedness-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=handedness-1':'dashboard.html?v=workload-rounding-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
