@@ -3,9 +3,10 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import * as skillRegistry from './skill-models.mjs?v=saves-model-2';
-import * as savesRegistry from './saves-snapshot.mjs?v=saves-actual-1';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=saves-actual-1';
+import * as skillRegistry from './skill-models.mjs?v=workload-rounding-1';
+import * as savesRegistry from './saves-snapshot.mjs?v=workload-rounding-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=workload-rounding-1';
+import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeRow,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const {skillSaves}=savesRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
@@ -16,6 +17,8 @@ const activeModel=()=>skillModels[modelKey];
 $('model').value=defaultModel;
 window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
 window.projectionRankingOwner=null;
+window.projectionRoundInnings=roundInnings;window.projectionRoundPA=roundPA;window.projectionFormatInnings=formatInnings;
+window.projectionRoundWorkloadVariant=roundWorkloadVariant;window.projectionRoundOutcomeExplanation=roundOutcomeExplanation;
 window.skillGradesState=null;
 window.skillGradesModel=()=>modelKey;
 window.skillGradesWorkloadsLoad=()=>{
@@ -101,7 +104,7 @@ window.dashboardLoad=()=>{
  if(!loaded)loaded=(async()=>{
   const index=await json('index.json'),meta=await json('metadata.json'),rows=[];
   for(let i=0;i<index.parts.length;i+=4){const pages=await Promise.all(index.parts.slice(i,i+4).map(json));rows.push(...pages.flat());}
-  return {rows,meta};
+  return {rows:rows.map(roundOutcomeRow),meta:{...meta,workload_rounding:'Projected IP uses .33/.67/whole numeric innings; projected PA is whole. Final counts use those rounded workloads. Observed history and rate environments are unchanged.'}};
  })().catch(error=>{loaded=null;throw error;});
  return loaded;
 };
@@ -117,13 +120,21 @@ window.skillGradesLoad=()=>{
  })().catch(error=>{if(generation===modelEpoch)skillsLoaded=null;throw error;});
  return skillsLoaded;
 };
-async function download(version,path){
- const epoch=sessionEpoch,blob=await (await privateFetch(version,path)).blob();
+async function download(version,path,{gzip=false,name=null}={}){
+ const epoch=sessionEpoch,response=await privateFetch(version,path);
+ const unpack=gzip&&typeof DecompressionStream==='function';
+ const blob=unpack?await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).blob():await response.blob();
  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed. Sign in again.');
- const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=unpack&&name?name:path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 window.dashboardDownload=path=>download(snapshot,path);
-window.skillGradesDownload=path=>path.startsWith('saves/')?skillSaves?download(skillSaves,path.slice(6)):Promise.reject(Error('Saves projections are unavailable.')):path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
+window.skillGradesDownload=async path=>{
+ if(path==='playing_time/forecast_totals.csv'){
+  const data=await window.skillGradesWorkloadsLoad(),storage=data.metadata?.forecast_totals_storage;
+  if(storage==='forecast_totals.csv.gz')return download(skillWorkloads,storage,{gzip:true,name:'forecast_totals.csv'});
+ }
+ return path.startsWith('saves/')?skillSaves?download(skillSaves,path.slice(6)):Promise.reject(Error('Saves projections are unavailable.')):path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
+};
 
 function clear(){
  authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;contractsLoaded=null;savesLoaded=null;savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
@@ -141,7 +152,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=rankings?'rankings.html?v=saves-actual-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=saves-actual-1':'dashboard.html?v=positions-1';
+  $('dashboard').src=rankings?'rankings.html?v=workload-rounding-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=workload-rounding-1':'dashboard.html?v=workload-rounding-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

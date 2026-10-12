@@ -7,7 +7,7 @@ try {
  DATA=await window.parent.skillGradesLoad();
  if(typeof window.parent.skillGradesWorkloadsLoad==='function'){
   const pt=await window.parent.skillGradesWorkloadsLoad();
-  DATA.playing_time_model=pt.metadata;DATA.playing_time_standards={...pt.standards,...(DATA.projected_contribution_standards?{[loadedModel]:DATA.projected_contribution_standards}:{})};
+  DATA.playing_time_model=pt.metadata;DATA.playing_time_standards={...(DATA.projected_contribution_standards?{[loadedModel]:DATA.projected_contribution_standards}:{}),...pt.standards};
   for(const p of DATA.players)p.playing_time=pt.players[`${p.mlbid}:${p.kind}`]||null;
  }
 } catch(error) {
@@ -31,6 +31,9 @@ if(standardizedModel){
 }
 const overrides=new Map();let selected=null, displayed=[], page=0;const pageSize=100;
 const modelHost=typeof window!=='undefined'&&window.parent!==window?window.parent:null;
+function roundInnings(n){return modelHost?.projectionRoundInnings?modelHost.projectionRoundInnings(n):finite(n)&&n>=0?Math.round(Math.round(n*3)*100/3)/100:null}
+function formatInnings(n){if(modelHost?.projectionFormatInnings)return modelHost.projectionFormatInnings(n);const rounded=roundInnings(n);return finite(rounded)?Number.isInteger(rounded)?String(rounded):rounded.toFixed(2):'—'}
+function roundWorkloadVariant(variant){if(modelHost?.projectionRoundWorkloadVariant)return modelHost.projectionRoundWorkloadVariant(variant);if(!variant)return null;const rounded={...variant};if(finite(variant.PA)){rounded.PA=Math.round(variant.PA);if(finite(variant.AB))rounded.AB=variant.PA>0?rounded.PA*variant.AB/variant.PA:0;}if(finite(variant.IP))rounded.IP=roundInnings(variant.IP);return rounded}
 let comparisonData=null,comparisonError='',savesData=null,savesError='',savesReady=!modelHost?.projectionSavesLoad;
 function saveForecast(p,IP){return modelHost?.projectionSaveForecast?.(savesData,p.mlbid,IP)||{SV:null,role:'unassigned'}}
 function renderSavesModel(){if($('saves-methodology'))$('saves-methodology').innerHTML=savesError?'<p class="notice">'+esc(savesError)+'</p>':modelHost?.projectionSavesExplainer?.(savesData)||'<p class="note">Saves projections are unavailable in this snapshot.</p>'}
@@ -42,7 +45,7 @@ function modelComparison(p){
  const values={};
  for(const [id] of models){const m=comparisonData[id],other=m.players[key(p)];values[id]={};if(!other)continue;
   const profile={...p,rates:other.rates},neutral=rates(profile,'neutral'),scenario=rates(profile,park);
-  for(const c of cats[p.kind]){const raw=category(scenario,c),base=category(neutral,c),environment=m.environment[c],st=workloadMode()==='standard'?m.standards[c]:m.projected_contribution_standards?.[workloadMode()]?.[c]||contributionStandard(c,id),sign=['ERA','WHIP'].includes(c)?-1:1;let z=null;
+  for(const c of cats[p.kind]){const raw=category(scenario,c),base=category(neutral,c),environment=m.environment[c],st=workloadMode()==='standard'?m.standards[c]:DATA.playing_time_standards?.[id]?.[workloadMode()]?.[c]||m.projected_contribution_standards?.[workloadMode()]?.[c]||contributionStandard(c,id),sign=['ERA','WHIP'].includes(c)?-1:1;let z=null;
    if(view==='quality'&&finite(other.category_standardized?.[c])&&finite(raw)&&finite(base))z=other.category_standardized[c]+sign*(raw-base)/environment.sd;
    else if(view!=='quality'&&finite(raw)&&finite(workload)){let contribution;if(['Power','Speed','K'].includes(c))contribution=raw*workload;else if(c==='AVG')contribution=(raw-st.reference_rate)*workload;else contribution=(st.reference_rate-raw)*workload/(c==='ERA'?9:1);z=(contribution-st.contribution_mean)/st.contribution_sd;}
    values[id][c]={z,raw};
@@ -58,9 +61,9 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const key=p=>`${p.mlbid}:${p.kind}`;
 function role(p){return overrides.get(key(p))||p.assigned_role}
 function workloadMode(){return $('workload')?.value||'standard'}
-function workloadVariant(p){const mode=workloadMode();if(mode==='standard'||!p.playing_time)return null;const method=mode==='projected'?p.playing_time.selected.replace(/_age$/,''):mode;return p.playing_time.variants[method]||null}
-function playerLoad(p){if(overrides.has(key(p)))return loads[role(p)];const variant=workloadVariant(p);return variant?(p.kind==='Hitter'?variant.AB:variant.IP):workloadMode()==='standard'||!DATA.playing_time_model?loads[role(p)]:null}
-function loadText(p){const n=playerLoad(p);return finite(n)?n.toFixed(p.kind==='Hitter'?0:1):'—'}
+function workloadVariant(p){const mode=workloadMode();if(mode==='standard'||!p.playing_time)return null;const method=mode==='projected'?p.playing_time.selected.replace(/_age$/,''):mode;return roundWorkloadVariant(p.playing_time.variants[method]||null)}
+function playerLoad(p){if(overrides.has(key(p)))return roundInnings(loads[role(p)]);const variant=workloadVariant(p),load=variant?(p.kind==='Hitter'?variant.AB:variant.IP):workloadMode()==='standard'||!DATA.playing_time_model?loads[role(p)]:null;return p.kind==='Pitcher'?roundInnings(load):load}
+function loadText(p){const n=playerLoad(p);return p.kind==='Pitcher'?formatInnings(n):finite(n)?n.toFixed(0):'—'}
 function contributionStandard(c,modelId){const mode=workloadMode(),id=modelId||modelHost?.skillGradesModel?.()||'original';return mode!=='standard'&&DATA.playing_time_standards?.[id]?.[mode]?.[c]||DATA.standards[c]}
 
 function rates(p,park){const r={...p.rates};if(park==='neutral'||(park==='current'&&!p.team_id&&!p.on_roster))return r;const id=park==='current'?p.team_id:park,f=p.parks[String(id)]||DATA.park_priors?.[p.kind]?.[String(id)];if(!f)return null;
@@ -90,7 +93,7 @@ function renderDetail(){const p=displayed.find(p=>key(p)===selected);if(!p){$('d
 let html=`<h2 class="playername">${esc(p.player_name)}</h2><div class="subline">${esc(p.team)} · ${esc(p.depth_role||p.assigned_role)}</div><div class="subline">Eligible positions: ${esc(eligiblePositions(p).join(' / ')||'No qualifying position')}</div><span class="tag">Prior 3 seasons: ${Math.round(p.mlb_history_sample).toLocaleString()} MLB ${p.kind==='Hitter'?'AB':'IP'}</span>`;
 html+=`<h2 style="margin-top:16px">Projected MLB-equivalent line</h2><p>${cats[p.kind].map(c=>esc(statText(category(scenario,c),c,load))).join(' · ')}${p.kind==='Pitcher'?' · '+(savesReady?finite(saveForecast(p,load).SV)?saveForecast(p,load).SV.toFixed(0)+' SV':'Unavailable SV':'Loading SV…'):''}</p><p class="note">At ${loadText(p)} ${p.kind==='Hitter'?'AB':'IP'} · ${!p.team_id&&$('park').value==='current'&&!p.on_roster?'Neutral park (no projected MLB role)':esc($('park').selectedOptions[0].text)}. ${workloadMode()==='standard'?'Standard-workload skill expectation.':'History-based playing-time estimate; actual availability and roster decisions may differ.'}</p>`;
 const pt=workloadVariant(p);
-if(pt){html+='<p class="note"><strong>Projected playing time:</strong> '+(p.kind==='Hitter'?pt.PA.toFixed(0)+' PA · '+pt.AB.toFixed(0)+' AB':pt.IP.toFixed(1)+' IP')+' · '+esc(pt.configuration.replace(/_/g,' '))+' · recency '+pt.weights.map(w=>(w*100).toFixed(1)+'%').join(' / ')+'.</p>';if(overrides.has(key(p)))html+='<p class="notice">Manual role override uses the standard '+loads[role(p)]+' IP workload. Restore the assigned role to use projected innings.</p>';if(!p.on_roster)html+='<p class="notice">No projected MLB roster role is assigned. This is a workload estimate from translated history, not a guaranteed call-up or MLB opportunity.</p>';}
+if(pt){html+='<p class="note"><strong>Projected playing time:</strong> '+(p.kind==='Hitter'?pt.PA.toFixed(0)+' PA · '+pt.AB.toFixed(0)+' AB':formatInnings(pt.IP)+' IP')+' · '+esc(pt.configuration.replace(/_/g,' '))+' · recency '+pt.weights.map(w=>(w*100).toFixed(1)+'%').join(' / ')+'.</p>';if(overrides.has(key(p)))html+='<p class="notice">Manual role override uses the standard '+formatInnings(loads[role(p)])+' IP workload. Restore the assigned role to use projected innings.</p>';if(!p.on_roster)html+='<p class="notice">No projected MLB roster role is assigned. This is a workload estimate from translated history, not a guaranteed call-up or MLB opportunity.</p>';}
 html+=modelComparison(p);
 if(standardizedModel)html+='<p class="note">These raw stats translate the standardized forecast through the assumed 2027 league environment, then apply the selected park. Each category uses its selected weights for the preceding three league means and spreads. In neutral park: rate = league mean + forecast SD × league SD; subtract for ERA and WHIP. Extreme rates may be bounded to keep a feasible stat line.</p>';
 if(standardizedModel&&p.rate_bounds_applied&&Object.values(p.rate_bounds_applied).some(Boolean))html+='<p class="notice">Display bounds were applied to the stat line. The grade retains the standardized skill forecast; park changes add their rate effect to that same forecast. A bounded displayed stat may therefore not convert back to the displayed grade.</p>';
@@ -143,7 +146,7 @@ if(DATA.playing_time_model){
  setText('quality-reference','Rate quality stays in the core model’s category SD units. Projected contribution uses HR/SB/K totals and volume-weighted excess hits, earned runs prevented, or baserunners prevented. Each core model and playing-time method has a fixed MLB-role benchmark; minor-league-only profiles and filters do not redefine it. Standard workload restores the prior 600 AB / role IP convention.');
  $('playing-time-explainer').hidden=false;
  const scopes={harmonic_positive:'Harmonic · nonzero MLB',all_players:'All prior players · includes zero MLB',zero_mlb:'Zero MLB only · NRMSE undefined'};
- let html='<p class="note">'+esc(pt.target_policy)+'</p><p class="note">'+esc(pt.weighting)+'</p><p class="note">'+esc(pt.metric_definition)+'</p><p class="note">'+esc(pt.selection)+'</p><p class="note">'+esc(pt.missing_policy)+'</p><p class="note">'+esc(pt.age)+'</p><p class="note">'+esc(pt.limitations)+'</p>';
+ let html='<p class="note">'+esc(pt.target_policy)+'</p>'+(pt.rounding_policy?'<p class="note">'+esc(pt.rounding_policy)+'</p>':'')+'<p class="note">'+esc(pt.weighting)+'</p><p class="note">'+esc(pt.metric_definition)+'</p><p class="note">'+esc(pt.selection)+'</p><p class="note">'+esc(pt.missing_policy)+'</p><p class="note">'+esc(pt.age)+'</p><p class="note">'+esc(pt.limitations)+'</p>';
  html+='<p class="note">Ballast full-season targets are 600 PA for hitters, 175 IP for SP, 60 IP for RP, and 100 IP for swingmen. The standard skill comparison continues to use 600 AB for hitters. Exact requested ballast = (sum of three actual translated workloads + weighted full-season shortfalls) / 3. Its actual-season coefficients are (1 − weight) / 3, so higher deficit recency gives lower actual-season influence. Ordered ballast = weighted workload + one-third of its full-season shortfall; this preserves newest > middle > oldest.</p><h2>Final playing-time choices</h2><div class="scroll"><table><thead><tr><th>Role</th><th>Method</th><th>Selected</th><th>n / n−1 / n−2</th><th>Age</th></tr></thead><tbody>';
  for(const [r,choices] of Object.entries(pt.by_method))for(const [method,name] of Object.entries(choices)){const c=pt.configurations[r][name];html+='<tr><td>'+r+'</td><td>'+esc(method.replace(/_/g,' '))+'</td><td>'+(pt.selected[r]===name?'Yes':'')+'</td><td>'+c.weights.map(w=>(w*100).toFixed(1)+'%').join(' / ')+'</td><td>'+(c.age?'Yes':'No')+'</td></tr>';}
  html+='</tbody></table></div><h2>Pooled chronological playing-time errors</h2><p class="note">Targets are actual unregressed MLB PA/IP. MAE and RMSE are PA for hitters and IP for pitchers. MASE and NRMSE are dimensionless. Positive bias overpredicts. Recency and age fits use earlier information; the displayed method/age choices use all completed folds and are not an independent holdout.</p>';

@@ -1,9 +1,11 @@
 // Saves are a separate opportunity forecast, shared by every skill model.
+import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const saveRoleOptions=[['auto','Auto'],['closer','Closer'],['committee','Closer committee'],['setup','Setup'],['other','Other relief'],['starter','Starter']];
 export const saveRoleLabel=role=>saveRoleOptions.find(([id])=>id===role)?.[1]||'Unassigned';
 export function projectSaves(data,mlbid,IP,override='auto'){
+ IP=roundInnings(IP);
  const record=data?.players?.[String(mlbid)],selected=saveRoleOptions.some(([id])=>id===override)?override:'auto';
  const role=selected==='auto'?record?.auto_role||'unassigned':selected,rate=record?.scenarios?.[role]?.saves_per_ip;
  const baselineRole=selected==='auto'?record?.baseline?.auto_role||'unassigned':selected,baselineRate=record?.baseline?.scenarios?.[baselineRole]?.saves_per_ip;

@@ -1,4 +1,5 @@
-import {projectSaves} from './saves.mjs?v=saves-actual-1';
+import {projectSaves} from './saves.mjs?v=workload-rounding-1';
+import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 export const fantasyRoles=['SP','RP','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
@@ -61,8 +62,8 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
   const hr=r.HR_rate,nh=r.H_rate-hr;r.HR_rate=hr*factor.HR;r.H_rate=r.HR_rate+nh*factor.NH;
   if(p.kind==='Pitcher'&&finite(r.ER_rate))r.ER_rate=Math.max(0,r.ER_rate+core.run_weights.HR*(r.HR_rate-hr)+core.run_weights.NH*(nh*factor.NH-nh));
  }
- const record=pt.players[entry.key],variant=method==='standard'?null:record?.variants[method==='projected'?record.selected.replace(/_age$/,''):method];
- const load=method==='standard'?(p.kind==='Hitter'?600:entry.role==='SP'?175:60):(p.kind==='Hitter'?variant?.AB:variant?.IP);
+ const record=pt.players[entry.key],variant=method==='standard'?null:roundWorkloadVariant(record?.variants[method==='projected'?record.selected.replace(/_age$/,''):method]);
+ const workload=method==='standard'?(p.kind==='Hitter'?600:entry.role==='SP'?175:60):(p.kind==='Hitter'?variant?.AB:variant?.IP),load=p.kind==='Pitcher'?roundInnings(workload):workload;
  const cat=(rates,c)=>({Power:rates.HR_rate,Speed:rates.SB_rate,AVG:rates.H_rate,K:rates.K_rate,ERA:finite(rates.ER_rate)?9*rates.ER_rate:null,WHIP:finite(rates.H_rate)&&finite(rates.BB_rate)?rates.H_rate+rates.BB_rate:null})[c];
  const categories=p.kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'],grades={},stats={};
  for(const c of categories){
