@@ -85,6 +85,18 @@ function renderCustomTools(){
  $('list-destination').value=compatible.some(item=>item.id===destination)?destination:'';
  $('send-selected').disabled=!selectedKeys.size||!$('list-destination').value;$('clear-selection').disabled=!selectedKeys.size;$('select-visible').disabled=!displayed.length;
  $('open-destination').hidden=!customLists[lastSentList];if(customLists[lastSentList])$('open-destination').textContent='Open '+customLists[lastSentList].name;
+ syncTableSelection();
+}
+function syncTableSelection(){
+ const checkbox=$('select-all-displayed');if(!checkbox)return;
+ const selected=displayed.filter(row=>selectedKeys.has(row.entry.key)).length;
+ checkbox.checked=displayed.length>0&&selected===displayed.length;
+ checkbox.indeterminate=selected>0&&selected<displayed.length;
+ checkbox.disabled=displayed.length===0;
+}
+function setDisplayedSelection(selected){
+ for(const row of displayed){if(selected)selectedKeys.add(row.entry.key);else selectedKeys.delete(row.entry.key);}
+ render();
 }
 function createList(){
  try{customLists=createCustomList(customLists,$('create-list-name').value,$('create-list-kind').value);rebuildCustomLists();renderListOptions();$('create-list-name').value='';render();persist('Custom list created. Check players and choose it as the destination.');}
@@ -136,11 +148,12 @@ function render(){
  displayed=sortRankingRows(displayed,sorting,$('sort-direction').value);
  processColumns=hitter?[['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:[['stuff','Pitch grade'],['SwStr','SwStr %']];const cats=hitter?['Power','Speed','AVG']:['K','ERA','WHIP'];
  columns=hitter?[['PA','PA',0],['AB','AB',0],['HR','HR',0],['SB','SB',0],['AVG','AVG',3]]:[['IP','IP',2],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]];
- $('head').innerHTML='<tr><th>Select</th><th class="player">Player</th><th>Rank / reorder</th><th>Team</th><th>RR role</th><th>FA year</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([,name])=>'<th>'+name+'</th>').join('')+cats.map(c=>'<th>'+c+' SD</th>').join('')+'<th>Sum SD</th>'+processColumns.map(([,label])=>'<th>'+label+'</th>').join('')+'</tr>';
+ $('head').innerHTML='<tr><th><label class="select-all-control" title="Select or deselect all displayed players"><input id="select-all-displayed" class="select-player" type="checkbox" data-select-all aria-label="Select all displayed players"><span>Select all</span></label></th><th class="player">Player</th><th>Rank / reorder</th><th>Team</th><th>RR role</th><th>FA year</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([,name])=>'<th>'+name+'</th>').join('')+cats.map(c=>'<th>'+c+' SD</th>').join('')+'<th>Sum SD</th>'+processColumns.map(([,label])=>'<th>'+label+'</th>').join('')+'</tr>';
  $('rows').innerHTML=displayed.map(({entry:p,rank,forecast:f},i)=>'<tr draggable="'+reordering+'" data-key="'+esc(p.key)+'"><td><input class="select-player" type="checkbox" data-select="'+esc(p.key)+'" aria-label="Select '+esc(p.name)+'"'+(selectedKeys.has(p.key)?' checked':'')+'></td><td class="player"><button type="button" class="exclude-player" data-exclude="'+esc(p.key)+'" aria-label="'+(customLists[role]?'Remove ':'Exclude ')+esc(p.name)+' from '+esc(listLabel(role))+'" title="'+(customLists[role]?'Remove from this custom list':'Exclude from this position list')+'">×</button>'+esc(p.name)+(p.profile?'':'<small>Projection unavailable</small>')+'</td><td><input aria-label="Rank for '+esc(p.name)+'" data-rank="'+esc(p.key)+'" type="number" min="1" max="'+orders[role].length+'" value="'+rank+'" '+(reordering?'':'disabled')+'><button data-move="up" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' up" '+(!reordering||i===0?'disabled':'')+'>↑</button><button data-move="down" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' down" '+(!reordering||i===displayed.length-1?'disabled':'')+'>↓</button></td><td>'+esc(p.team.replaceAll('-',' '))+'</td><td><a href="'+esc(p.source_url)+'" target="_blank" rel="noopener">'+esc(p.role==='Hitter'?(p.section==='mlb-bn'?'Platoon starter':'Lineup '+p.rr_role):p.rr_role)+'</a>'+(p.platoon?' · '+esc(p.platoon):'')+'</td>'+contractCell(p)+'<td>'+esc(p.positions.join(' / ')||p.role)+'</td>'+(!hitter?'<td>'+esc(pitcherHandLabel(p.mlbid))+'</td>'+savesRoleCell(p):'')+columns.map(([c,,d])=>statCell(f,c,d)).join('')+[...cats,'Sum'].map(c=>{const value=c==='Sum'?f.sum:f.grades[c];return '<td class="number '+(finite(value)?value>=0?'good':'bad':'')+'">'+fmt(value)+'</td>'}).join('')+processColumns.map(([field])=>'<td class="number">'+fmt(p.profile?.input_skills?.[field])+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="'+(11+columns.length+processColumns.length+(!hitter?2:0))+'">'+(customLists[role]&&!orders[role].length?'This custom list is empty. Select players from a position list and send them here.':'No matching players.')+'</td></tr>';
  $('count').textContent=displayed.length+' of '+orders[role].length+' players · '+listLabel(role)+' · '+(({recommended:'Recommended cutoffs',native:'Native sample regression',research:'Bayesian feature model',original:'Original live model'})[model]||model)+' · '+$('view').selectedOptions[0].text+(exclusions[role].size?' · '+exclusions[role].size+' excluded':'');
  renderCustomTools();
 }
+$('head').addEventListener('change',event=>{const checkbox=event.target.closest('input[data-select-all]');if(!checkbox||!displayed.length)return;setDisplayedSelection(checkbox.checked);$('select-all-displayed')?.focus();});
 $('rows').addEventListener('click',event=>{
  const excluded=event.target.closest('button[data-exclude]');if(excluded){excludePlayer(excluded.dataset.exclude);return;}
  const button=event.target.closest('button[data-move]');if(!button)return;
@@ -171,7 +184,7 @@ $('import').onchange=async event=>{try{
  }catch(error){$('status').textContent=error.message;}finally{event.target.value='';}};
 $('create-list').onclick=createList;$('send-selected').onclick=sendSelected;
 $('list-destination').addEventListener('change',renderCustomTools);
-$('select-visible').onclick=()=>{for(const row of displayed)selectedKeys.add(row.entry.key);render();};
+$('select-visible').onclick=()=>setDisplayedSelection(true);
 $('clear-selection').onclick=()=>{selectedKeys.clear();render();};
 $('open-destination').onclick=()=>enterList(lastSentList);
 $('rename-list').onclick=()=>{try{const id=$('role').value;customLists=renameCustomList(customLists,id,$('custom-list-name').value);renderListOptions(id);render();persist('Custom list renamed.');}catch(error){$('status').textContent=error.message;}};
