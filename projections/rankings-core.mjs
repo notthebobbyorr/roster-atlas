@@ -1,6 +1,6 @@
 import {projectSaves} from './saves.mjs?v=team-saves-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
-export const fantasyRoles=['SP','RP','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
+export const fantasyRoles=['SP','RP','All P','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
  const counts=new Map();for(const p of entries){const role=p.rr_role||'Unlisted';counts.set(role,(counts.get(role)||0)+1);}
@@ -9,7 +9,7 @@ export function rrRoleOptions(entries){
  return [...counts].sort(([a],[b])=>{const ai=priority.indexOf(a),bi=priority.indexOf(b);return ai>=0||bi>=0?(ai<0?99:ai)-(bi<0?99:bi):a.localeCompare(b,undefined,{numeric:true});}).map(([value,count])=>({value,label:label(value),count}));
 }
 export function listRoles(rr,positions){
- if(rr.kind==='Pitcher')return [rr.role];
+ if(rr.kind==='Pitcher')return [rr.role,'All P'];
  const roles=['C','1B','2B','3B','SS','OF'].filter(p=>positions.includes(p));
  if(positions.some(p=>['1B','3B'].includes(p)))roles.push('CI');
  if(positions.some(p=>['2B','SS'].includes(p)))roles.push('MI');
@@ -36,10 +36,10 @@ export function moveRank(order,key,index){
  const next=order.filter(id=>id!==key);next.splice(Math.max(0,Math.min(next.length,index)),0,key);return next;
 }
 export function readBackup(data,available){
- if(data?.kind!=='roster-atlas-starter-rankings'||data.version!==1||!data.orders||typeof data.orders!=='object')throw Error('This is not a starter-ranking backup.');
+ if(data?.kind!=='roster-atlas-starter-rankings'||![1,2].includes(data.version)||!data.orders||typeof data.orders!=='object')throw Error('This is not a starter-ranking backup.');
  const result={};
  for(const role of fantasyRoles){
-  const ids=data.orders[role];
+  const ids=role==='All P'&&data.version===1&&data.orders[role]==null?[]:data.orders[role];
   if(!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)throw Error('Invalid '+role+' ranking.');
   result[role]=reconcileOrder(ids,available[role]);
  }

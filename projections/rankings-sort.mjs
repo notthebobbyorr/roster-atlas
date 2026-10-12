@@ -2,7 +2,7 @@ import {compareFreeAgentYears} from './rankings-contracts.mjs?v=recommended-cont
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 export function rankingSortOptions(role){
- const pitcher=['SP','RP'].includes(role);
+ const pitcher=['SP','RP','All P'].includes(role);
  const totals=pitcher?[['IP','Innings (IP)'],['K','Strikeouts (K)'],['SV','Saves (SV)'],['ERA','ERA'],['WHIP','WHIP']]:[['PA','Plate appearances (PA)'],['AB','At bats (AB)'],['HR','Home runs (HR)'],['SB','Stolen bases (SB)'],['AVG','Batting average (AVG)']];
  const grades=pitcher?[['K','Strikeouts SD'],['ERA','ERA SD'],['WHIP','WHIP SD']]:[['Power','Power SD'],['Speed','Speed SD'],['AVG','AVG SD']];
  const inputs=pitcher?[['stuff','Stuff (pitch grade)'],['SwStr','SwStr %']]:[['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs expected']];

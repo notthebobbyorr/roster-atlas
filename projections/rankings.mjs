@@ -1,9 +1,10 @@
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=handedness-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=team-saves-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=custom-lists-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=rankings-sort-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=custom-lists-1';
+import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=custom-lists-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=x=>typeof x==='number'&&Number.isFinite(x),fmt=(x,d=1)=>finite(x)?x.toFixed(d):'—';
@@ -16,36 +17,88 @@ try{
  [core,pt,contracts,saves]=await Promise.all([parent.skillGradesLoad(),parent.skillGradesWorkloadsLoad(),parent.projectionContractsLoad(),parent.projectionSavesLoad?.().catch(error=>{savesError=error.message;return null})||null]);
  if(owner!==parent.projectionRankingOwner)throw Error('Session changed. Sign in again.');
 }catch(error){$('status').textContent=error.message;throw error;}
-const model=parent.skillGradesModel(),lists=attachContracts(compileLists(starterRoles,core.players,parent.projectionEligiblePositions),contracts,core.projection_season||2027);
+const model=parent.skillGradesModel(),positionLists=attachContracts(compileLists(starterRoles,core.players,parent.projectionEligiblePositions),contracts,core.projection_season||2027);
+const lists={...positionLists},entries=uniqueRankingEntries(positionLists),entryByKey=new Map(entries.map(p=>[p.key,p]));
 const available=Object.fromEntries(fantasyRoles.map(role=>[role,lists[role].map(p=>p.key)]));
 const storageKey='ra-starter-rankings:v1:'+owner;
 let saved=null;
 try{const text=localStorage.getItem(storageKey);if(text)saved=JSON.parse(text);}catch{$('status').textContent='Saved lists could not be read. Export a backup after editing; device storage may be unavailable.';}
+let customLists=normalizeCustomLists(saved?.customLists,entries);
 const initial=p=>projection(core,pt,p,{model}).sum;
 const orders=Object.fromEntries(fantasyRoles.map(role=>[role,reconcileOrder(saved?.orders?.[role],[...lists[role]].sort((a,b)=>{const x=initial(a),y=initial(b);return finite(x)&&finite(y)?y-x||a.name.localeCompare(b.name):finite(x)?-1:finite(y)?1:a.name.localeCompare(b.name)}).map(p=>p.key))]));
-$('role').innerHTML=fantasyRoles.map(role=>'<option>'+role+'</option>').join('');
 const rrSelections=Object.fromEntries(fantasyRoles.map(role=>{const values=rrRoleOptions(lists[role]).map(o=>o.value),previous=saved?.rrRoles?.[role];return [role,new Set((Array.isArray(previous)?previous:values).filter(v=>values.includes(v)))];}));
 const exclusions=Object.fromEntries(fantasyRoles.map(role=>[role,new Set((Array.isArray(saved?.excluded?.[role])?saved.excluded[role]:[]).filter(id=>available[role].includes(id)))]));
+rebuildCustomLists(saved||{});renderListOptions(saved?.preferences?.role);
 $('team').innerHTML+=[...new Set(starterRoles.players.map(p=>p.team))].sort().map(t=>'<option value="'+esc(t)+'">'+esc(t.replaceAll('-',' '))+'</option>').join('');
 for(const id of ['role','workload','view','park','search','team','throws'])if(saved?.preferences?.[id]!=null)$(id).value=saved.preferences[id];
 if(!['','L','R','S','unknown'].includes($('throws').value))$('throws').value='';
-if(!fantasyRoles.includes($('role').value))$('role').value='SP';
-const restoredSort=normalizeRankingSort($('role').value,saved?.preferences?.sort,saved?.preferences?.['sort-direction']);
+if(!Object.hasOwn(lists,$('role').value))$('role').value='SP';
+const restoredSort=normalizeRankingSort(sortRole(),saved?.preferences?.sort,saved?.preferences?.['sort-direction']);
 renderSortOptions(restoredSort.value,restoredSort.direction);
-$('source').innerHTML='2027 projections · RosterResource roles retrieved '+esc(new Date(starterRoles.retrieved_at).toLocaleDateString('en-US',{timeZone:'America/New_York'}))+' · <a href="'+esc(starterRoles.source)+'" target="_blank" rel="noopener">RosterResource roster grid</a>. New lists start in projected contribution Sum order; your edits then keep their own order.';
+$('source').innerHTML='2027 projections · RosterResource roles retrieved '+esc(new Date(starterRoles.retrieved_at).toLocaleDateString('en-US',{timeZone:'America/New_York'}))+' · <a href="'+esc(starterRoles.source)+'" target="_blank" rel="noopener">RosterResource roster grid</a>. New position lists start in projected contribution Sum order. Custom lists start in the order players are added; each list saves your edits.';
 $('policy').textContent=parent.projectionPositionNote(2026)+' Pitcher lists follow RR rotation/bullpen roles, independently of the model’s workload classification.';
 $('contract-policy').textContent='FA year is the first season of free agency: 2027 means after 2026; 2028 means after the projected 2027 season. * marks conditional option or opt-out scenarios. Source-listed service-time control years may change with service time. No control end is inferred when absent. Payroll contracts retrieved '+contracts.as_of+'. FA sorting uses the earliest listed scenario; unknown years stay last. Your saved ranking order is preserved.';
 if($('saves-methodology'))$('saves-methodology').innerHTML=savesError?'<p>'+esc(savesError)+'</p>':savesExplainer(saves);
-let displayed=[],columns=[],processColumns=[],dragged=null;
+let displayed=[],columns=[],processColumns=[],dragged=null,selectedKeys=new Set(),selectionKind=listKind(),lastSentList=null;
+$('create-list-kind').value=listKind();
 function persist(message='Saved on this device · export a backup to transfer lists.'){
  if(parent.projectionRankingOwner!==owner)throw Error('Session changed. Sign in again.');
- const preferences=Object.fromEntries(['role','workload','view','park','search','team','throws','sort','sort-direction'].map(id=>[id,$(id).value]));
- try{localStorage.setItem(storageKey,JSON.stringify({orders,preferences,rrRoles:Object.fromEntries(fantasyRoles.map(role=>[role,[...rrSelections[role]]])),excluded:Object.fromEntries(fantasyRoles.map(role=>[role,[...exclusions[role]]])),updated_at:new Date().toISOString()}));$('status').textContent=message;}
+ syncCustomOrders();
+ const preferences=readPreferences();
+ try{localStorage.setItem(storageKey,JSON.stringify({orders,preferences,customLists,rrRoles:serializeSets(rrSelections),excluded:serializeSets(exclusions),updated_at:new Date().toISOString()}));$('status').textContent=message;}
  catch{$('status').textContent='Device storage unavailable. Your changes are in this page only; export a JSON backup before leaving.';}
+}
+function listKind(id=$('role').value){return customLists[id]?.kind||(['SP','RP','All P'].includes(id)?'Pitcher':'Hitter');}
+function listLabel(id=$('role').value){return customLists[id]?.name||id;}
+function sortRole(){return listKind()==='Pitcher'?'All P':'UT-only';}
+function serializeSets(collection){return Object.fromEntries(Object.keys(lists).map(id=>[id,[...(collection[id]||[])]]));}
+function readPreferences(){return Object.fromEntries(['role','workload','view','park','search','team','throws','sort','sort-direction'].map(id=>[id,$(id).value]));}
+function syncCustomOrders(){for(const id of Object.keys(customLists))customLists[id]={...customLists[id],keys:[...orders[id]]};}
+function rebuildCustomLists(seed={}){
+ const active=new Set([...fantasyRoles,...Object.keys(customLists)]);
+ for(const id of Object.keys(lists))if(!active.has(id))for(const collection of [lists,available,orders,rrSelections,exclusions])delete collection[id];
+ for(const [id,list] of Object.entries(customLists)){
+  const previousCodes=new Set(rrRoleOptions(lists[id]||[]).map(o=>o.value)),rows=customListEntries(list,entries),codes=rrRoleOptions(rows).map(o=>o.value),existing=rrSelections[id];
+  lists[id]=rows;available[id]=rows.map(p=>p.key);orders[id]=reconcileOrder(seed.orders?.[id]||orders[id]||list.keys,available[id]);
+  const prior=existing?[...existing]:Array.isArray(seed.rrRoles?.[id])?seed.rrRoles[id]:codes;
+  rrSelections[id]=new Set(codes.filter(code=>prior.includes(code)||(existing&&!previousCodes.has(code))));
+  exclusions[id]=new Set([...(exclusions[id]||seed.excluded?.[id]||[])].filter(key=>available[id].includes(key)));
+ }
+ syncCustomOrders();
+}
+function renderListOptions(value=$('role').value){
+ $('role').innerHTML='<optgroup label="Positions">'+fantasyRoles.map(id=>'<option value="'+esc(id)+'">'+esc(id)+'</option>').join('')+'</optgroup>'+(Object.keys(customLists).length?'<optgroup label="Custom lists">'+Object.values(customLists).map(list=>'<option value="'+esc(list.id)+'">'+esc(list.name)+' · '+(list.kind==='Pitcher'?'Pitchers':'Hitters')+'</option>').join('')+'</optgroup>':'');
+ $('role').value=Object.hasOwn(lists,value)?value:'SP';
+}
+function enterList(id){
+ if(!Object.hasOwn(lists,id))return;
+ const kind=listKind(id);if(kind!==selectionKind)selectedKeys.clear();selectionKind=kind;$('role').value=id;$('create-list-kind').value=kind;
+ if(customLists[id]){for(const control of ['search','team','throws'])$(control).value='';$('sort').value='rank';}
+ dragged=null;render();persist();
+}
+function renderCustomTools(){
+ const id=$('role').value,list=customLists[id],destination=$('list-destination').value,compatible=Object.values(customLists).filter(item=>item.kind===selectionKind);
+ $('custom-controls').hidden=!list;if(list)$('custom-list-name').value=list.name;
+ $('list-membership-policy').textContent=list?'Click × to remove a player from this custom list. Other lists and projections stay unchanged. Add them again from a position list whenever needed.':'Click × beside a player to exclude them from this position list. Exclusions apply across its filters and all models; other lists and projections stay unchanged. Restore players below. Rank numbers retain their place in the complete list.';
+ $('selected-count').textContent=selectedKeys.size+' '+(selectionKind==='Pitcher'?'pitcher':'hitter')+(selectedKeys.size===1?'':'s')+' selected';
+ $('list-destination').innerHTML='<option value="">Choose a custom list</option>'+compatible.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.name)+'</option>').join('');
+ $('list-destination').value=compatible.some(item=>item.id===destination)?destination:'';
+ $('send-selected').disabled=!selectedKeys.size||!$('list-destination').value;$('clear-selection').disabled=!selectedKeys.size;$('select-visible').disabled=!displayed.length;
+ $('open-destination').hidden=!customLists[lastSentList];if(customLists[lastSentList])$('open-destination').textContent='Open '+customLists[lastSentList].name;
+}
+function createList(){
+ try{customLists=createCustomList(customLists,$('create-list-name').value,$('create-list-kind').value);rebuildCustomLists();renderListOptions();$('create-list-name').value='';render();persist('Custom list created. Check players and choose it as the destination.');}
+ catch(error){$('status').textContent=error.message;}
+}
+function sendSelected(){
+ try{
+  const id=$('list-destination').value,list=customLists[id];if(!list||!selectedKeys.size)throw Error('Select players and choose a destination list.');
+  const next=addCustomMembers(list,[...selectedKeys],entries),added=next.keys.length-list.keys.length;customLists={...customLists,[id]:next};rebuildCustomLists();selectedKeys.clear();lastSentList=id;render();persist('Added '+added+' player'+(added===1?'':'s')+' to '+next.name+'. Your current list is unchanged.');
+ }catch(error){$('status').textContent=error.message;}
 }
 function parameters(p){return {model,method:$('workload').value,view:$('view').value,park:$('park').value,saves,savesRole:parent.projectionSavesRole?.(p?.mlbid)||'auto',savesOverrides:parent.projectionSavesRoleOverrides?.()||{}};}
 function change(key,index){const role=$('role').value;orders[role]=moveRank(orders[role],key,index);persist();render();}
-function excludePlayer(key){const role=$('role').value;if(!available[role].includes(key))return;exclusions[role].add(key);persist('Player excluded from '+role+' on this device. Restore them under Excluded players.');render();}
+function excludePlayer(key){const role=$('role').value;if(!available[role].includes(key))return;selectedKeys.delete(key);if(customLists[role]){customLists={...customLists,[role]:removeCustomMember(customLists[role],key)};rebuildCustomLists();persist('Player removed from '+listLabel(role)+'. Other lists are unchanged.');}else{exclusions[role].add(key);persist('Player excluded from '+role+' on this device. Restore them under Excluded players.');}render();}
 function restorePlayer(key){exclusions[$('role').value].delete(key);persist('Player restored to this position list.');render();}
 function renderExcluded(){const role=$('role').value,removed=lists[role].filter(p=>exclusions[role].has(p.key));$('excluded-count').textContent=removed.length;$('excluded-panel').hidden=removed.length===0;$('excluded-rows').innerHTML=removed.map(p=>'<div><span>'+esc(p.name)+' · '+esc(p.team.replaceAll('-',' '))+'</span> <button type="button" data-restore="'+esc(p.key)+'">Restore</button></div>').join('');$('restore-all').disabled=removed.length===0;}
 function renderRRRoles(){
@@ -67,8 +120,8 @@ function statCell(f,c,d){
  return '<td class="number"'+title+'>'+value+'</td>';
 }
 function renderSortOptions(value=$('sort').value,direction=$('sort-direction').value){
- const selected=normalizeRankingSort($('role').value,value,direction);
- $('sort').innerHTML=rankingSortOptions($('role').value).map(option=>'<option value="'+esc(option.value)+'">'+esc(option.label)+'</option>').join('');
+ const selected=normalizeRankingSort(sortRole(),value,direction);
+ $('sort').innerHTML=rankingSortOptions(sortRole()).map(option=>'<option value="'+esc(option.value)+'">'+esc(option.label)+'</option>').join('');
  $('sort').value=selected.value;$('sort-direction').value=selected.direction;
  $('sort-direction').disabled=selected.value==='rank';
 }
@@ -76,16 +129,17 @@ function render(){
  renderSortOptions();
  renderRRRoles();
  renderExcluded();
- const role=$('role').value,entries=new Map(lists[role].map(p=>[p.key,p])),query=$('search').value.trim().toLowerCase(),team=$('team').value,hand=$('throws').value,hitter=!['SP','RP'].includes(role);
+ const role=$('role').value,entries=new Map(lists[role].map(p=>[p.key,p])),query=$('search').value.trim().toLowerCase(),team=$('team').value,hand=$('throws').value,hitter=listKind(role)==='Hitter';
  $('throws-filter').hidden=hitter;
- displayed=orders[role].map((key,index)=>({entry:entries.get(key),rank:index+1})).filter(({entry:p})=>!exclusions[role].has(p.key)&&rrSelections[role].has(p.rr_role||'Unlisted')&&(!team||p.team===team)&&(hitter||!hand||(pitcherHand(p.mlbid)||'unknown')===hand)&&(!query||`${p.name} ${p.mlbid||''}`.toLowerCase().includes(query))).map(row=>({...row,forecast:projection(core,pt,row.entry,parameters(row.entry))}));
+ displayed=orders[role].map((key,index)=>({entry:entries.get(key),rank:index+1})).filter(({entry:p})=>!exclusions[role].has(p.key)&&rrSelections[role].has(p.rr_role||'Unlisted')&&(!team||p.team===team)&&(hitter||!hand||(pitcherHand(p.mlbid)??'unknown')===hand)&&(!query||`${p.name} ${p.mlbid||''}`.toLowerCase().includes(query))).map(row=>({...row,forecast:projection(core,pt,row.entry,parameters(row.entry))}));
  const sorting=$('sort').value,reordering=sorting==='rank';
  displayed=sortRankingRows(displayed,sorting,$('sort-direction').value);
  processColumns=hitter?[['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:[['stuff','Pitch grade'],['SwStr','SwStr %']];const cats=hitter?['Power','Speed','AVG']:['K','ERA','WHIP'];
  columns=hitter?[['PA','PA',0],['AB','AB',0],['HR','HR',0],['SB','SB',0],['AVG','AVG',3]]:[['IP','IP',2],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]];
- $('head').innerHTML='<tr><th class="player">Player</th><th>Rank / reorder</th><th>Team</th><th>RR role</th><th>FA year</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([,name])=>'<th>'+name+'</th>').join('')+cats.map(c=>'<th>'+c+' SD</th>').join('')+'<th>Sum SD</th>'+processColumns.map(([,label])=>'<th>'+label+'</th>').join('')+'</tr>';
- $('rows').innerHTML=displayed.map(({entry:p,rank,forecast:f},i)=>'<tr draggable="'+reordering+'" data-key="'+esc(p.key)+'"><td class="player"><button type="button" class="exclude-player" data-exclude="'+esc(p.key)+'" aria-label="Exclude '+esc(p.name)+' from '+esc(role)+'" title="Exclude from this position list">×</button>'+esc(p.name)+(p.profile?'':'<small>Projection unavailable</small>')+'</td><td><input aria-label="Rank for '+esc(p.name)+'" data-rank="'+esc(p.key)+'" type="number" min="1" max="'+orders[role].length+'" value="'+rank+'" '+(reordering?'':'disabled')+'><button data-move="up" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' up" '+(!reordering||i===0?'disabled':'')+'>↑</button><button data-move="down" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' down" '+(!reordering||i===displayed.length-1?'disabled':'')+'>↓</button></td><td>'+esc(p.team.replaceAll('-',' '))+'</td><td><a href="'+esc(p.source_url)+'" target="_blank" rel="noopener">'+esc(p.role==='Hitter'?(p.section==='mlb-bn'?'Platoon starter':'Lineup '+p.rr_role):p.rr_role)+'</a>'+(p.platoon?' · '+esc(p.platoon):'')+'</td>'+contractCell(p)+'<td>'+esc(p.positions.join(' / ')||p.role)+'</td>'+(!hitter?'<td>'+esc(pitcherHandLabel(p.mlbid))+'</td>'+savesRoleCell(p):'')+columns.map(([c,,d])=>statCell(f,c,d)).join('')+[...cats,'Sum'].map(c=>{const value=c==='Sum'?f.sum:f.grades[c];return '<td class="number '+(finite(value)?value>=0?'good':'bad':'')+'">'+fmt(value)+'</td>'}).join('')+processColumns.map(([field])=>'<td class="number">'+fmt(p.profile?.input_skills?.[field])+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="'+(10+columns.length+processColumns.length+(!hitter?2:0))+'">No matching players.</td></tr>';
- $('count').textContent=displayed.length+' of '+orders[role].length+' players · '+role+' · '+(({recommended:'Recommended cutoffs',native:'Native sample regression',research:'Bayesian feature model',original:'Original live model'})[model]||model)+' · '+$('view').selectedOptions[0].text+(exclusions[role].size?' · '+exclusions[role].size+' excluded':'');
+ $('head').innerHTML='<tr><th>Select</th><th class="player">Player</th><th>Rank / reorder</th><th>Team</th><th>RR role</th><th>FA year</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([,name])=>'<th>'+name+'</th>').join('')+cats.map(c=>'<th>'+c+' SD</th>').join('')+'<th>Sum SD</th>'+processColumns.map(([,label])=>'<th>'+label+'</th>').join('')+'</tr>';
+ $('rows').innerHTML=displayed.map(({entry:p,rank,forecast:f},i)=>'<tr draggable="'+reordering+'" data-key="'+esc(p.key)+'"><td><input class="select-player" type="checkbox" data-select="'+esc(p.key)+'" aria-label="Select '+esc(p.name)+'"'+(selectedKeys.has(p.key)?' checked':'')+'></td><td class="player"><button type="button" class="exclude-player" data-exclude="'+esc(p.key)+'" aria-label="'+(customLists[role]?'Remove ':'Exclude ')+esc(p.name)+' from '+esc(listLabel(role))+'" title="'+(customLists[role]?'Remove from this custom list':'Exclude from this position list')+'">×</button>'+esc(p.name)+(p.profile?'':'<small>Projection unavailable</small>')+'</td><td><input aria-label="Rank for '+esc(p.name)+'" data-rank="'+esc(p.key)+'" type="number" min="1" max="'+orders[role].length+'" value="'+rank+'" '+(reordering?'':'disabled')+'><button data-move="up" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' up" '+(!reordering||i===0?'disabled':'')+'>↑</button><button data-move="down" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' down" '+(!reordering||i===displayed.length-1?'disabled':'')+'>↓</button></td><td>'+esc(p.team.replaceAll('-',' '))+'</td><td><a href="'+esc(p.source_url)+'" target="_blank" rel="noopener">'+esc(p.role==='Hitter'?(p.section==='mlb-bn'?'Platoon starter':'Lineup '+p.rr_role):p.rr_role)+'</a>'+(p.platoon?' · '+esc(p.platoon):'')+'</td>'+contractCell(p)+'<td>'+esc(p.positions.join(' / ')||p.role)+'</td>'+(!hitter?'<td>'+esc(pitcherHandLabel(p.mlbid))+'</td>'+savesRoleCell(p):'')+columns.map(([c,,d])=>statCell(f,c,d)).join('')+[...cats,'Sum'].map(c=>{const value=c==='Sum'?f.sum:f.grades[c];return '<td class="number '+(finite(value)?value>=0?'good':'bad':'')+'">'+fmt(value)+'</td>'}).join('')+processColumns.map(([field])=>'<td class="number">'+fmt(p.profile?.input_skills?.[field])+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="'+(11+columns.length+processColumns.length+(!hitter?2:0))+'">'+(customLists[role]&&!orders[role].length?'This custom list is empty. Select players from a position list and send them here.':'No matching players.')+'</td></tr>';
+ $('count').textContent=displayed.length+' of '+orders[role].length+' players · '+listLabel(role)+' · '+(({recommended:'Recommended cutoffs',native:'Native sample regression',research:'Bayesian feature model',original:'Original live model'})[model]||model)+' · '+$('view').selectedOptions[0].text+(exclusions[role].size?' · '+exclusions[role].size+' excluded':'');
+ renderCustomTools();
 }
 $('rows').addEventListener('click',event=>{
  const excluded=event.target.closest('button[data-exclude]');if(excluded){excludePlayer(excluded.dataset.exclude);return;}
@@ -93,7 +147,7 @@ $('rows').addEventListener('click',event=>{
  const index=displayed.findIndex(row=>row.entry.key===button.dataset.key),target=displayed[index+(button.dataset.move==='up'?-1:1)];
  if(target)change(button.dataset.key,target.rank-1);
 });
-$('rows').addEventListener('change',event=>{const scenario=event.target.closest('select[data-save-role]');if(scenario){parent.projectionSetSavesRole(scenario.dataset.saveRole,scenario.value);render();return;}const input=event.target.closest('input[data-rank]');if(!input)return;const rank=Number(input.value);if(!Number.isInteger(rank)||rank<1||rank>orders[$('role').value].length){$('status').textContent='Enter a rank within this list.';render();return;}change(input.dataset.rank,rank-1);});
+$('rows').addEventListener('change',event=>{const checkbox=event.target.closest('input[data-select]');if(checkbox){const key=checkbox.dataset.select;if(entryByKey.get(key)?.kind!==selectionKind)return;if(checkbox.checked)selectedKeys.add(key);else selectedKeys.delete(key);renderCustomTools();return;}const scenario=event.target.closest('select[data-save-role]');if(scenario){parent.projectionSetSavesRole(scenario.dataset.saveRole,scenario.value);render();return;}const input=event.target.closest('input[data-rank]');if(!input)return;const rank=Number(input.value);if(!Number.isInteger(rank)||rank<1||rank>orders[$('role').value].length){$('status').textContent='Enter a rank within this list.';render();return;}change(input.dataset.rank,rank-1);});
 $('rows').addEventListener('dragstart',event=>{if($('sort').value!=='rank'){event.preventDefault();return;}const row=event.target.closest('tr[data-key]');if(!row)return;dragged=row.dataset.key;event.dataTransfer.setData('text/plain',dragged);event.dataTransfer.effectAllowed='move';});
 $('rows').addEventListener('dragover',event=>{if(event.target.closest('tr[data-key]'))event.preventDefault();});
 $('rows').addEventListener('drop',event=>{event.preventDefault();if($('sort').value!=='rank'){dragged=null;return;}const row=event.target.closest('tr[data-key]');if(row&&dragged&&row.dataset.key!==dragged)change(dragged,orders[$('role').value].indexOf(row.dataset.key));dragged=null;});
@@ -103,15 +157,30 @@ $('restore-all').onclick=()=>{exclusions[$('role').value].clear();persist('All e
 $('rr-checks').addEventListener('change',event=>{const input=event.target,code=input.dataset?.rrRole;if(!code||!rrRoleOptions(lists[$('role').value]).some(o=>o.value===code))return;const selected=rrSelections[$('role').value];if(input.checked)selected.add(code);else selected.delete(code);persist();render();document.querySelector?.('input[data-rr-role="'+code+'"]')?.focus();});
 $('rr-all').onclick=()=>{rrSelections[$('role').value]=new Set(rrRoleOptions(lists[$('role').value]).map(o=>o.value));persist();render();};
 $('rr-none').onclick=()=>{rrSelections[$('role').value]=new Set();persist();render();};
-for(const id of ['role','search','team','throws','workload','view','park','sort','sort-direction'])$(id).addEventListener(id==='search'?'input':'change',()=>{dragged=null;render();persist();});
+$('role').addEventListener('change',()=>enterList($('role').value));
+for(const id of ['search','team','throws','workload','view','park','sort','sort-direction'])$(id).addEventListener(id==='search'?'input':'change',()=>{dragged=null;render();persist();});
 function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-$('backup').onclick=()=>download('starter-rankings.json',JSON.stringify({kind:'roster-atlas-starter-rankings',version:1,source_retrieved_at:starterRoles.retrieved_at,orders,excluded:Object.fromEntries(fantasyRoles.map(role=>[role,[...exclusions[role]]]))},null,2),'application/json');
-$('import').onchange=async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>2_000_000)throw Error('Ranking backup is too large.');const data=JSON.parse(await file.text()),imported=readBackup(data,available),removed=readExclusions(data,available);Object.assign(orders,imported);for(const role of fantasyRoles)exclusions[role]=new Set(removed[role]);persist('Imported lists and saved on this device. Inactive players were removed; new starters appended.');render();}catch(error){$('status').textContent=error.message;}finally{event.target.value='';}};
+$('backup').onclick=()=>{syncCustomOrders();download('starter-rankings.json',JSON.stringify({kind:'roster-atlas-starter-rankings',version:2,source_retrieved_at:starterRoles.retrieved_at,orders,customLists,excluded:serializeSets(exclusions),rrRoles:serializeSets(rrSelections),preferences:readPreferences()},null,2),'application/json');};
+$('import').onchange=async event=>{try{
+ const file=event.target.files[0];if(!file)return;if(file.size>2_000_000)throw Error('Ranking backup is too large.');
+ const data=JSON.parse(await file.text()),imported=readBackup(data,available),removed=readExclusions(data,available),nextCustoms=data.version===2?readCustomLists(data,entries):customLists;
+ if(data.version===2)for(const [id,list] of Object.entries(nextCustoms)){const keys=data.excluded?.[id]||[];if(!Array.isArray(keys)||keys.some(key=>typeof key!=='string')||new Set(keys).size!==keys.length)throw Error('Invalid custom list exclusions.');}
+ Object.assign(orders,imported);for(const role of fantasyRoles)exclusions[role]=new Set(removed[role]);
+ if(data.version===2){for(const id of Object.keys(customLists)){delete lists[id];delete orders[id];delete exclusions[id];delete rrSelections[id];delete available[id];}customLists=nextCustoms;rebuildCustomLists({...data,orders:{}});}
+ renderListOptions();selectedKeys.clear();selectionKind=listKind();$('create-list-kind').value=selectionKind;render();persist('Imported lists and saved on this device. Inactive players were removed; new starters appended to position lists.');
+ }catch(error){$('status').textContent=error.message;}finally{event.target.value='';}};
+$('create-list').onclick=createList;$('send-selected').onclick=sendSelected;
+$('list-destination').addEventListener('change',renderCustomTools);
+$('select-visible').onclick=()=>{for(const row of displayed)selectedKeys.add(row.entry.key);render();};
+$('clear-selection').onclick=()=>{selectedKeys.clear();render();};
+$('open-destination').onclick=()=>enterList(lastSentList);
+$('rename-list').onclick=()=>{try{const id=$('role').value;customLists=renameCustomList(customLists,id,$('custom-list-name').value);renderListOptions(id);render();persist('Custom list renamed.');}catch(error){$('status').textContent=error.message;}};
+$('delete-list').onclick=()=>{const id=$('role').value,list=customLists[id];if(!list||!window.confirm('Delete "'+list.name+'"? Players and other lists will stay unchanged.'))return;const next={...customLists};delete next[id];customLists=next;rebuildCustomLists();renderListOptions();for(const control of ['search','team','throws'])$(control).value='';enterList(list.kind==='Pitcher'?'All P':'UT-only');persist('Custom list deleted.');};
 $('export').onclick=()=>{
- const cats=['SP','RP'].includes($('role').value)?['K','ERA','WHIP']:['Power','Speed','AVG'];
- const rows=[['Rank','Player','MLB ID','Team','RR role','FA year (first FA season)','FA status','Earliest FA scenario','FA if options declined','FA if options exercised','Earliest opt-out FA year','Contract options','FA control notes','FA source','FA retrieved at','Eligibility',...(['SP','RP'].includes($('role').value)?['Throws']:[]),'Model','Playing time','Park','Grade view','Saves role scenario',...columns.map(([,label])=>label),...cats.map(c=>c+' SD'),'Sum SD',...processColumns.map(([,label])=>label)],
+ const cats=listKind()==='Pitcher'?['K','ERA','WHIP']:['Power','Speed','AVG'];
+ const rows=[['Rank','Player','MLB ID','Team','RR role','FA year (first FA season)','FA status','Earliest FA scenario','FA if options declined','FA if options exercised','Earliest opt-out FA year','Contract options','FA control notes','FA source','FA retrieved at','Eligibility',...(listKind()==='Pitcher'?['Throws']:[]),'Model','Playing time','Park','Grade view','Saves role scenario',...columns.map(([,label])=>label),...cats.map(c=>c+' SD'),'Sum SD',...processColumns.map(([,label])=>label)],
  ...displayed.map(({entry:p,rank,forecast:f})=>[rank,p.name,p.mlbid,p.team,p.rr_role,p.contractInfo.listed??'',p.contractInfo.status,p.contractInfo.earliest??'',p.contractInfo.declined??'',p.contractInfo.exercised??'',p.contractInfo.optOut??'',p.contract?.contract_options??'',p.contract?.control_notes??'',p.contractInfo.sourceUrl??'',p.contract?.retrieved_at??'',p.positions.join('/'),...(p.kind==='Pitcher'?[pitcherHandLabel(p.mlbid)]:[]),model,$('workload').value,$('park').value,$('view').value,p.kind==='Pitcher'?f.saves?.role||'unassigned':'',...columns.map(([c])=>f[c]??f.stats[c]??''),...cats.map(c=>f.grades[c]??''),f.sum??'',...processColumns.map(([field])=>p.profile?.input_skills?.[field]??'')])];
- download('starter-rankings-'+$('role').value+'.csv',rows.map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');
+ download('starter-rankings-'+listLabel().replace(/[^A-Za-z0-9_-]+/g,'-')+'.csv',rows.map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');
 };
 render();
 
