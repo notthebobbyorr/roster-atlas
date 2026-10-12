@@ -35,7 +35,7 @@ function roundInnings(n){return modelHost?.projectionRoundInnings?modelHost.proj
 function formatInnings(n){if(modelHost?.projectionFormatInnings)return modelHost.projectionFormatInnings(n);const rounded=roundInnings(n);return finite(rounded)?Number.isInteger(rounded)?String(rounded):rounded.toFixed(2):'—'}
 function roundWorkloadVariant(variant){if(modelHost?.projectionRoundWorkloadVariant)return modelHost.projectionRoundWorkloadVariant(variant);if(!variant)return null;const rounded={...variant};if(finite(variant.PA)){rounded.PA=Math.round(variant.PA);if(finite(variant.AB))rounded.AB=variant.PA>0?rounded.PA*variant.AB/variant.PA:0;}if(finite(variant.IP))rounded.IP=roundInnings(variant.IP);return rounded}
 let comparisonData=null,comparisonError='',savesData=null,savesError='',savesReady=!modelHost?.projectionSavesLoad;
-function saveForecast(p,IP){return modelHost?.projectionSaveForecast?.(savesData,p.mlbid,IP)||{SV:null,role:'unassigned'}}
+function saveForecast(p,IP){return modelHost?.projectionSaveForecast?.(savesData,p.mlbid,IP,workloadMode())||{SV:null,role:'unassigned'}}
 function renderSavesModel(){if($('saves-methodology'))$('saves-methodology').innerHTML=savesError?'<p class="notice">'+esc(savesError)+'</p>':modelHost?.projectionSavesExplainer?.(savesData)||'<p class="note">Saves projections are unavailable in this snapshot.</p>'}
 function rememberModelState(){if(modelHost?.skillGradesModel)modelHost.skillGradesState={selected,page,overrides:[...overrides],filters:Object.fromEntries(['kind','population','park','view','sort','order','search','workload','position'].map(id=>[id,$(id)?.value||'standard']))};}
 function modelComparison(p){
@@ -166,7 +166,7 @@ document.addEventListener('click',event=>{
  const link=event.target.closest('a[href]');
  if(!link)return;
  const path=link.getAttribute('href');
- if(['REPORT.md','player_grades.csv','manifest.json','playing_time/REPORT.md','playing_time/season_errors.csv','playing_time/overall_errors.csv','playing_time/forecast_totals.csv','saves/REPORT.md','saves/season_errors.csv','saves/overall_errors.csv'].includes(path)){
+ if(['REPORT.md','player_grades.csv','manifest.json','playing_time/REPORT.md','playing_time/season_errors.csv','playing_time/overall_errors.csv','playing_time/forecast_totals.csv','saves/REPORT.md','saves/season_errors.csv','saves/overall_errors.csv','saves/team_budgets.csv','saves/team_season_errors.csv','saves/team_overall_errors.csv','saves/team_allocations_2027.csv','saves/forecasts_2027.csv'].includes(path)){
   event.preventDefault();window.parent.skillGradesDownload(path).catch(error=>alert(error.message));
  }
 });

@@ -3,9 +3,9 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import * as skillRegistry from './skill-models.mjs?v=workload-rounding-1';
-import * as savesRegistry from './saves-snapshot.mjs?v=workload-rounding-1';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=workload-rounding-1';
+import * as skillRegistry from './skill-models.mjs?v=team-saves-1';
+import * as savesRegistry from './saves-snapshot.mjs?v=team-saves-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=team-saves-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeRow,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const {skillSaves}=savesRegistry;
@@ -67,7 +67,7 @@ window.projectionSavesLoad=()=>{
 window.projectionSavesRoleOptions=saveRoleOptions;
 window.projectionSavesRole=mlbid=>authenticated?savesRoles[String(mlbid)]||'auto':'auto';
 window.projectionSavesRoleOverrides=()=>authenticated?{...savesRoles}:{};
-window.projectionSaveForecast=(data,mlbid,IP)=>projectSaves(data,mlbid,IP,window.projectionSavesRole(mlbid));
+window.projectionSaveForecast=(data,mlbid,IP,method='projected')=>projectSaves(data,mlbid,IP,window.projectionSavesRole(mlbid),{method,overrides:window.projectionSavesRoleOverrides()});
 window.projectionSavesExplainer=savesExplainer;
 window.projectionSetSavesRole=(mlbid,role)=>{
  if(!authenticated||!window.projectionRankingOwner)throw Error('Sign in to change saves scenarios.');
@@ -152,7 +152,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=rankings?'rankings.html?v=workload-rounding-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=workload-rounding-1':'dashboard.html?v=workload-rounding-1';
+  $('dashboard').src=rankings?'rankings.html?v=team-saves-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=team-saves-1':'dashboard.html?v=workload-rounding-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

@@ -1,6 +1,6 @@
-import {saveRoleOptions,savesExplainer} from './saves.mjs?v=workload-rounding-1';
+import {saveRoleOptions,savesExplainer} from './saves.mjs?v=team-saves-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=workload-rounding-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=team-saves-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=rankings-sort-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -41,7 +41,7 @@ function persist(message='Saved on this device · export a backup to transfer li
  try{localStorage.setItem(storageKey,JSON.stringify({orders,preferences,rrRoles:Object.fromEntries(fantasyRoles.map(role=>[role,[...rrSelections[role]]])),excluded:Object.fromEntries(fantasyRoles.map(role=>[role,[...exclusions[role]]])),updated_at:new Date().toISOString()}));$('status').textContent=message;}
  catch{$('status').textContent='Device storage unavailable. Your changes are in this page only; export a JSON backup before leaving.';}
 }
-function parameters(p){return {model,method:$('workload').value,view:$('view').value,park:$('park').value,saves,savesRole:parent.projectionSavesRole?.(p?.mlbid)||'auto'};}
+function parameters(p){return {model,method:$('workload').value,view:$('view').value,park:$('park').value,saves,savesRole:parent.projectionSavesRole?.(p?.mlbid)||'auto',savesOverrides:parent.projectionSavesRoleOverrides?.()||{}};}
 function change(key,index){const role=$('role').value;orders[role]=moveRank(orders[role],key,index);persist();render();}
 function excludePlayer(key){const role=$('role').value;if(!available[role].includes(key))return;exclusions[role].add(key);persist('Player excluded from '+role+' on this device. Restore them under Excluded players.');render();}
 function restorePlayer(key){exclusions[$('role').value].delete(key);persist('Player restored to this position list.');render();}
@@ -112,4 +112,4 @@ $('export').onclick=()=>{
 };
 render();
 
-document.addEventListener('click',event=>{const link=event.target.closest('a[href]'),path=link?.getAttribute('href');if(['saves/REPORT.md','saves/season_errors.csv','saves/overall_errors.csv'].includes(path)){event.preventDefault();parent.skillGradesDownload(path).catch(error=>{$('status').textContent=error.message;});}});
+document.addEventListener('click',event=>{const link=event.target.closest('a[href]'),path=link?.getAttribute('href');if(['saves/REPORT.md','saves/season_errors.csv','saves/overall_errors.csv','saves/team_budgets.csv','saves/team_season_errors.csv','saves/team_overall_errors.csv','saves/team_allocations_2027.csv','saves/forecasts_2027.csv'].includes(path)){event.preventDefault();parent.skillGradesDownload(path).catch(error=>{$('status').textContent=error.message;});}});

@@ -1,4 +1,4 @@
-import {projectSaves} from './saves.mjs?v=workload-rounding-1';
+import {projectSaves} from './saves.mjs?v=team-saves-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 export const fantasyRoles=['SP','RP','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
@@ -54,7 +54,7 @@ export function readExclusions(data,available){
  }
  return result;
 }
-export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto'}={}){
+export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={}}={}){
  const p=entry.profile;
  if(!p)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null};
  const r={...p.rates},factor=park==='neutral'?null:(p.parks?.[String(entry.team_id)]||core.park_priors?.[p.kind]?.[String(entry.team_id)]);
@@ -79,6 +79,6 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
   grades[c]=finite(z)?z:null;
  }
  const total=c=>finite(stats[c])&&finite(load)?stats[c]*load:null;
- const save=p.kind==='Pitcher'?projectSaves(saves,p.mlbid,load,savesRole):null;
+ const save=p.kind==='Pitcher'?projectSaves(saves,p.mlbid,load,savesRole,{method,overrides:savesOverrides}):null;
  return {PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null},saves:save,grades,sum:categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null};
 }
