@@ -1,6 +1,6 @@
 import {projectSaves} from './saves.mjs?v=team-saves-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
-export const fantasyRoles=['SP','RP','All P','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
+export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
  const counts=new Map();for(const p of entries){const role=p.rr_role||'Unlisted';counts.set(role,(counts.get(role)||0)+1);}
@@ -34,6 +34,8 @@ export function compileLists(rr,players,eligible){
   const entry={key,mlbid:profile.mlbid,kind:profile.kind,role,name:profile.player_name,profile,positions,team:'unassigned',team_id:null,rr_role:'Unassigned',section:'unassigned',source_url:rr.source};
   for(const position of listRoles(entry,positions))lists[position].push(entry);
  }
+ const pool=[...new Map(Object.values(lists).flat().map(entry=>[entry.key,entry])).values()];
+ lists['All Hitters']=pool.filter(entry=>entry.kind==='Hitter');lists['All Players']=pool;
  for(const rows of Object.values(lists))if(new Set(rows.map(r=>r.key)).size!==rows.length)throw Error('Duplicate player in a role list.');
  return lists;
 }
@@ -49,7 +51,7 @@ export function readBackup(data,available){
  if(data?.kind!=='roster-atlas-starter-rankings'||![1,2].includes(data.version)||!data.orders||typeof data.orders!=='object')throw Error('This is not a starter-ranking backup.');
  const result={};
  for(const role of fantasyRoles){
-  const ids=role==='All P'&&data.version===1&&data.orders[role]==null?[]:data.orders[role];
+  const ids=((role==='All P'&&data.version===1)||['All Hitters','All Players'].includes(role))&&data.orders[role]==null?[]:data.orders[role];
   if(!Array.isArray(ids)||ids.some(id=>typeof id!=='string')||new Set(ids).size!==ids.length)throw Error('Invalid '+role+' ranking.');
   result[role]=reconcileOrder(ids,available[role]);
  }
