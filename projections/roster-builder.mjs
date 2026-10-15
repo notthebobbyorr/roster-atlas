@@ -2,7 +2,7 @@ import {compileLists,projection} from './rankings-core.mjs?v=all-players-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast} from './roster-builder-core.mjs?v=roster-builder-1';
+import {assignmentOptions,createTeam,addPick,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=roster-ages-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
 
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -52,7 +52,7 @@ function refreshSnapshots(){
  const team=currentTeam();
  team.picks=team.picks.map(pick=>{
   const entry=entryByKey.get(pick.key);if(!entry?.profile)return pick;
-  return {...pick,eligible:optionsForPick(pick),snapshot:{model,season,saved_at:new Date().toISOString(),forecast:cleanForecast(forecast(entry))}};
+  return {...pick,eligible:optionsForPick(pick),snapshot:{model,season,age:projectionAge(entry,pick,season),saved_at:new Date().toISOString(),forecast:cleanForecast(forecast(entry))}};
  });
 }
 function persist(message='Saved on this device · export a team file for backup or another device.'){
@@ -72,6 +72,8 @@ function renderTracker(){
  $('position-tracker').innerHTML=['C','1B','2B','SS','3B','OF','SP','RP'].map(pos=>{
   const count=progress.counts[pos],goal=target.positions[pos];return '<span class="position-chip '+(count>=goal?'met':'open')+'" title="'+Math.max(0,goal-count)+' more '+pos+' needed">'+pos+' <strong>'+count+'/'+goal+'</strong></span>';
  }).join('')+'<span class="position-chip '+(progress.extraHitters>=target.positions.UT?'met':'open')+'" title="Hitters beyond the 26 position minimums, including UT assignments">Extra H <strong>'+progress.extraHitters+'/'+target.positions.UT+'</strong></span>';
+ const ages=rosterAges(rosterRows,season);
+ $('age-tracker').innerHTML='<span class="muted">July 1, '+season+'</span>'+['Hitter','Pitcher'].map(kind=>{const group=ages[kind];return '<span title="Arithmetic mean of known ages at July 1, '+season+'; every drafted player has equal weight">Avg '+kind.toLowerCase()+' age <strong>'+fmt(group.average)+'</strong> <small>'+group.known+'/'+group.total+' known</small></span>';}).join('');
  $('roster-count').textContent=progress.spots+' drafted · '+Math.max(0,50-progress.spots)+' spots open';
  $('position-note').textContent='Targets are minimums; extra players can fill any eligible hitter position or UT. Each player is counted once, in the assigned position. Extra H counts hitter depth beyond the 26 position minimums. '+parent.projectionPositionNote(2026);
 }

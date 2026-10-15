@@ -5,6 +5,19 @@ export const hitterTargets={C:4,'1B':3,'2B':3,SS:3,'3B':3,OF:10};
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const plain=value=>value&&typeof value==='object'&&!Array.isArray(value);
 const text=(value,max)=>typeof value==='string'&&value.length<=max;
+const validAge=value=>finite(value)&&value>0&&value<100;
+export function projectionAge(entry,pick,season){
+ if(validAge(entry?.profile?.projection_age))return entry.profile.projection_age;
+ const snapshot=pick?.snapshot;
+ const age=validAge(snapshot?.age)&&Number.isInteger(snapshot.season)?snapshot.age+season-snapshot.season:null;
+ return validAge(age)?age:null;
+}
+export function rosterAges(rows,season){
+ return Object.fromEntries(['Hitter','Pitcher'].map(kind=>{
+  const group=rows.filter(row=>row.pick.kind===kind),ages=group.map(row=>projectionAge(row.entry,row.pick,season)).filter(validAge);
+  return [kind,{average:ages.length?ages.reduce((a,b)=>a+b,0)/ages.length:null,known:ages.length,total:group.length}];
+ }));
+}
 export function assignmentOptions(entry){
  if(entry.kind==='Pitcher')return ['SP','RP'];
  return [...new Set([...rosterPositions.filter(pos=>pos!=='UT'&&pos!=='SP'&&pos!=='RP'&&entry.positions?.includes(pos)),'UT'])];
@@ -38,7 +51,7 @@ export function addPick(team,entry,forecast,{model,season}={}){
  const position=defaultAssignment(entry,team),eligible=assignmentOptions(entry),used=new Set(team.picks.map(p=>p.round));
  const round=Array.from({length:50},(_,i)=>i+1).find(value=>!used.has(value))||50;
  const pick={key:entry.key,mlbid:Number(entry.mlbid),name:entry.name,kind:entry.kind,eligible,position,round,note:'',reliefType:position==='RP'?(entry.rr_role==='CL'?'closer':'spec'):'other',
-  snapshot:{model:model||'recommended',season:season||2027,saved_at:new Date().toISOString(),forecast:cleanForecast(forecast)}};
+  snapshot:{model:model||'recommended',season:season||2027,age:projectionAge(entry,null,season||2027),saved_at:new Date().toISOString(),forecast:cleanForecast(forecast)}};
  return {...team,picks:[...team.picks,pick]};
 }
 export function positionProgress(team){
@@ -78,7 +91,7 @@ export function validateTeam(raw){
   if(!plain(p.snapshot)||!text(p.snapshot.model,40)||!Number.isInteger(p.snapshot.season)||!text(p.snapshot.saved_at,60)||!plain(p.snapshot.forecast))throw Error('Missing saved projection.');
   const forecast=cleanForecast(p.snapshot.forecast);
   if([forecast.PA,forecast.AB,forecast.IP,...Object.values(forecast.stats)].some(value=>finite(value)&&value<0))throw Error('Saved workload and outcome stats cannot be negative.');
-  return {...p,eligible:[...new Set(p.eligible)],snapshot:{model:p.snapshot.model,season:p.snapshot.season,saved_at:p.snapshot.saved_at,forecast}};
+  return {...p,eligible:[...new Set(p.eligible)],snapshot:{model:p.snapshot.model,season:p.snapshot.season,age:validAge(p.snapshot.age)?p.snapshot.age:null,saved_at:p.snapshot.saved_at,forecast}};
  });
  return {id:raw.id,name:raw.name.trim(),split:raw.split,method:raw.method,park:raw.park,view:raw.view,showGuidelines:raw.showGuidelines===true,picks};
 }
