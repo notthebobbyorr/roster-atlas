@@ -85,7 +85,7 @@ function restoreSavesRoles(owner){
   if(stored&&typeof stored==='object'&&!Array.isArray(stored))for(const [id,role] of Object.entries(stored))if(/^\d+$/.test(id)&&role!=='auto'&&saveRoleOptions.some(([code])=>code===role))savesRoles[id]=role;
  }catch{}
 }
-const selectedView=()=>location.hash==='#rankings'?'rankings':location.hash==='#skills'?'skills':'outcomes';
+const selectedView=()=>location.hash==='#roster'?'roster':location.hash==='#rankings'?'rankings':location.hash==='#skills'?'skills':'outcomes';
 
 async function privateFetch(version,path){
  if(!/^[a-zA-Z0-9_./-]+$/.test(path)||path.includes('..'))throw Error('Invalid data path');
@@ -145,16 +145,16 @@ function clear(){
 }
 async function showView(){
  if(!authenticated)return;
- const id=++requestId,view=selectedView(),skills=view!=='outcomes',rankings=view==='rankings';
+ const id=++requestId,view=selectedView(),skills=view!=='outcomes',rankings=view==='rankings',roster=view==='roster';
  $('modelControls').hidden=!skills;
- $('outcomesTab').setAttribute('aria-pressed',String(!skills));$('skillsTab').setAttribute('aria-pressed',String(view==='skills'));$('rankingsTab').setAttribute('aria-pressed',String(rankings));
+ $('outcomesTab').setAttribute('aria-pressed',String(!skills));$('skillsTab').setAttribute('aria-pressed',String(view==='skills'));$('rankingsTab').setAttribute('aria-pressed',String(rankings));$('rosterTab').setAttribute('aria-pressed',String(roster));
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');$('retry').hidden=true;
- $('status').textContent=skills?'Loading skill grades…':'Loading projection snapshot…';
+ $('status').textContent=roster?'Loading roster builder…':skills?'Loading skill grades…':'Loading projection snapshot…';
  try{
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
-  $('dashboard').title=rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=rankings?'rankings.html?v=all-players-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=handedness-1':'dashboard.html?v=workload-rounding-1';
+  $('dashboard').title=roster?'Roster builder':rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
+  $('dashboard').src=roster?'roster-builder.html?v=roster-builder-1&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=all-players-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=handedness-1':'dashboard.html?v=workload-rounding-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -172,6 +172,7 @@ $('logout').onclick=async()=>{clear();$('status').textContent='Signing out…';t
 $('outcomesTab').onclick=()=>{if(selectedView()==='outcomes')showView();else location.hash='outcomes';};
 $('skillsTab').onclick=()=>{if(selectedView()==='skills')showView();else location.hash='skills';};
 $('rankingsTab').onclick=()=>{if(selectedView()==='rankings')showView();else location.hash='rankings';};
+$('rosterTab').onclick=()=>{if(selectedView()==='roster')showView();else location.hash='roster';};
 $('retry').onclick=showView;
 $('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;skillsLoaded=null;showView();};
 window.addEventListener('hashchange',showView);
