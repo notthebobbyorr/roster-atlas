@@ -1,3 +1,4 @@
+import {projectInningsPerStart} from './pitcher-starts.mjs?v=starter-length-1';
 import {projectSaves} from './saves.mjs?v=team-saves-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
@@ -75,6 +76,8 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
   if(p.kind==='Pitcher'&&finite(r.ER_rate))r.ER_rate=Math.max(0,r.ER_rate+core.run_weights.HR*(r.HR_rate-hr)+core.run_weights.NH*(nh*factor.NH-nh));
  }
  const record=pt.players[entry.key],variant=method==='standard'?null:roundWorkloadVariant(record?.variants[method==='projected'?record.selected.replace(/_age$/,''):method]);
+ const startVariant=method==='standard'?record?.variants[record.selected?.replace(/_age$/,'')]:variant;
+ const startLength=p.kind==='Pitcher'&&[entry.role,p.assigned_role].some(role=>['SP','Swingman'].includes(role))?projectInningsPerStart(p.mlbid,startVariant?.weights):null;
  const workload=method==='standard'?(p.kind==='Hitter'?600:entry.role==='SP'?175:entry.role==='Swingman'?100:60):(p.kind==='Hitter'?variant?.AB:variant?.IP),load=p.kind==='Pitcher'?roundInnings(workload):workload;
  const cat=(rates,c)=>({Power:rates.HR_rate,Speed:rates.SB_rate,AVG:rates.H_rate,K:rates.K_rate,ERA:finite(rates.ER_rate)?9*rates.ER_rate:null,WHIP:finite(rates.H_rate)&&finite(rates.BB_rate)?rates.H_rate+rates.BB_rate:null})[c];
  const categories=p.kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'],grades={},stats={};
@@ -92,5 +95,5 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  }
  const total=c=>finite(stats[c])&&finite(load)?stats[c]*load:null;
  const save=p.kind==='Pitcher'?projectSaves(saves,p.mlbid,load,savesRole,{method,overrides:savesOverrides}):null;
- return {PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null},saves:save,grades,sum:categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null};
+ return {IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null},saves:save,grades,sum:categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null};
 }

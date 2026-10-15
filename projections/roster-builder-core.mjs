@@ -32,7 +32,7 @@ export function createTeam(name='My draft'){
 }
 export function cleanForecast(forecast){
  const number=value=>finite(value)?value:null;
- return {PA:number(forecast?.PA),AB:number(forecast?.AB),IP:number(forecast?.IP),
+ return {IP_per_start:number(forecast?.IP_per_start),PA:number(forecast?.PA),AB:number(forecast?.AB),IP:number(forecast?.IP),
   stats:Object.fromEntries(['HR','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),
   grades:Object.fromEntries(['Power','Speed','AVG','K','ERA','WHIP'].map(key=>[key,number(forecast?.grades?.[key])])),sum:number(forecast?.sum)};
 }
@@ -90,7 +90,7 @@ export function validateTeam(raw){
   if(!Number.isInteger(p.round)||p.round<1||p.round>50||!text(p.note,500)||!['closer','spec','other'].includes(p.reliefType))throw Error('Invalid draft round, note, or relief designation.');
   if(!plain(p.snapshot)||!text(p.snapshot.model,40)||!Number.isInteger(p.snapshot.season)||!text(p.snapshot.saved_at,60)||!plain(p.snapshot.forecast))throw Error('Missing saved projection.');
   const forecast=cleanForecast(p.snapshot.forecast);
-  if([forecast.PA,forecast.AB,forecast.IP,...Object.values(forecast.stats)].some(value=>finite(value)&&value<0))throw Error('Saved workload and outcome stats cannot be negative.');
+  if([forecast.IP_per_start,forecast.PA,forecast.AB,forecast.IP,...Object.values(forecast.stats)].some(value=>finite(value)&&value<0))throw Error('Saved workload and outcome stats cannot be negative.');
   return {...p,eligible:[...new Set(p.eligible)],snapshot:{model:p.snapshot.model,season:p.snapshot.season,age:validAge(p.snapshot.age)?p.snapshot.age:null,saved_at:p.snapshot.saved_at,forecast}};
  });
  return {id:raw.id,name:raw.name.trim(),split:raw.split,method:raw.method,park:raw.park,view:raw.view,showGuidelines:raw.showGuidelines===true,picks};

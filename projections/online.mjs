@@ -154,7 +154,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=roster?'roster-builder.html?v=roster-ages-1&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=all-players-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=handedness-1':'dashboard.html?v=workload-rounding-1';
+  $('dashboard').src=roster?'roster-builder.html?v=starter-length-1&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=starter-length-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=handedness-1':'dashboard.html?v=workload-rounding-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
