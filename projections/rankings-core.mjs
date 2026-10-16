@@ -1,5 +1,5 @@
-import {projectInningsPerStart} from './pitcher-starts.mjs?v=starter-length-1';
-import {projectSaves} from './saves.mjs?v=team-saves-1';
+import {projectInningsPerStart} from './pitcher-starts.mjs?v=hybrid-full-1';
+import {projectSaves} from './saves.mjs?v=hybrid-full-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);

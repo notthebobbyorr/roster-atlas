@@ -3,9 +3,9 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import * as skillRegistry from './skill-models.mjs?v=hybrid-1';
+import * as skillRegistry from './skill-models.mjs?v=hybrid-full-1';
 import * as savesRegistry from './saves-snapshot.mjs?v=team-saves-1';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=handedness-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeRow,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
@@ -13,7 +13,7 @@ const {skillSaves}=savesRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
 const defaultModel=['recommended','native','original'].find(id=>Object.hasOwn(skillModels,id));
-let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null,contractsLoaded=null,savesLoaded=null,savesRoles={};
+let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null,contractsLoaded=null,savesLoaded=new Map(),savesRoles={};
 const activeModel=()=>skillModels[modelKey];
 $('model').value=defaultModel;
 window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
@@ -37,7 +37,7 @@ window.skillGradesWorkloadsLoad=()=>{
 window.skillGradesComparisonLoad=()=>{
  if(!authenticated)return Promise.reject(Error('Sign in to compare models.'));
  const epoch=sessionEpoch;
- if(!comparisonLoaded)comparisonLoaded=(async()=>{const data=await(await privateFetch((skillModels.hybrid||skillModels.recommended||skillModels.native||skillModels.research).snapshot,'comparison.json')).json();if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;})().catch(error=>{comparisonLoaded=null;throw error;});
+ if(!comparisonLoaded)comparisonLoaded=(async()=>{const data=await(await privateFetch((skillModels.hybrid_full||skillModels.hybrid||skillModels.recommended||skillModels.native||skillModels.research).snapshot,'comparison.json')).json();if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;})().catch(error=>{comparisonLoaded=null;throw error;});
  return comparisonLoaded;
 };
 window.projectionContractsLoad=()=>{
@@ -55,16 +55,17 @@ window.projectionContractsLoad=()=>{
 };
 window.projectionSavesLoad=()=>{
  if(!authenticated)return Promise.reject(Error('Sign in to view saves projections.'));
- if(!skillSaves)return Promise.resolve(null);
- const epoch=sessionEpoch;
- if(!savesLoaded)savesLoaded=(async()=>{
-  const ready=await(await privateFetch(skillSaves,'index.json')).json();
-  if(ready.kind!=='fantasy-saves-projections'||ready.version!==skillSaves)throw Error('The saves snapshot is not ready.');
-  const data=await(await privateFetch(skillSaves,'saves.json')).json();
+ const separate=activeModel().saves===true,version=separate?activeModel().snapshot:skillSaves;
+ if(!version)return Promise.resolve(null);
+ const epoch=sessionEpoch,cache=savesLoaded;
+ if(!cache.has(version))cache.set(version,(async()=>{
+  const ready=await(await privateFetch(version,'index.json')).json();
+  if(ready.kind!==(separate?'fantasy-skill-grades':'fantasy-saves-projections')||ready.version!==version)throw Error('The saves snapshot is not ready.');
+  const data=await(await privateFetch(version,'saves.json')).json();
   if(data.kind!=='roster-atlas-save-projections'||data.schema_version!==1||!data.players||typeof data.players!=='object'||Array.isArray(data.players))throw Error('The saves data format is not supported.');
   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;
- })().catch(error=>{if(epoch===sessionEpoch)savesLoaded=null;throw error;});
- return savesLoaded;
+ })().catch(error=>{if(epoch===sessionEpoch)cache.delete(version);throw error;}));
+ return cache.get(version);
 };
 window.projectionSavesRoleOptions=saveRoleOptions;
 window.projectionSavesRole=mlbid=>authenticated?savesRoles[String(mlbid)]||'auto':'auto';
@@ -135,11 +136,16 @@ window.skillGradesDownload=async path=>{
   const data=await window.skillGradesWorkloadsLoad(),storage=data.metadata?.forecast_totals_storage;
   if(storage==='forecast_totals.csv.gz')return download(skillWorkloads,storage,{gzip:true,name:'forecast_totals.csv'});
  }
- return path.startsWith('saves/')?skillSaves?download(skillSaves,path.slice(6)):Promise.reject(Error('Saves projections are unavailable.')):path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
+ if(path.startsWith('saves/')){
+  const separate=activeModel().saves===true,version=separate?activeModel().snapshot:skillSaves;
+  const file=path.slice(6),target=separate&&file!=='saves.json'?'saves_'+file:file;
+  return version?download(version,target):Promise.reject(Error('Saves projections are unavailable.'));
+ }
+ return path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
 };
 
 function clear(){
- authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;contractsLoaded=null;savesLoaded=null;savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
+ authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;contractsLoaded=null;savesLoaded=new Map();savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
 }
@@ -154,7 +160,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=roster?'roster-builder.html?v=starter-length-1&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=starter-length-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=handedness-1':'dashboard.html?v=workload-rounding-1';
+  $('dashboard').src=roster?'roster-builder.html?v=hybrid-full-1&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=hybrid-full-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=hybrid-full-1':'dashboard.html?v=workload-rounding-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
