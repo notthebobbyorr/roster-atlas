@@ -1,8 +1,8 @@
-import {compileLists,projection} from './rankings-core.mjs?v=pitching-grade-1';
+import {compileLists,projection} from './rankings-core.mjs?v=ace-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=pitching-grade-1';
+import {assignmentOptions,createTeam,addPick,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=ace-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
 
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -93,7 +93,7 @@ function statCells(f,showStart=true){return playerColumns.map(([key,,digits])=>'
 function gradeCells(f){return gradeColumns.map(key=>'<td class="number">'+fmt(f?.grades?.[key])+'</td>').join('')+'<td class="number">'+fmt(f?.sum)+'</td><td class="number">'+fmt(f?.offense_grade)+'</td><td class="number">'+fmt(f?.pitching_grade)+'</td>';}
 function statHeaders(){return playerColumns.map(([,label])=>'<th>'+label+'</th>').join('');}
 function renderRoster(){
- $('roster-head').innerHTML='<tr><th>Round</th><th class="player">Player</th><th>Assigned position</th><th>RP plan</th>'+statHeaders()+gradeColumns.map(key=>'<th>'+key+' SD</th>').join('')+'<th>Sum SD</th><th>Offense Grade</th><th>Pitching Grade</th><th>Draft notes</th><th>Remove</th></tr>';
+ $('roster-head').innerHTML='<tr><th>Round</th><th class="player">Player</th><th>Assigned position</th><th>RP plan</th>'+statHeaders()+gradeColumns.map(key=>'<th>'+key+' SD</th>').join('')+'<th>Sum SD</th><th>Offense Grade</th><th>ACE</th><th>Draft notes</th><th>Remove</th></tr>';
  $('roster-rows').innerHTML=rosterRows.map(({pick,entry,live,forecast:f})=>'<tr><td><input class="round" type="number" min="1" max="50" data-round="'+esc(pick.key)+'" value="'+pick.round+'" aria-label="Draft round for '+esc(pick.name)+'"></td><td class="player">'+esc(pick.name)+'<small>'+esc(pick.kind)+' · '+(live?esc(entry.team.replaceAll('-',' ')):'Saved '+esc(pick.snapshot.model)+' · '+pick.snapshot.season)+'</small></td><td><select data-position="'+esc(pick.key)+'" aria-label="Assigned position for '+esc(pick.name)+'">'+optionsForPick(pick).map(pos=>'<option value="'+pos+'"'+(pos===pick.position?' selected':'')+'>'+pos+'</option>').join('')+'</select></td><td>'+(pick.position==='RP'?'<select data-relief="'+esc(pick.key)+'" aria-label="Relief plan for '+esc(pick.name)+'">'+[['closer','Closer'],['spec','Spec'],['other','Other RP']].map(([code,label])=>'<option value="'+code+'"'+(pick.reliefType===code?' selected':'')+'>'+label+'</option>').join('')+'</select>':'—')+'</td>'+statCells(f,pick.position==='SP')+gradeCells(f)+'<td><input class="note" maxlength="500" data-note="'+esc(pick.key)+'" value="'+esc(pick.note)+'" aria-label="Draft notes for '+esc(pick.name)+'"></td><td><button class="danger" type="button" data-remove="'+esc(pick.key)+'" aria-label="Remove '+esc(pick.name)+'">×</button></td></tr>').join('')||'<tr><td class="empty" colspan="25">Your roster is empty. Find a drafted player below and click Add.</td></tr>';
 }
 function fortyMan(entry){return rosterStatus.players[String(entry.mlbid)]?.forty_man||(rosterStatus.official_teams===30?'no':'unknown');}
@@ -101,7 +101,7 @@ function renderPool(){
  const query=$('search').value.trim().toLowerCase(),kind=$('kind').value,position=$('position').value,forty=$('forty-man').value,team=currentTeam(),picked=new Set(team.picks.map(p=>p.mlbid));
  filtered=pool.filter(entry=>(!kind||entry.kind===kind)&&(!position||assignmentOptions(entry).includes(position))&&(!forty||fortyMan(entry)===forty)&&(!query||`${entry.name} ${entry.mlbid}`.toLowerCase().includes(query))).map(entry=>({entry,forecast:forecast(entry)})).sort((a,b)=>{const x=a.forecast.sum,y=b.forecast.sum;return finite(x)&&finite(y)?y-x||a.entry.name.localeCompare(b.entry.name):finite(x)?-1:finite(y)?1:a.entry.name.localeCompare(b.entry.name);});
  const pages=Math.max(1,Math.ceil(filtered.length/50));page=Math.max(0,Math.min(page,pages-1));
- $('pool-head').innerHTML='<tr><th>Add</th><th class="player">Player</th><th>Group</th><th>Eligible / plan</th>'+statHeaders()+'<th>Sum SD</th><th>Offense Grade</th><th>Pitching Grade</th></tr>';
+ $('pool-head').innerHTML='<tr><th>Add</th><th class="player">Player</th><th>Group</th><th>Eligible / plan</th>'+statHeaders()+'<th>Sum SD</th><th>Offense Grade</th><th>ACE</th></tr>';
  $('pool-rows').innerHTML=filtered.slice(page*50,page*50+50).map(({entry,forecast:f})=>'<tr><td><button type="button" data-add="'+esc(entry.key)+'"'+(picked.has(Number(entry.mlbid))||team.picks.length>=50?' disabled':'')+'>'+(picked.has(Number(entry.mlbid))?'Drafted':'Add')+'</button></td><td class="player">'+esc(entry.name)+'<small>'+esc(entry.team.replaceAll('-',' '))+' · ID '+entry.mlbid+'</small></td><td>'+esc(entry.kind)+'</td><td>'+assignmentOptions(entry).join(' / ')+'</td>'+statCells(f)+'<td class="number">'+fmt(f.sum)+'</td><td class="number">'+fmt(f.offense_grade)+'</td><td class="number">'+fmt(f.pitching_grade)+'</td></tr>').join('')||'<tr><td class="empty" colspan="18">No matching players. Clear a filter or try an MLB ID.</td></tr>';
  $('pool-count').textContent=filtered.length+' matching players';$('page-count').textContent='Page '+(page+1)+' of '+pages+' · 50 per page';$('previous-page').disabled=page===0;$('next-page').disabled=page>=pages-1;
 }
@@ -145,7 +145,7 @@ $('import-team').onchange=async event=>{
  }catch(error){$('status').textContent=error.message;}finally{event.target.value='';}
 };
 $('export-csv').onclick=()=>action(()=>{
- const header=['Round','Player','MLB ID','Group','Assigned position','RP plan','Notes','Projection source',...playerColumns.map(([,label])=>label),...gradeColumns.map(key=>key+' SD'),'Sum SD','Offense Grade','Pitching Grade'];
+ const header=['Round','Player','MLB ID','Group','Assigned position','RP plan','Notes','Projection source',...playerColumns.map(([,label])=>label),...gradeColumns.map(key=>key+' SD'),'Sum SD','Offense Grade','ACE'];
  const rows=rosterRows.map(({pick,live,forecast:f})=>[pick.round,pick.name,pick.mlbid,pick.kind,pick.position,pick.position==='RP'?pick.reliefType:'',pick.note,live?model:pick.snapshot.model+' (saved)',...playerColumns.map(([key])=>key==='IP_per_start'&&pick.position!=='SP'?'':statValue(f,key)??''),...gradeColumns.map(key=>f?.grades?.[key]??''),f?.sum??'',f?.offense_grade??'',f?.pitching_grade??'']);
  download(fileName()+'.csv',[header,...rows].map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');
 });
