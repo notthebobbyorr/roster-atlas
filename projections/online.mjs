@@ -1,19 +1,15 @@
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
-import {snapshot} from './snapshot.mjs';
-import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import * as skillRegistry from './skill-models.mjs?v=prior-offense-grade-1';
-import * as savesRegistry from './saves-snapshot.mjs?v=team-saves-1';
+import * as skillRegistry from './skill-models.mjs?v=mobile-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
-import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeRow,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
+import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
-const {skillSaves}=savesRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
-let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
-const defaultModel=['hybrid_full','recommended','native','original'].find(id=>Object.hasOwn(skillModels,id));
-let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null,contractsLoaded=null,savesLoaded=new Map(),savesRoles={};
+let authenticated=false,requestId=0,sessionEpoch=0;
+const defaultModel=['hybrid_full','recommended'].find(id=>Object.hasOwn(skillModels,id));
+let modelKey=defaultModel,modelEpoch=0,runtimes=new Map(),savesRoles={};
 const activeModel=()=>skillModels[modelKey];
 $('model').value=defaultModel;
 window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
@@ -23,50 +19,32 @@ window.projectionRoundInnings=roundInnings;window.projectionRoundPA=roundPA;wind
 window.projectionRoundWorkloadVariant=roundWorkloadVariant;window.projectionRoundOutcomeExplanation=roundOutcomeExplanation;
 window.skillGradesState=null;
 window.skillGradesModel=()=>modelKey;
-window.skillGradesWorkloadsLoad=()=>{
- if(!authenticated)return Promise.reject(Error('Sign in to view projected playing time.'));
- const epoch=sessionEpoch;
- if(!workloadsLoaded)workloadsLoaded=(async()=>{
-  const ready=await(await privateFetch(skillWorkloads,'index.json')).json();
-  if(ready.kind!=='fantasy-playing-time'||ready.version!==skillWorkloads)throw Error('The playing-time snapshot is not ready.');
-  const data=await(await privateFetch(skillWorkloads,'workloads.json')).json();
-  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;
- })().catch(error=>{workloadsLoaded=null;throw error;});
- return workloadsLoaded;
-};
-window.skillGradesComparisonLoad=()=>{
- if(!authenticated)return Promise.reject(Error('Sign in to compare models.'));
- const epoch=sessionEpoch;
- if(!comparisonLoaded)comparisonLoaded=(async()=>{const data=await(await privateFetch((skillModels.hybrid_full||skillModels.hybrid||skillModels.recommended||skillModels.native||skillModels.research).snapshot,'comparison.json')).json();if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;})().catch(error=>{comparisonLoaded=null;throw error;});
- return comparisonLoaded;
-};
-window.projectionContractsLoad=()=>{
- if(!authenticated)return Promise.reject(Error('Sign in to view contract information.'));
- const version=skillModels.recommended?.snapshot,epoch=sessionEpoch;
- if(!version)return Promise.reject(Error('Contract information is not available in this model registry.'));
- if(!contractsLoaded)contractsLoaded=(async()=>{
-  const ready=await(await privateFetch(version,'index.json')).json();
-  if(ready.kind!=='fantasy-skill-grades'||ready.version!==version)throw Error('The contract snapshot is not ready.');
-  const data=await(await privateFetch(version,'contracts.json')).json();
-  if(data.kind!=='roster-atlas-free-agent-years'||data.schema_version!==1||!data.players||typeof data.players!=='object'||Array.isArray(data.players))throw Error('The contract data format is not supported.');
-  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;
- })().catch(error=>{if(epoch===sessionEpoch)contractsLoaded=null;throw error;});
- return contractsLoaded;
-};
-window.projectionSavesLoad=()=>{
- if(!authenticated)return Promise.reject(Error('Sign in to view saves projections.'));
- const separate=activeModel().saves===true,version=separate?activeModel().snapshot:skillSaves;
- if(!version)return Promise.resolve(null);
- const epoch=sessionEpoch,cache=savesLoaded;
+async function runtimeLoad(){
+ if(!authenticated)throw Error('Sign in to view projections.');
+ const version=activeModel().runtime,epoch=sessionEpoch,generation=modelEpoch,cache=runtimes;
  if(!cache.has(version))cache.set(version,(async()=>{
   const ready=await(await privateFetch(version,'index.json')).json();
-  if(ready.kind!==(separate?'fantasy-skill-grades':'fantasy-saves-projections')||ready.version!==version)throw Error('The saves snapshot is not ready.');
-  const data=await(await privateFetch(version,'saves.json')).json();
-  if(data.kind!=='roster-atlas-save-projections'||data.schema_version!==1||!data.players||typeof data.players!=='object'||Array.isArray(data.players))throw Error('The saves data format is not supported.');
-  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');return data;
+  if(ready.kind!=='fantasy-atlas-runtime'||ready.version!==version)throw Error('The Atlas snapshot is not ready.');
+  const compressed=typeof DecompressionStream==='function';
+  const response=await privateFetch(version,compressed?'runtime.json.gz':'runtime.json');
+  const data=compressed?await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json():await response.json();
+  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
+  if(data.kind!=='roster-atlas-runtime'||data.schema_version!==1||!Array.isArray(data.core?.players)||!data.workloads?.players||!data.saves?.players||!data.contracts?.players)throw Error('The Atlas data format is not supported.');
+  for(const p of data.core.players)p.parks=data.core.park_sets[p.park_index];
+  delete data.core.park_sets;
+  for(const p of Object.values(data.saves.players))p.scenarios=data.saves.scenario_sets[p.scenario_index];
+  delete data.saves.scenario_sets;
+  return data;
  })().catch(error=>{if(epoch===sessionEpoch)cache.delete(version);throw error;}));
- return cache.get(version);
-};
+ const result=await cache.get(version);
+ if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
+ return result;
+}
+window.skillGradesLoad=async()=>(await runtimeLoad()).core;
+window.skillGradesWorkloadsLoad=async()=>(await runtimeLoad()).workloads;
+window.projectionContractsLoad=async()=>(await runtimeLoad()).contracts;
+window.projectionSavesLoad=async()=>(await runtimeLoad()).saves;
+window.projectionModelNotes=()=>activeModel().notes;
 window.projectionSavesRoleOptions=saveRoleOptions;
 window.projectionSavesRole=mlbid=>authenticated?savesRoles[String(mlbid)]||'auto':'auto';
 window.projectionSavesRoleOverrides=()=>authenticated?{...savesRoles}:{};
@@ -86,7 +64,7 @@ function restoreSavesRoles(owner){
   if(stored&&typeof stored==='object'&&!Array.isArray(stored))for(const [id,role] of Object.entries(stored))if(/^\d+$/.test(id)&&role!=='auto'&&saveRoleOptions.some(([code])=>code===role))savesRoles[id]=role;
  }catch{}
 }
-const selectedView=()=>location.hash==='#roster'?'roster':location.hash==='#rankings'?'rankings':location.hash==='#outcomes'?'outcomes':'skills';
+const selectedView=()=>location.hash==='#roster'?'roster':'rankings';
 
 async function privateFetch(version,path){
  if(!/^[a-zA-Z0-9_./-]+$/.test(path)||path.includes('..'))throw Error('Invalid data path');
@@ -100,29 +78,6 @@ async function privateFetch(version,path){
  }
  return response;
 }
-window.dashboardFetch=path=>privateFetch(snapshot,path);
-const json=async path=>(await window.dashboardFetch(path)).json();
-window.dashboardLoad=()=>{
- if(!authenticated)return Promise.reject(Error('Sign in to view projections.'));
- if(!loaded)loaded=(async()=>{
-  const index=await json('index.json'),meta=await json('metadata.json'),rows=[];
-  for(let i=0;i<index.parts.length;i+=4){const pages=await Promise.all(index.parts.slice(i,i+4).map(json));rows.push(...pages.flat());}
-  return {rows:rows.map(roundOutcomeRow),meta:{...meta,workload_rounding:'Projected IP uses .33/.67/whole numeric innings; projected PA is whole. Final counts use those rounded workloads. Observed history and rate environments are unchanged.'}};
- })().catch(error=>{loaded=null;throw error;});
- return loaded;
-};
-window.skillGradesLoad=()=>{
- if(!authenticated)return Promise.reject(Error('Sign in to view skill grades.'));
- const version=activeModel().snapshot,epoch=sessionEpoch,generation=modelEpoch;
- if(!skillsLoaded)skillsLoaded=(async()=>{
-  const ready=await (await privateFetch(version,'index.json')).json();
-  if(ready.kind!=='fantasy-skill-grades'||ready.version!==version)throw Error('The skill snapshot is not ready.');
-  const data=await (await privateFetch(version,'grades.json')).json();
-  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
-  return data;
- })().catch(error=>{if(generation===modelEpoch)skillsLoaded=null;throw error;});
- return skillsLoaded;
-};
 async function download(version,path,{gzip=false,name=null}={}){
  const epoch=sessionEpoch,response=await privateFetch(version,path);
  const unpack=gzip&&typeof DecompressionStream==='function';
@@ -130,37 +85,28 @@ async function download(version,path,{gzip=false,name=null}={}){
  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed. Sign in again.');
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=unpack&&name?name:path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-window.dashboardDownload=path=>download(snapshot,path);
 window.skillGradesDownload=async path=>{
- if(path==='playing_time/forecast_totals.csv'){
-  const data=await window.skillGradesWorkloadsLoad(),storage=data.metadata?.forecast_totals_storage;
-  if(storage==='forecast_totals.csv.gz')return download(skillWorkloads,storage,{gzip:true,name:'forecast_totals.csv'});
- }
- if(path.startsWith('saves/')){
-  const separate=activeModel().saves===true,version=separate?activeModel().snapshot:skillSaves;
-  const file=path.slice(6),target=separate&&file!=='saves.json'?'saves_'+file:file;
-  return version?download(version,target):Promise.reject(Error('Saves projections are unavailable.'));
- }
- return path.startsWith('playing_time/')?download(skillWorkloads,path.slice(13)):download(activeModel().snapshot,path);
+ if(path.startsWith('saves/')){const m=activeModel(),file=path.slice(6);return download(m.saves_source,(m.saves_file_prefix||'')+file);}
+ return download(activeModel().snapshot,path);
 };
 
 function clear(){
- authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;loaded=null;skillsLoaded=null;comparisonLoaded=null;workloadsLoaded=null;contractsLoaded=null;savesLoaded=new Map();savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
+ authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;runtimes=new Map();savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
 }
 async function showView(){
  if(!authenticated)return;
- const id=++requestId,view=selectedView(),skills=view!=='outcomes',rankings=view==='rankings',roster=view==='roster';
- $('modelControls').hidden=!skills;
- $('outcomesTab').setAttribute('aria-pressed',String(!skills));$('skillsTab').setAttribute('aria-pressed',String(view==='skills'));$('rankingsTab').setAttribute('aria-pressed',String(rankings));$('rosterTab').setAttribute('aria-pressed',String(roster));
+ const id=++requestId,roster=selectedView()==='roster';
+ $('modelControls').hidden=false;
+ $('rankingsTab').setAttribute('aria-pressed',String(!roster));$('rosterTab').setAttribute('aria-pressed',String(roster));
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');$('retry').hidden=true;
- $('status').textContent=roster?'Loading roster builder…':skills?'Loading skill grades…':'Loading projection snapshot…';
+ $('status').textContent=roster?'Loading roster builder…':'Loading rankings…';
  try{
-  await (skills?window.skillGradesLoad():window.dashboardLoad());
+  await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
-  $('dashboard').title=roster?'Roster builder':rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=roster?'roster-builder.html?v=offense-grade-2&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=offense-grade-2&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=hybrid-default-1':'dashboard.html?v=workload-rounding-1';
+  $('dashboard').title=roster?'Roster builder':'Player rankings';
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=mobile-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -175,12 +121,10 @@ async function open(){
 }
 $('loginForm').onsubmit=async e=>{e.preventDefault();try{await cloud.sign_in($('email').value,$('password').value);$('password').value='';await open();}catch(error){$('status').textContent=error.message;}};
 $('logout').onclick=async()=>{clear();$('status').textContent='Signing out…';try{await cloud.sign_out();$('status').textContent='';}catch{$('status').textContent='Signed out on this device.';}};
-$('outcomesTab').onclick=()=>{if(selectedView()==='outcomes')showView();else location.hash='outcomes';};
-$('skillsTab').onclick=()=>{if(selectedView()==='skills')showView();else location.hash='skills';};
 $('rankingsTab').onclick=()=>{if(selectedView()==='rankings')showView();else location.hash='rankings';};
 $('rosterTab').onclick=()=>{if(selectedView()==='roster')showView();else location.hash='roster';};
 $('retry').onclick=showView;
-$('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;skillsLoaded=null;showView();};
+$('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;showView();};
 window.addEventListener('hashchange',showView);
 window.addEventListener('storage',event=>{if(event.key===cloud.session_key&&!cloud.session){clear();$('status').textContent='Signed out.';}});
 if(cloud.session)open();
