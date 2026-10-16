@@ -69,7 +69,7 @@ export function readExclusions(data,available){
 }
 export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={}}={}){
  const p=entry.profile;
- if(!p)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null};
+ if(!p)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,offense_grade:null};
  const r={...p.rates},factor=park==='neutral'?null:(p.parks?.[String(entry.team_id)]||core.park_priors?.[p.kind]?.[String(entry.team_id)]);
  if(factor&&finite(r.HR_rate)&&finite(r.H_rate)){
   const hr=r.HR_rate,nh=r.H_rate-hr;r.HR_rate=hr*factor.HR;r.H_rate=r.HR_rate+nh*factor.NH;
@@ -95,5 +95,5 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  }
  const total=c=>finite(stats[c])&&finite(load)?stats[c]*load:null;
  const save=p.kind==='Pitcher'?projectSaves(saves,p.mlbid,load,savesRole,{method,overrides:savesOverrides}):null;
- return {IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null},saves:save,grades,sum:categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null};
+ return {offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null},saves:save,grades,sum:categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null};
 }

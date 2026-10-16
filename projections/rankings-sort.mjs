@@ -6,7 +6,7 @@ export function rankingSortOptions(role){
  const pitcher=['SP','RP','All P'].includes(role);
  const totals=pitcher?[['IP','Innings (IP)'],['IP_per_start','IP/Start estimate'],['K','Strikeouts (K)'],['SV','Saves (SV)'],['ERA','ERA'],['WHIP','WHIP']]:[['PA','Plate appearances (PA)'],['AB','At bats (AB)'],['HR','Home runs (HR)'],['SB','Stolen bases (SB)'],['AVG','Batting average (AVG)']];
  const grades=pitcher?[['K','Strikeouts SD'],['ERA','ERA SD'],['WHIP','WHIP SD']]:[['Power','Power SD'],['Speed','Speed SD'],['AVG','AVG SD']];
- const inputs=pitcher?[['stuff','Stuff (pitch grade)'],['SwStr','SwStr %']]:[['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs expected']];
+ const inputs=pitcher?[['stuff','Stuff (pitch grade)'],['SwStr','SwStr %']]:[['offense_grade','Offense Grade'],['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs expected']];
  return [{value:'rank',label:'My ranking'},{value:'sum',label:'Sum SD'},
   ...totals.map(([key,label])=>({value:'stat:'+key,label})),
   ...grades.map(([key,label])=>({value:'grade:'+key,label})),
@@ -22,7 +22,7 @@ function numericValue(row,value){
  const [kind,field]=value.split(':');
  if(kind==='stat')return row.forecast[field]??row.forecast.stats?.[field];
  if(kind==='grade')return row.forecast.grades?.[field];
- if(kind==='input')return row.entry.profile?.input_skills?.[field];
+ if(kind==='input')return field==='offense_grade'?row.entry.profile?.offense_grade:row.entry.profile?.input_skills?.[field];
  return null;
 }
 export function sortRankingRows(rows,value,direction='desc'){

@@ -3,7 +3,7 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import * as skillRegistry from './skill-models.mjs?v=hybrid-default-1';
+import * as skillRegistry from './skill-models.mjs?v=offense-grade-1';
 import * as savesRegistry from './saves-snapshot.mjs?v=team-saves-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
@@ -160,7 +160,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=roster?'roster-builder.html?v=hybrid-default-1&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=hybrid-default-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=hybrid-default-1':'dashboard.html?v=workload-rounding-1';
+  $('dashboard').src=roster?'roster-builder.html?v=offense-grade-2&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=offense-grade-2&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=hybrid-default-1':'dashboard.html?v=workload-rounding-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

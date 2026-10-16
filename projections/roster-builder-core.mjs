@@ -32,7 +32,7 @@ export function createTeam(name='My draft'){
 }
 export function cleanForecast(forecast){
  const number=value=>finite(value)?value:null;
- return {IP_per_start:number(forecast?.IP_per_start),PA:number(forecast?.PA),AB:number(forecast?.AB),IP:number(forecast?.IP),
+ return {offense_grade:number(forecast?.offense_grade),IP_per_start:number(forecast?.IP_per_start),PA:number(forecast?.PA),AB:number(forecast?.AB),IP:number(forecast?.IP),
   stats:Object.fromEntries(['HR','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),
   grades:Object.fromEntries(['Power','Speed','AVG','K','ERA','WHIP'].map(key=>[key,number(forecast?.grades?.[key])])),sum:number(forecast?.sum)};
 }

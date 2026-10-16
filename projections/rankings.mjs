@@ -2,9 +2,9 @@ import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=hybrid-full-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=offense-grade-2';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=hybrid-full-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=offense-grade-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -140,7 +140,7 @@ function savesRoleCell(p){
  const selected=parent.projectionSavesRole?.(p.mlbid)||'auto',auto=saves?.players?.[String(p.mlbid)]?.auto_role||'unassigned';
  return '<td><select data-save-role="'+esc(p.mlbid)+'" aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' · '+auto:''))+'</option>').join('')+'</select></td>';
 }
-function processValue(p,field){return (['stuff','SwStr'].includes(field)?p.kind==='Pitcher':p.kind==='Hitter')?p.profile?.input_skills?.[field]:null;}
+function processValue(p,field){if(field==='offense_grade')return p.kind==='Hitter'?p.profile?.offense_grade:null;return (['stuff','SwStr'].includes(field)?p.kind==='Pitcher':p.kind==='Hitter')?p.profile?.input_skills?.[field]:null;}
 function statCell(f,c,d){
  const value=c==='IP'?formatInnings(f.IP):fmt(f[c]??f.stats[c],d);
  const title=c==='IP_per_start'?' title="Three-year MLB starter-only innings/start estimate; '+(f.startLength?.observed_starts??0)+' observed starts. Selected playing-time recency weights; no extra age/park adjustment."':c==='SV'&&f.saves?.detailText?' title="'+esc(f.saves.detailText)+'"':'';
@@ -166,6 +166,7 @@ function render(){
  const sorting=$('sort').value,reordering=sorting==='rank';
  displayed=sortRankingRows(displayed,sorting,$('sort-direction').value);
  processColumns=mixed?[['stuff','Pitch grade'],['SwStr','SwStr %'],['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:hitter?[['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:[['stuff','Pitch grade'],['SwStr','SwStr %']];const cats=mixed?['Power','Speed','AVG','K','ERA','WHIP']:hitter?['Power','Speed','AVG']:['K','ERA','WHIP'];
+ if(hitter||mixed)processColumns.unshift(['offense_grade','Offense Grade']);
  categoryColumns=cats;
  columns=mixed?[['PA','PA',0],['AB','AB',0],['HR','HR',0],['SB','SB',0],['AVG','AVG',3],['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]]:hitter?[['PA','PA',0],['AB','AB',0],['HR','HR',0],['SB','SB',0],['AVG','AVG',3]]:[['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]];
  $('head').innerHTML='<tr><th><label class="select-all-control" title="Select or deselect all displayed players"><input id="select-all-displayed" class="select-player" type="checkbox" data-select-all aria-label="Select all displayed players"><span>Select all</span></label></th><th class="player">Player</th>'+sortableHeader('Rank / reorder','rank')+(mixed?'<th>Player type</th>':'')+'<th>Team</th><th>RR role</th>'+sortableHeader('FA year','fa')+'<th>40-man</th><th>Options remaining</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([key,name])=>sortableHeader(name,'stat:'+key)).join('')+cats.map(c=>sortableHeader(c+' SD','grade:'+c)).join('')+sortableHeader('Sum SD','sum')+processColumns.map(([key,label])=>sortableHeader(label,'input:'+key)).join('')+'</tr>';
