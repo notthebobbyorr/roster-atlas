@@ -3,7 +3,7 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import * as skillRegistry from './skill-models.mjs?v=offense-grade-1';
+import * as skillRegistry from './skill-models.mjs?v=prior-offense-grade-1';
 import * as savesRegistry from './saves-snapshot.mjs?v=team-saves-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
