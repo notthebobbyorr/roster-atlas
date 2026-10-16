@@ -3,7 +3,7 @@ import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
 import {snapshot} from './snapshot.mjs';
 import {skillSnapshot} from './skill-snapshot.mjs?v=standardized-recency-1';
-import * as skillRegistry from './skill-models.mjs?v=hybrid-full-1';
+import * as skillRegistry from './skill-models.mjs?v=hybrid-default-1';
 import * as savesRegistry from './saves-snapshot.mjs?v=team-saves-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
@@ -12,7 +12,7 @@ const {skillModels,skillWorkloads}=skillRegistry;
 const {skillSaves}=savesRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let loaded=null,skillsLoaded=null,authenticated=false,requestId=0,sessionEpoch=0;
-const defaultModel=['recommended','native','original'].find(id=>Object.hasOwn(skillModels,id));
+const defaultModel=['hybrid_full','recommended','native','original'].find(id=>Object.hasOwn(skillModels,id));
 let modelKey=defaultModel,modelEpoch=0,comparisonLoaded=null,workloadsLoaded=null,contractsLoaded=null,savesLoaded=new Map(),savesRoles={};
 const activeModel=()=>skillModels[modelKey];
 $('model').value=defaultModel;
@@ -86,7 +86,7 @@ function restoreSavesRoles(owner){
   if(stored&&typeof stored==='object'&&!Array.isArray(stored))for(const [id,role] of Object.entries(stored))if(/^\d+$/.test(id)&&role!=='auto'&&saveRoleOptions.some(([code])=>code===role))savesRoles[id]=role;
  }catch{}
 }
-const selectedView=()=>location.hash==='#roster'?'roster':location.hash==='#rankings'?'rankings':location.hash==='#skills'?'skills':'outcomes';
+const selectedView=()=>location.hash==='#roster'?'roster':location.hash==='#rankings'?'rankings':location.hash==='#outcomes'?'outcomes':'skills';
 
 async function privateFetch(version,path){
  if(!/^[a-zA-Z0-9_./-]+$/.test(path)||path.includes('..'))throw Error('Invalid data path');
@@ -160,7 +160,7 @@ async function showView(){
   await (skills?window.skillGradesLoad():window.dashboardLoad());
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':rankings?'Starting-role rankings':skills?'Fantasy skill grades dashboard':'Roster projections dashboard';
-  $('dashboard').src=roster?'roster-builder.html?v=hybrid-full-1&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=hybrid-full-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=hybrid-full-1':'dashboard.html?v=workload-rounding-1';
+  $('dashboard').src=roster?'roster-builder.html?v=hybrid-default-1&model='+encodeURIComponent(modelKey):rankings?'rankings.html?v=hybrid-default-1&model='+encodeURIComponent(modelKey):skills?activeModel().html+'?v='+encodeURIComponent(activeModel().snapshot)+'&ui=hybrid-default-1':'dashboard.html?v=workload-rounding-1';
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

@@ -48,7 +48,7 @@ function hybridBreakdown(p){
 function modelComparison(p){
  if(!modelHost?.skillGradesComparisonLoad)return '';
  if(!comparisonData)return '<p class="note">'+(comparisonError?esc(comparisonError):'Loading model comparison…')+'</p>';
- const models=[['original','Original live'],['research','Bayesian features'],['native','Native sample regression'],['recommended','Recommended cutoffs'],['hybrid','HR/SB hybrid'],['hybrid_full','Full skills-first hybrid']].filter(([id])=>comparisonData[id]),workload=playerLoad(p),view=$('view').value,park=$('park').value;
+ const models=[['recommended','Recommended cutoffs'],['hybrid_full','Full skills-first hybrid']].filter(([id])=>comparisonData[id]),workload=playerLoad(p),view=$('view').value,park=$('park').value;
  const values={};
  for(const [id] of models){const m=comparisonData[id],other=m.players[key(p)];values[id]={};if(!other)continue;
   const profile={...p,rates:other.rates},neutral=rates(profile,'neutral'),scenario=rates(profile,park);
@@ -58,8 +58,9 @@ function modelComparison(p){
    values[id][c]={z,raw};
   }
  }
- const before=comparisonData.hybrid_full?'recommended':comparisonData.hybrid?'recommended':comparisonData.recommended?'native':comparisonData.native?'research':'original',after=comparisonData.hybrid_full?'hybrid_full':comparisonData.hybrid?'hybrid':comparisonData.recommended?'recommended':comparisonData.native?'native':'research';
- let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+loadText(p)+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is '+(comparisonData.hybrid_full?'full hybrid minus recommended cutoffs':comparisonData.hybrid?'skills-first hybrid minus recommended cutoffs':comparisonData.recommended?'recommended cutoffs minus native regression':comparisonData.native?'native regression minus Bayesian':'Bayesian minus original')+'; positive favors the newer grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th>'+models.map(([,label])=>'<th>'+label+'</th>').join('')+'<th>Δ SD</th></tr></thead><tbody>';
+ if(models.length<2)return '<p class="note">The two-model comparison is available with the current Full skills-first hybrid snapshot.</p>';
+ const before='recommended',after='hybrid_full';
+ let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+loadText(p)+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is full hybrid minus recommended cutoffs; positive favors the newer grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th>'+models.map(([,label])=>'<th>'+label+'</th>').join('')+'<th>Δ SD</th></tr></thead><tbody>';
  for(const c of [...cats[p.kind],'Sum']){const get=id=>c==='Sum'?{z:cats[p.kind].every(x=>finite(values[id][x]?.z))?cats[p.kind].reduce((sum,x)=>sum+values[id][x].z,0):null}:values[id][c]||{};const a=get(before),b=get(after),delta=finite(a.z)&&finite(b.z)?b.z-a.z:null;html+='<tr><td>'+c+'</td>'+models.map(([id])=>get(id)).map(v=>'<td class="number">'+fmt(v.z)+' SD'+(c==='Sum'?'':'<br><small>'+esc(statText(v.raw,c,workload))+'</small>')+'</td>').join('')+'<td class="number '+color(delta)+'">'+fmt(delta)+'</td></tr>';}
  return html+'</tbody></table></div>';
 }
@@ -67,7 +68,7 @@ function modelComparison(p){
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=p=>`${p.mlbid}:${p.kind}`;
 function role(p){return overrides.get(key(p))||p.assigned_role}
-function workloadMode(){return $('workload')?.value||'standard'}
+function workloadMode(){return $('workload')?.value||'projected'}
 function workloadVariant(p){const mode=workloadMode();if(mode==='standard'||!p.playing_time)return null;const method=mode==='projected'?p.playing_time.selected.replace(/_age$/,''):mode;return roundWorkloadVariant(p.playing_time.variants[method]||null)}
 function playerLoad(p){if(overrides.has(key(p)))return roundInnings(loads[role(p)]);const variant=workloadVariant(p),load=variant?(p.kind==='Hitter'?variant.AB:variant.IP):workloadMode()==='standard'||!DATA.playing_time_model?loads[role(p)]:null;return p.kind==='Pitcher'?roundInnings(load):load}
 function loadText(p){const n=playerLoad(p);return p.kind==='Pitcher'?formatInnings(n):finite(n)?n.toFixed(0):'—'}
