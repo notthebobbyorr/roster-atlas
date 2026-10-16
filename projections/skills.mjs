@@ -39,10 +39,16 @@ function saveForecast(p,IP){return modelHost?.projectionSaveForecast?.(savesData
 function throwLabel(p){return modelHost?.projectionPitcherHandLabel?.(p.mlbid)||'Unknown'}
 function renderSavesModel(){if($('saves-methodology'))$('saves-methodology').innerHTML=savesError?'<p class="notice">'+esc(savesError)+'</p>':modelHost?.projectionSavesExplainer?.(savesData)||'<p class="note">Saves projections are unavailable in this snapshot.</p>'}
 function rememberModelState(){if(modelHost?.skillGradesModel)modelHost.skillGradesState={selected,page,overrides:[...overrides],filters:Object.fromEntries(['kind','population','park','view','sort','order','search','workload','position'].map(id=>[id,$(id)?.value||'standard']))};}
+function hybridBreakdown(p){
+ if(!p.hybrid_components)return '';
+ const entries=Object.entries(p.hybrid_components);
+ if(!entries.length)return '';
+ return '<h2 style="margin-top:20px">Skills-first forecast breakdown</h2><p class="note">Neutral category SD = skills foundation (including age) + persistent personal outcome adjustment. Park effects come afterward. Missing or inferred outcome residuals add zero independent evidence.</p><div class="scroll"><table><thead><tr><th>Category</th><th>Skills foundation</th><th>Personal adjustment</th><th>Neutral total</th><th>Independent MLB PA</th></tr></thead><tbody>'+entries.map(([cat,v])=>'<tr><td>'+esc(cat)+'</td><td class="number">'+fmt(v.foundation_sd)+' SD</td><td class="number">'+fmt(v.personal_adjustment_sd)+' SD</td><td class="number">'+fmt(v.neutral_hybrid_sd)+' SD</td><td class="number">'+Math.round(v.residual_history_PA).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>';
+}
 function modelComparison(p){
  if(!modelHost?.skillGradesComparisonLoad)return '';
  if(!comparisonData)return '<p class="note">'+(comparisonError?esc(comparisonError):'Loading model comparison…')+'</p>';
- const models=[['original','Original live'],['research','Bayesian features'],['native','Native sample regression'],['recommended','Recommended cutoffs']].filter(([id])=>comparisonData[id]),workload=playerLoad(p),view=$('view').value,park=$('park').value;
+ const models=[['original','Original live'],['research','Bayesian features'],['native','Native sample regression'],['recommended','Recommended cutoffs'],['hybrid','Skills-first hybrid']].filter(([id])=>comparisonData[id]),workload=playerLoad(p),view=$('view').value,park=$('park').value;
  const values={};
  for(const [id] of models){const m=comparisonData[id],other=m.players[key(p)];values[id]={};if(!other)continue;
   const profile={...p,rates:other.rates},neutral=rates(profile,'neutral'),scenario=rates(profile,park);
@@ -52,8 +58,8 @@ function modelComparison(p){
    values[id][c]={z,raw};
   }
  }
- const before=comparisonData.recommended?'native':comparisonData.native?'research':'original',after=comparisonData.recommended?'recommended':comparisonData.native?'native':'research';
- let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+loadText(p)+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is '+(comparisonData.recommended?'recommended cutoffs minus native regression':comparisonData.native?'native regression minus Bayesian':'Bayesian minus original')+'; positive favors the newer grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th>'+models.map(([,label])=>'<th>'+label+'</th>').join('')+'<th>Δ SD</th></tr></thead><tbody>';
+ const before=comparisonData.hybrid?'recommended':comparisonData.recommended?'native':comparisonData.native?'research':'original',after=comparisonData.hybrid?'hybrid':comparisonData.recommended?'recommended':comparisonData.native?'native':'research';
+ let html='<h2 style="margin-top:20px">Model comparison</h2><p class="note">Same park and '+loadText(p)+' '+(p.kind==='Hitter'?'AB':'IP')+'. Δ is '+(comparisonData.hybrid?'skills-first hybrid minus recommended cutoffs':comparisonData.recommended?'recommended cutoffs minus native regression':comparisonData.native?'native regression minus Bayesian':'Bayesian minus original')+'; positive favors the newer grade. Each model translates through its own assumed 2027 environment.</p><div class="scroll"><table><thead><tr><th>Category</th>'+models.map(([,label])=>'<th>'+label+'</th>').join('')+'<th>Δ SD</th></tr></thead><tbody>';
  for(const c of [...cats[p.kind],'Sum']){const get=id=>c==='Sum'?{z:cats[p.kind].every(x=>finite(values[id][x]?.z))?cats[p.kind].reduce((sum,x)=>sum+values[id][x].z,0):null}:values[id][c]||{};const a=get(before),b=get(after),delta=finite(a.z)&&finite(b.z)?b.z-a.z:null;html+='<tr><td>'+c+'</td>'+models.map(([id])=>get(id)).map(v=>'<td class="number">'+fmt(v.z)+' SD'+(c==='Sum'?'':'<br><small>'+esc(statText(v.raw,c,workload))+'</small>')+'</td>').join('')+'<td class="number '+color(delta)+'">'+fmt(delta)+'</td></tr>';}
  return html+'</tbody></table></div>';
 }
@@ -96,6 +102,7 @@ html+=`<h2 style="margin-top:16px">Projected MLB-equivalent line</h2><p>${cats[p
 const pt=workloadVariant(p);
 if(pt){html+='<p class="note"><strong>Projected playing time:</strong> '+(p.kind==='Hitter'?pt.PA.toFixed(0)+' PA · '+pt.AB.toFixed(0)+' AB':formatInnings(pt.IP)+' IP')+' · '+esc(pt.configuration.replace(/_/g,' '))+' · recency '+pt.weights.map(w=>(w*100).toFixed(1)+'%').join(' / ')+'.</p>';if(overrides.has(key(p)))html+='<p class="notice">Manual role override uses the standard '+formatInnings(loads[role(p)])+' IP workload. Restore the assigned role to use projected innings.</p>';if(!p.on_roster)html+='<p class="notice">No projected MLB roster role is assigned. This is a workload estimate from translated history, not a guaranteed call-up or MLB opportunity.</p>';}
 html+=modelComparison(p);
+html+=hybridBreakdown(p);
 if(standardizedModel)html+='<p class="note">These raw stats translate the standardized forecast through the assumed 2027 league environment, then apply the selected park. Each category uses its selected weights for the preceding three league means and spreads. In neutral park: rate = league mean + forecast SD × league SD; subtract for ERA and WHIP. Extreme rates may be bounded to keep a feasible stat line.</p>';
 if(standardizedModel&&p.rate_bounds_applied&&Object.values(p.rate_bounds_applied).some(Boolean))html+='<p class="notice">Display bounds were applied to the stat line. The grade retains the standardized skill forecast; park changes add their rate effect to that same forecast. A bounded displayed stat may therefore not convert back to the displayed grade.</p>';
 if(standardizedModel?.uncertainty&&typeof standardizedModel.uncertainty==='string')html+=`<p class="note">${esc(standardizedModel.uncertainty)}</p>`;
