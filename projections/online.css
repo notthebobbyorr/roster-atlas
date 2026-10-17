@@ -5,3 +5,15 @@ body{margin:0;font:15px system-ui;background:#f3f5f4;color:#183d34}header{displa
 #modelControls{padding:10px 20px;background:#fff;border-bottom:1px solid #b9cbc3;display:flex;gap:12px;align-items:center;flex-wrap:wrap}#modelControls label{margin:0}#modelControls select{padding:9px;max-width:100%;font:inherit}#modelControls small{color:#436256}iframe{height:calc(100dvh - 190px)}@media(max-width:600px){#modelControls{padding:10px 12px;gap:8px}#modelControls select{flex:1;min-width:180px}#modelControls small{width:100%}iframe{height:calc(100dvh - 240px)}}
 
 #views{flex-wrap:wrap}@media(max-width:600px){#views button{flex:1 1 calc(50% - 8px)}iframe{height:calc(100dvh - 285px)}}
+
+#grade-rubric{width:100%;max-width:860px;border-top:1px solid #d8e2dd;padding-top:7px;font-size:12px}
+#grade-rubric summary{cursor:pointer;font-size:13px;font-weight:650;line-height:1.5}
+#grade-rubric summary>span{font-size:12px;font-weight:400;color:#436256;margin-left:10px}
+.rubric-scroll{overflow-x:auto;margin-top:5px}
+#grade-rubric table{border-collapse:collapse;width:100%;min-width:480px;font-variant-numeric:tabular-nums}
+#grade-rubric th,#grade-rubric td{padding:4px 9px;text-align:center;white-space:nowrap;border-bottom:1px solid #e2e9e5}
+#grade-rubric th:first-child{text-align:left;padding-left:0}
+#grade-rubric thead th>span{display:block;font-size:10px;font-weight:400;color:#436256}
+#grade-rubric .reference{background:#edf3f0;font-weight:700}
+#grade-rubric p{margin:5px 0 0;color:#436256;font-size:11px;line-height:1.4}
+@media(max-width:600px){#grade-rubric summary>span{display:block;margin-left:0}#grade-rubric th,#grade-rubric td{padding:4px 7px}}
