@@ -1,4 +1,4 @@
-import {compileLists,projection} from './rankings-core.mjs?v=slam-1';
+import {compileLists,projection} from './rankings-core.mjs?v=organizations-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -18,6 +18,7 @@ try{
 const model=parent.skillGradesModel(),season=core.projection_season||2027;
 const pool=compileLists(starterRoles,core.players,parent.projectionEligiblePositions)['All Players'];
 const entryByKey=new Map(pool.map(entry=>[entry.key,entry]));
+$('organization').innerHTML+=[...new Set(pool.map(p=>p.team))].sort().map(team=>'<option value="'+esc(team)+'">'+esc(team.replaceAll('-',' '))+'</option>').join('');
 const storageKey='ra-draft-teams:v1:'+owner;
 let teams={},activeId=null,page=0,filtered=[],rosterRows=[],forecastCache=new Map(),loadError='';
 try{
@@ -98,8 +99,8 @@ function renderRoster(){
 }
 function fortyMan(entry){return rosterStatus.players[String(entry.mlbid)]?.forty_man||(rosterStatus.official_teams===30?'no':'unknown');}
 function renderPool(){
- const query=$('search').value.trim().toLowerCase(),kind=$('kind').value,position=$('position').value,forty=$('forty-man').value,team=currentTeam(),picked=new Set(team.picks.map(p=>p.mlbid));
- filtered=pool.filter(entry=>(!kind||entry.kind===kind)&&(!position||assignmentOptions(entry).includes(position))&&(!forty||fortyMan(entry)===forty)&&(!query||`${entry.name} ${entry.mlbid}`.toLowerCase().includes(query))).map(entry=>({entry,forecast:forecast(entry)})).sort((a,b)=>{const x=a.forecast.sum,y=b.forecast.sum;return finite(x)&&finite(y)?y-x||a.entry.name.localeCompare(b.entry.name):finite(x)?-1:finite(y)?1:a.entry.name.localeCompare(b.entry.name);});
+ const query=$('search').value.trim().toLowerCase(),kind=$('kind').value,position=$('position').value,forty=$('forty-man').value,organization=$('organization').value,team=currentTeam(),picked=new Set(team.picks.map(p=>p.mlbid));
+ filtered=pool.filter(entry=>(!kind||entry.kind===kind)&&(!organization||entry.team===organization)&&(!position||assignmentOptions(entry).includes(position))&&(!forty||fortyMan(entry)===forty)&&(!query||`${entry.name} ${entry.mlbid}`.toLowerCase().includes(query))).map(entry=>({entry,forecast:forecast(entry)})).sort((a,b)=>{const x=a.forecast.sum,y=b.forecast.sum;return finite(x)&&finite(y)?y-x||a.entry.name.localeCompare(b.entry.name):finite(x)?-1:finite(y)?1:a.entry.name.localeCompare(b.entry.name);});
  const pages=Math.max(1,Math.ceil(filtered.length/50));page=Math.max(0,Math.min(page,pages-1));
  $('pool-head').innerHTML='<tr><th>Add</th><th class="player">Player</th><th>Group</th><th>Eligible / plan</th>'+statHeaders()+'<th>Sum SD</th><th>SLAM</th><th>ACE</th></tr>';
  $('pool-rows').innerHTML=filtered.slice(page*50,page*50+50).map(({entry,forecast:f})=>'<tr><td><button type="button" data-add="'+esc(entry.key)+'"'+(picked.has(Number(entry.mlbid))||team.picks.length>=50?' disabled':'')+'>'+(picked.has(Number(entry.mlbid))?'Drafted':'Add')+'</button></td><td class="player">'+esc(entry.name)+'<small>'+esc(entry.team.replaceAll('-',' '))+' · ID '+entry.mlbid+'</small></td><td>'+esc(entry.kind)+'</td><td>'+assignmentOptions(entry).join(' / ')+'</td>'+statCells(f)+'<td class="number">'+fmt(f.sum)+'</td><td class="number">'+fmt(f.offense_grade)+'</td><td class="number">'+fmt(f.pitching_grade)+'</td></tr>').join('')||'<tr><td class="empty" colspan="18">No matching players. Clear a filter or try an MLB ID.</td></tr>';
@@ -122,7 +123,7 @@ $('rename-team').onclick=()=>action(()=>{const name=$('team-name').value.trim();
 $('delete-team').onclick=()=>action(()=>{if(!window.confirm('Delete '+currentTeam().name+' and its drafted players from this device? Export a team file first if you want to keep it.'))return;delete teams[activeId];if(!Object.keys(teams).length){const team=createTeam();teams[team.id]=team;}activeId=Object.keys(teams)[0];page=0;render();persist('Team deleted from this device.');});
 for(const [id,field] of [['split','split'],['workload','method'],['park','park'],['view','view']])$(id).addEventListener('change',()=>action(()=>{currentTeam()[field]=$(id).value;forecastCache.clear();render();persist();}));
 $('show-guidelines').addEventListener('change',()=>action(()=>{currentTeam().showGuidelines=$('show-guidelines').checked;renderGuidelines();persist();}));
-for(const id of ['search','kind','position','forty-man'])$(id).addEventListener(id==='search'?'input':'change',()=>action(()=>{page=0;renderPool();}));
+for(const id of ['search','kind','position','forty-man','organization'])$(id).addEventListener(id==='search'?'input':'change',()=>action(()=>{page=0;renderPool();}));
 $('previous-page').onclick=()=>action(()=>{page--;renderPool();});$('next-page').onclick=()=>action(()=>{page++;renderPool();});
 $('add-placeholder').onclick=()=>action(()=>{
  const name=$('placeholder-name').value;

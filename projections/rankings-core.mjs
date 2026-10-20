@@ -1,12 +1,13 @@
 import {projectInningsPerStart} from './pitcher-starts.mjs?v=hybrid-full-1';
 import {projectSaves} from './saves.mjs?v=hybrid-full-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
+import {playerOrganizations} from './player-organizations.mjs?v=organizations-1';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
  const counts=new Map();for(const p of entries){const role=p.rr_role||'Unlisted';counts.set(role,(counts.get(role)||0)+1);}
  const priority=['CL','SU8','SU7','MID','LR'];
- const label=role=>({CL:'Closers / closer committees (CL)',SU8:'Setup · 8th inning (SU8)',SU7:'Setup · 7th inning (SU7)',MID:'Middle relief (MID)',LR:'Long relief (LR)',Bench:'Platoon starter (Bench)',Unassigned:'Unassigned / FA'})[role]||(/^SP\d+$/.test(role)?'Rotation slot '+role.slice(2)+' ('+role+')':/^\d+$/.test(role)?'Lineup slot '+role:role);
+ const label=role=>({CL:'Closers / closer committees (CL)',SU8:'Setup · 8th inning (SU8)',SU7:'Setup · 7th inning (SU7)',MID:'Middle relief (MID)',LR:'Long relief (LR)',Bench:'Platoon starter (Bench)',Unassigned:'No RR role / unassigned'})[role]||(/^SP\d+$/.test(role)?'Rotation slot '+role.slice(2)+' ('+role+')':/^\d+$/.test(role)?'Lineup slot '+role:role);
  return [...counts].sort(([a],[b])=>{const ai=priority.indexOf(a),bi=priority.indexOf(b);return ai>=0||bi>=0?(ai<0?99:ai)-(bi<0?99:bi):a.localeCompare(b,undefined,{numeric:true});}).map(([value,count])=>({value,label:label(value),count}));
 }
 export function listRoles(rr,positions){
@@ -32,7 +33,11 @@ export function compileLists(rr,players,eligible){
   const role=profile.kind==='Pitcher'?profile.assigned_role:'Hitter';
   if(!['Hitter','SP','RP','Swingman'].includes(role))continue;
   const positions=eligible(profile.mlbid,profile.kind,2026);
-  const entry={key,mlbid:profile.mlbid,kind:profile.kind,role,name:profile.player_name,profile,positions,team:'unassigned',team_id:null,rr_role:'Unassigned',section:'unassigned',source_url:rr.source};
+  const membership=playerOrganizations.players[String(profile.mlbid)],org=membership?playerOrganizations.teams[String(membership[0])]:null;
+  // Team filtering may use an organization; only RR assigns an MLB park/role.
+  const entry={key,mlbid:profile.mlbid,kind:profile.kind,role,name:profile.player_name,profile,positions,
+    team:org?.[1]||'unassigned',team_id:null,organization_id:org?.[0]??null,
+    organization_fgid:membership?.[1]??null,rr_role:'Unassigned',section:'unassigned',source_url:rr.source};
   for(const position of listRoles(entry,positions))lists[position].push(entry);
  }
  const pool=[...new Map(Object.values(lists).flat().map(entry=>[entry.key,entry])).values()];
