@@ -2,7 +2,7 @@ import {compileLists,projection} from './rankings-core.mjs?v=slam-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=slam-1';
+import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=placeholders-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
 
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -84,9 +84,9 @@ function renderTotals(){
   const value=key==='IP'?formatInnings(totals[key]):fmt(totals[key],digits),c=coverage[key];
   return '<dl class="total"><dt>'+label+'</dt><dd>'+value+'</dd><small>'+(c.known<c.total?'Partial · '+c.known+'/'+c.total+' players':'')+'</small></dl>';
  }).join('');
- const saved=rosterRows.filter(row=>!row.live).length;
+ const saved=rosterRows.filter(row=>!row.live&&!row.pick.placeholder).length,manual=rosterRows.filter(row=>row.pick.placeholder).length;
  $('projection-label').textContent=season+' · '+(modelNames[model]||model);
- $('totals-note').textContent='AVG is weighted by AB; ERA and WHIP by IP. Missing projections are excluded and marked partial. R, RBI and wins are not yet projected. Saves use the existing role/IP model. IP/Start is a separate three-year MLB starter-only length estimate using the selected playing-time recency weights; it does not change projected IP. No MLB starts in the window means unavailable. '+(saved?saved+' player(s) use their saved projection because the current pool has no usable profile.':'All drafted players use the current selected model.');
+ $('totals-note').textContent='AVG is weighted by AB; ERA and WHIP by IP. Missing projections are excluded and marked partial. R, RBI and wins are not yet projected. Saves use the existing role/IP model. IP/Start is a separate three-year MLB starter-only length estimate using the selected playing-time recency weights; it does not change projected IP. No MLB starts in the window means unavailable. '+(saved?saved+' player(s) use their saved projection because the current pool has no usable profile.':'Available players use the current selected model.')+(manual?' '+manual+' placeholder(s) count toward roster and position targets; their projections and ages are unknown.':'');
 }
 function statValue(f,key){return key==='PA'||key==='AB'||key==='IP'||key==='IP_per_start'?f?.[key]:f?.stats?.[key];}
 function statCells(f,showStart=true){return playerColumns.map(([key,,digits])=>'<td class="number">'+(key==='IP'?formatInnings(statValue(f,key)):fmt(key==='IP_per_start'&&!showStart?null:statValue(f,key),digits))+'</td>').join('');}
@@ -94,7 +94,7 @@ function gradeCells(f){return gradeColumns.map(key=>'<td class="number">'+fmt(f?
 function statHeaders(){return playerColumns.map(([,label])=>'<th>'+label+'</th>').join('');}
 function renderRoster(){
  $('roster-head').innerHTML='<tr><th>Round</th><th class="player">Player</th><th>Assigned position</th><th>RP plan</th>'+statHeaders()+gradeColumns.map(key=>'<th>'+key+' SD</th>').join('')+'<th>Sum SD</th><th>SLAM</th><th>ACE</th><th>Draft notes</th><th>Remove</th></tr>';
- $('roster-rows').innerHTML=rosterRows.map(({pick,entry,live,forecast:f})=>'<tr><td><input class="round" type="number" min="1" max="50" data-round="'+esc(pick.key)+'" value="'+pick.round+'" aria-label="Draft round for '+esc(pick.name)+'"></td><td class="player">'+esc(pick.name)+'<small>'+esc(pick.kind)+' · '+(live?esc(entry.team.replaceAll('-',' ')):'Saved '+esc(pick.snapshot.model)+' · '+pick.snapshot.season)+'</small></td><td><select data-position="'+esc(pick.key)+'" aria-label="Assigned position for '+esc(pick.name)+'">'+optionsForPick(pick).map(pos=>'<option value="'+pos+'"'+(pos===pick.position?' selected':'')+'>'+pos+'</option>').join('')+'</select></td><td>'+(pick.position==='RP'?'<select data-relief="'+esc(pick.key)+'" aria-label="Relief plan for '+esc(pick.name)+'">'+[['closer','Closer'],['spec','Spec'],['other','Other RP']].map(([code,label])=>'<option value="'+code+'"'+(pick.reliefType===code?' selected':'')+'>'+label+'</option>').join('')+'</select>':'—')+'</td>'+statCells(f,pick.position==='SP')+gradeCells(f)+'<td><input class="note" maxlength="500" data-note="'+esc(pick.key)+'" value="'+esc(pick.note)+'" aria-label="Draft notes for '+esc(pick.name)+'"></td><td><button class="danger" type="button" data-remove="'+esc(pick.key)+'" aria-label="Remove '+esc(pick.name)+'">×</button></td></tr>').join('')||'<tr><td class="empty" colspan="25">Your roster is empty. Find a drafted player below and click Add.</td></tr>';
+ $('roster-rows').innerHTML=rosterRows.map(({pick,entry,live,forecast:f})=>'<tr><td><input class="round" type="number" min="1" max="50" data-round="'+esc(pick.key)+'" value="'+pick.round+'" aria-label="Draft round for '+esc(pick.name)+'"></td><td class="player">'+esc(pick.name)+'<small>'+esc(pick.kind)+' · '+(pick.placeholder?'Placeholder · no projection':live?esc(entry.team.replaceAll('-',' ')):'Saved '+esc(pick.snapshot.model)+' · '+pick.snapshot.season)+'</small></td><td><select data-position="'+esc(pick.key)+'" aria-label="Assigned position for '+esc(pick.name)+'">'+optionsForPick(pick).map(pos=>'<option value="'+pos+'"'+(pos===pick.position?' selected':'')+'>'+pos+'</option>').join('')+'</select></td><td>'+(pick.position==='RP'?'<select data-relief="'+esc(pick.key)+'" aria-label="Relief plan for '+esc(pick.name)+'">'+[['closer','Closer'],['spec','Spec'],['other','Other RP']].map(([code,label])=>'<option value="'+code+'"'+(pick.reliefType===code?' selected':'')+'>'+label+'</option>').join('')+'</select>':'—')+'</td>'+statCells(f,pick.position==='SP')+gradeCells(f)+'<td><input class="note" maxlength="500" data-note="'+esc(pick.key)+'" value="'+esc(pick.note)+'" aria-label="Draft notes for '+esc(pick.name)+'"></td><td><button class="danger" type="button" data-remove="'+esc(pick.key)+'" aria-label="Remove '+esc(pick.name)+'">×</button></td></tr>').join('')||'<tr><td class="empty" colspan="25">Your roster is empty. Find a drafted player below and click Add.</td></tr>';
 }
 function fortyMan(entry){return rosterStatus.players[String(entry.mlbid)]?.forty_man||(rosterStatus.official_teams===30?'no':'unknown');}
 function renderPool(){
@@ -124,6 +124,12 @@ for(const [id,field] of [['split','split'],['workload','method'],['park','park']
 $('show-guidelines').addEventListener('change',()=>action(()=>{currentTeam().showGuidelines=$('show-guidelines').checked;renderGuidelines();persist();}));
 for(const id of ['search','kind','position','forty-man'])$(id).addEventListener(id==='search'?'input':'change',()=>action(()=>{page=0;renderPool();}));
 $('previous-page').onclick=()=>action(()=>{page--;renderPool();});$('next-page').onclick=()=>action(()=>{page++;renderPool();});
+$('add-placeholder').onclick=()=>action(()=>{
+ const name=$('placeholder-name').value;
+ teams[activeId]=addPlaceholder(currentTeam(),{name,position:$('placeholder-position').value,note:$('placeholder-note').value},{season});
+ $('placeholder-name').value='';$('placeholder-note').value='';render();persist(name.trim()+' added as a placeholder. It counts toward your roster; projections remain blank.');
+});
+$('placeholder-name').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();$('add-placeholder').onclick();}});
 $('pool-rows').addEventListener('click',event=>{const button=event.target.closest('button[data-add]');if(!button)return;action(()=>{const entry=entryByKey.get(button.dataset.add);if(!entry)throw Error('Player unavailable.');teams[activeId]=addPick(currentTeam(),entry,forecast(entry),{model,season});render();persist(entry.name+' added. Position assignment can be changed in Your roster.');});});
 $('roster-rows').addEventListener('click',event=>{const button=event.target.closest('button[data-remove]');if(!button)return;action(()=>{currentTeam().picks=currentTeam().picks.filter(pick=>pick.key!==button.dataset.remove);render();persist('Player removed.');});});
 $('roster-rows').addEventListener('change',event=>action(()=>{
@@ -146,7 +152,7 @@ $('import-team').onchange=async event=>{
 };
 $('export-csv').onclick=()=>action(()=>{
  const header=['Round','Player','MLB ID','Group','Assigned position','RP plan','Notes','Projection source',...playerColumns.map(([,label])=>label),...gradeColumns.map(key=>key+' SD'),'Sum SD','SLAM','ACE'];
- const rows=rosterRows.map(({pick,live,forecast:f})=>[pick.round,pick.name,pick.mlbid,pick.kind,pick.position,pick.position==='RP'?pick.reliefType:'',pick.note,live?model:pick.snapshot.model+' (saved)',...playerColumns.map(([key])=>key==='IP_per_start'&&pick.position!=='SP'?'':statValue(f,key)??''),...gradeColumns.map(key=>f?.grades?.[key]??''),f?.sum??'',f?.offense_grade??'',f?.pitching_grade??'']);
+ const rows=rosterRows.map(({pick,live,forecast:f})=>[pick.round,pick.name,pick.mlbid,pick.kind,pick.position,pick.position==='RP'?pick.reliefType:'',pick.note,pick.placeholder?'Placeholder (no projection)':live?model:pick.snapshot.model+' (saved)',...playerColumns.map(([key])=>key==='IP_per_start'&&pick.position!=='SP'?'':statValue(f,key)??''),...gradeColumns.map(key=>f?.grades?.[key]??''),f?.sum??'',f?.offense_grade??'',f?.pitching_grade??'']);
  download(fileName()+'.csv',[header,...rows].map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');
 });
 render();if(loadError)$('status').textContent=loadError;else $('status').textContent='Ready · saved on this device; export a team file for backup.';

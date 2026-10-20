@@ -54,6 +54,19 @@ export function addPick(team,entry,forecast,{model,season}={}){
   snapshot:{model:model||'recommended',season:season||2027,age:projectionAge(entry,null,season||2027),saved_at:new Date().toISOString(),forecast:cleanForecast(forecast)}};
  return {...team,picks:[...team.picks,pick]};
 }
+export function addPlaceholder(team,{name,position,note=''}={}, {season=2027}={}){
+ if(team.picks.length>=50)throw Error('This roster already has 50 players. Remove a player before adding another.');
+ if(!text(name,120)||!name.trim())throw Error('Enter a player name from 1 to 120 characters.');
+ if(!rosterPositions.includes(position)||!text(note,500))throw Error('Choose a position and keep notes within 500 characters.');
+ if(team.picks.some(p=>p.name.trim().toLowerCase()===name.trim().toLowerCase()))throw Error('That player name is already on this team.');
+ const kind=['SP','RP'].includes(position)?'Pitcher':'Hitter';
+ const eligible=rosterPositions.filter(pos=>kind==='Pitcher'?['SP','RP'].includes(pos):!['SP','RP'].includes(pos));
+ const used=new Set(team.picks.map(p=>p.round)),round=Array.from({length:50},(_,i)=>i+1).find(n=>!used.has(n));
+ let key;do{key='manual:'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);}while(team.picks.some(p=>p.key===key));
+ const pick={key,mlbid:null,placeholder:true,name:name.trim(),kind,eligible,position,round,note,
+  reliefType:position==='RP'?'spec':'other',snapshot:{model:'placeholder',season,age:null,saved_at:new Date().toISOString(),forecast:cleanForecast(null)}};
+ return {...team,picks:[...team.picks,pick]};
+}
 export function positionProgress(team){
  const counts=Object.fromEntries(rosterPositions.map(pos=>[pos,0]));
  let hitters=0,pitchers=0;
@@ -84,14 +97,18 @@ export function validateTeam(raw){
  if(!['27/23','28/22'].includes(raw.split)||!['projected','direct','ordered_ballast','standard'].includes(raw.method)||!['current','neutral'].includes(raw.park)||!['contribution','quality'].includes(raw.view))throw Error('Invalid roster settings.');
  if(!Array.isArray(raw.picks)||raw.picks.length>50)throw Error('A team must contain at most 50 players.');
  const seen=new Set(),picks=raw.picks.map(p=>{
-  if(!plain(p)||!['Hitter','Pitcher'].includes(p.kind)||!Number.isInteger(p.mlbid)||p.mlbid<=0||p.key!==p.mlbid+':'+p.kind||seen.has(p.mlbid)||!text(p.name,120)||!p.name.trim())throw Error('Invalid or duplicate player.');
-  seen.add(p.mlbid);
+  if(!plain(p)||!['Hitter','Pitcher'].includes(p.kind)||!text(p.name,120)||!p.name.trim())throw Error('Invalid or duplicate player.');
+  const manual=p.placeholder===true;
+  if(manual? p.mlbid!==null||!text(p.key,100)||!/^manual:[A-Za-z0-9_-]+$/.test(p.key)
+    : !Number.isInteger(p.mlbid)||p.mlbid<=0||p.key!==p.mlbid+':'+p.kind)throw Error('Invalid player identity.');
+  const identity=manual?p.key:'mlb:'+p.mlbid;
+  if(seen.has(identity))throw Error('Invalid or duplicate player.');seen.add(identity);
   if(!Array.isArray(p.eligible)||!p.eligible.length||p.eligible.some(pos=>!rosterPositions.includes(pos)||(p.kind==='Pitcher'?!['SP','RP'].includes(pos):['SP','RP'].includes(pos)))||!p.eligible.includes(p.position))throw Error('Invalid position assignment.');
   if(!Number.isInteger(p.round)||p.round<1||p.round>50||!text(p.note,500)||!['closer','spec','other'].includes(p.reliefType))throw Error('Invalid draft round, note, or relief designation.');
   if(!plain(p.snapshot)||!text(p.snapshot.model,40)||!Number.isInteger(p.snapshot.season)||!text(p.snapshot.saved_at,60)||!plain(p.snapshot.forecast))throw Error('Missing saved projection.');
-  const forecast=cleanForecast(p.snapshot.forecast);
+  const forecast=cleanForecast(manual?null:p.snapshot.forecast);
   if([forecast.IP_per_start,forecast.PA,forecast.AB,forecast.IP,...Object.values(forecast.stats)].some(value=>finite(value)&&value<0))throw Error('Saved workload and outcome stats cannot be negative.');
-  return {...p,eligible:[...new Set(p.eligible)],snapshot:{model:p.snapshot.model,season:p.snapshot.season,age:validAge(p.snapshot.age)?p.snapshot.age:null,saved_at:p.snapshot.saved_at,forecast}};
+  return {...p,eligible:[...new Set(p.eligible)],snapshot:{model:manual?'placeholder':p.snapshot.model,season:p.snapshot.season,age:manual?null:validAge(p.snapshot.age)?p.snapshot.age:null,saved_at:p.snapshot.saved_at,forecast}};
  });
  return {id:raw.id,name:raw.name.trim(),split:raw.split,method:raw.method,park:raw.park,view:raw.view,showGuidelines:raw.showGuidelines===true,picks};
 }
