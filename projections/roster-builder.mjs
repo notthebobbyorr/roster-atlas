@@ -1,4 +1,4 @@
-import {compileLists,projection} from './rankings-core.mjs?v=organizations-1';
+import {compileLists,projection} from './rankings-core.mjs?v=coe-k-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
