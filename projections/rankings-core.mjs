@@ -75,7 +75,7 @@ export function readExclusions(data,available){
 export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={}}={}){
  const p=entry.profile;
  if(!p)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,offense_grade:null,pitching_grade:null};
- const r={...p.rates},factor=park==='neutral'?null:(p.parks?.[String(entry.team_id)]||core.park_priors?.[p.kind]?.[String(entry.team_id)]);
+ const r={...p.rates},factor=core.park_mode==='as_projected'||park==='neutral'?null:(p.parks?.[String(entry.team_id)]||core.park_priors?.[p.kind]?.[String(entry.team_id)]);
  if(factor&&finite(r.HR_rate)&&finite(r.H_rate)){
   const hr=r.HR_rate,nh=r.H_rate-hr;r.HR_rate=hr*factor.HR;r.H_rate=r.HR_rate+nh*factor.NH;
   if(p.kind==='Pitcher'&&finite(r.ER_rate))r.ER_rate=Math.max(0,r.ER_rate+core.run_weights.HR*(r.HR_rate-hr)+core.run_weights.NH*(nh*factor.NH-nh));

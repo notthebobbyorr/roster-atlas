@@ -1,4 +1,4 @@
-import {compileLists,projection} from './rankings-core.mjs?v=coe-k-1';
+import {compileLists,projection} from './rankings-core.mjs?v=platoon-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -16,6 +16,8 @@ try{
  if(owner!==parent.projectionRankingOwner)throw Error('Session changed. Sign in again.');
 }catch(error){$('status').textContent=error.message;throw error;}
 const model=parent.skillGradesModel(),season=core.projection_season||2027;
+if($('selected-model-note'))$('selected-model-note').textContent=core.projection_note||'';
+if(core.park_mode==='as_projected'){$('park').disabled=true;$('park').title='This variant uses its selected projection context without an additional park transformation.';}
 const pool=compileLists(starterRoles,core.players,parent.projectionEligiblePositions)['All Players'];
 const entryByKey=new Map(pool.map(entry=>[entry.key,entry]));
 $('organization').innerHTML+=[...new Set(pool.map(p=>p.team))].sort().map(team=>'<option value="'+esc(team)+'">'+esc(team.replaceAll('-',' '))+'</option>').join('');
@@ -34,7 +36,7 @@ if(!Object.hasOwn(teams,activeId))activeId=Object.keys(teams)[0];
 const totalsColumns=[['PA','PA',0],['AB','AB',0],['HR','HR',1],['SB','SB',1],['AVG','AVG',3],['IP','IP',2],['K','K',1],['SV','SV',1],['ERA','ERA',2],['WHIP','WHIP',3]];
 const playerColumns=[...totalsColumns.slice(0,6),['IP_per_start','IP/Start est.',1],...totalsColumns.slice(6)];
 const gradeColumns=['Power','Speed','AVG','K','ERA','WHIP'];
-const modelNames={recommended:'Recommended cutoffs',native:'Native sample regression',research:'Bayesian feature model',original:'Original live model'};
+const modelNames={platoon:'Platoon skill-aged · matchup playing time',hybrid_full:'Full skills-first hybrid',recommended:'Recommended cutoffs',native:'Native sample regression',research:'Bayesian feature model',original:'Original live model'};
 function currentTeam(){return teams[activeId];}
 function assertOwner(){if(parent.projectionRankingOwner!==owner)throw Error('Session changed. Sign in again.');}
 function forecast(entry){

@@ -3,7 +3,7 @@ import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=coe-k-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=platoon-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=slam-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
@@ -20,6 +20,8 @@ try{
  if(owner!==parent.projectionRankingOwner)throw Error('Session changed. Sign in again.');
 }catch(error){$('status').textContent=error.message;throw error;}
 const model=parent.skillGradesModel(),positionLists=attachContracts(compileLists(starterRoles,core.players,parent.projectionEligiblePositions),contracts,core.projection_season||2027);
+if($('selected-model-note'))$('selected-model-note').textContent=core.projection_note||'';
+if(core.park_mode==='as_projected'){$('park').disabled=true;$('park').title='This variant uses its selected projection context without an additional park transformation.';}
 const lists={...positionLists},entries=uniqueRankingEntries(positionLists),entryByKey=new Map(entries.map(p=>[p.key,p]));
 const available=Object.fromEntries(fantasyRoles.map(role=>[role,lists[role].map(p=>p.key)]));
 const storageKey='ra-starter-rankings:v1:'+owner;

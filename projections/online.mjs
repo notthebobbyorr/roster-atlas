@@ -1,14 +1,14 @@
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs';
 import {config} from '../config.mjs';
-import * as skillRegistry from './skill-models.mjs?v=coe-k-1';
+import * as skillRegistry from './skill-models.mjs?v=platoon-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let authenticated=false,requestId=0,sessionEpoch=0;
-const defaultModel=['hybrid_full','recommended'].find(id=>Object.hasOwn(skillModels,id));
+const defaultModel=['platoon','hybrid_full','recommended'].find(id=>Object.hasOwn(skillModels,id));
 let modelKey=defaultModel,modelEpoch=0,runtimes=new Map(),savesRoles={};
 const activeModel=()=>skillModels[modelKey];
 $('model').value=defaultModel;
@@ -99,6 +99,7 @@ async function showView(){
  if(!authenticated)return;
  const id=++requestId,roster=selectedView()==='roster';
  $('modelControls').hidden=false;
+ if($('downloadForecasts'))$('downloadForecasts').hidden=!activeModel().downloads?.projections_csv;
  $('rankingsTab').setAttribute('aria-pressed',String(!roster));$('rosterTab').setAttribute('aria-pressed',String(roster));
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');$('retry').hidden=true;
  $('status').textContent=roster?'Loading roster builder…':'Loading rankings…';
@@ -106,7 +107,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=coe-k-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=platoon-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -124,6 +125,11 @@ $('logout').onclick=async()=>{clear();$('status').textContent='Signing out…';t
 $('rankingsTab').onclick=()=>{if(selectedView()==='rankings')showView();else location.hash='rankings';};
 $('rosterTab').onclick=()=>{if(selectedView()==='roster')showView();else location.hash='roster';};
 $('retry').onclick=showView;
+if($('downloadForecasts'))$('downloadForecasts').onclick=async()=>{
+ if(!authenticated||!activeModel().downloads?.projections_csv)return;
+ try{await download(activeModel().snapshot,activeModel().downloads.projections_csv);}
+ catch(error){$('status').textContent=error.message;}
+};
 $('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;showView();};
 window.addEventListener('hashchange',showView);
 window.addEventListener('storage',event=>{if(event.key===cloud.session_key&&!cloud.session){clear();$('status').textContent='Signed out.';}});
