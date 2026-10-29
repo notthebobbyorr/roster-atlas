@@ -1,9 +1,10 @@
 import {Cloud} from './api.mjs?v=auth-recovery-1';
 import {config} from './config.mjs';
-import {recoveryInput,validateNewPassword} from './auth-recovery.mjs?v=auth-recovery-1';
+import {recoveryInput,recoveryLinkInput,validateNewPassword} from './auth-recovery.mjs?v=auth-recovery-2';
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 const page=new URL('./reset-password.html',location.href).href;
 const initial=recoveryInput(location.href,config.supabase_url);
+const localhostHelp=new URL(location.href).searchParams.get('help')==='localhost';
 // Clear tokens before making any network requests. Never persist a recovery session.
 if(location.hash||location.search)history.replaceState(null,'',location.pathname);
 let recoveryToken=null,recoveredUser=null,busy=false;
@@ -33,10 +34,8 @@ $('request-form').onsubmit=async event=>{
 $('link-form').onsubmit=async event=>{
  event.preventDefault();if(busy)return;const value=$('recovery-link').value.trim();$('recovery-link').value='';
  try{
-  const url=new URL(value);
-  if(url.origin!==new URL(config.supabase_url).origin&&(url.origin!==location.origin||url.pathname!==new URL(page).pathname))throw Error('invalid');
-  await accept(recoveryInput(value,config.supabase_url));
- }catch{message('Paste the password-reset link from your Roster Atlas email.',true);}
+  await accept(recoveryLinkInput(value,page,config.supabase_url));
+ }catch{message('Paste the reset link from your email, or the complete address from the localhost error page.',true);}
 };
 $('password-form').onsubmit=async event=>{
  event.preventDefault();if(busy)return;
@@ -59,3 +58,4 @@ $('password-form').onsubmit=async event=>{
 };
 if(initial.kind==='session'||initial.kind==='verify')accept(initial);
 else if(initial.kind!=='request')requestScreen('This reset link is invalid or has expired. Request a new link below.',true);
+else if(localhostHelp){$('link-help').open=true;message('Copy the complete address from the localhost error page and paste it below to continue.');$('recovery-link').focus();}

@@ -20,3 +20,13 @@ export function validateNewPassword(password,confirmation){
  if(password!==confirmation)return 'The passwords do not match. Please enter them again.';
  return '';
 }
+export function recoveryLinkInput(value,page,projectURL){
+ const url=new URL(value),input=recoveryInput(value,projectURL),own=new URL(page);
+ const loopback=['localhost','127.0.0.1','[::1]'].includes(url.hostname)&&['http:','https:'].includes(url.protocol);
+ const known=url.origin===new URL(projectURL).origin||(url.origin===own.origin&&url.pathname===own.pathname);
+ // A localhost callback may already contain the one-time recovery session.
+ // Never navigate to it or fetch it: validate its token against our fixed project.
+ if(!known&&!(loopback&&input.kind==='session'))throw Error('invalid');
+ if(input.kind!=='session'&&input.kind!=='verify')throw Error('invalid');
+ return input;
+}
