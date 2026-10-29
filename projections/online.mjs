@@ -2,7 +2,7 @@ import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
-import * as skillRegistry from './skill-models.mjs?v=platoon-parks-1';
+import * as skillRegistry from './skill-models.mjs?v=platoon-skills-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -101,6 +101,7 @@ async function showView(){
  const id=++requestId,roster=selectedView()==='roster';
  $('modelControls').hidden=false;
  if($('downloadForecasts'))$('downloadForecasts').hidden=!activeModel().downloads?.projections_csv;
+ if($('downloadSkills'))$('downloadSkills').hidden=!activeModel().downloads?.skills_csv;
  $('rankingsTab').setAttribute('aria-pressed',String(!roster));$('rosterTab').setAttribute('aria-pressed',String(roster));
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');$('retry').hidden=true;
  $('status').textContent=roster?'Loading roster builder…':'Loading rankings…';
@@ -108,7 +109,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=platoon-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=platoon-skills-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -129,6 +130,11 @@ $('retry').onclick=showView;
 if($('downloadForecasts'))$('downloadForecasts').onclick=async()=>{
  if(!authenticated||!activeModel().downloads?.projections_csv)return;
  try{await download(activeModel().snapshot,activeModel().downloads.projections_csv);}
+ catch(error){$('status').textContent=error.message;}
+};
+if($('downloadSkills'))$('downloadSkills').onclick=async()=>{
+ if(!authenticated||!activeModel().downloads?.skills_csv)return;
+ try{await download(activeModel().snapshot,activeModel().downloads.skills_csv);}
  catch(error){$('status').textContent=error.message;}
 };
 $('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;showView();};
