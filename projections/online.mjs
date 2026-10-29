@@ -2,7 +2,7 @@ import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
-import * as skillRegistry from './skill-models.mjs?v=platoon-1';
+import * as skillRegistry from './skill-models.mjs?v=platoon-parks-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
