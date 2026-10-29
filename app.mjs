@@ -1,5 +1,6 @@
 import {config} from './config.mjs';
-import {Cloud} from './api.mjs';
+import {Cloud} from './api.mjs?v=auth-recovery-1';
+import {redirectRecovery} from './auth-recovery.mjs?v=auth-recovery-1';
 import {fields,table_columns,table_value,validate_ids,append_matching,move_rank,merge_visible,filter_players,parse_import,format_value,make_draft,csv_export,sync_draft} from './core.mjs?v=pitch-grades-1';
 const $=id=>document.getElementById(id);
 const local_preview=['localhost','127.0.0.1','[::1]'].includes(location.hostname)&&new URLSearchParams(location.search).has('preview');
@@ -139,6 +140,7 @@ window.addEventListener('online',()=>{tell('Connection restored. Use Save now to
 window.addEventListener('offline',()=>tell('Offline. Changes stay on this device until you reconnect and save.'));
 window.addEventListener('beforeunload',event=>{if(state.drafts.some(d=>d.dirty||d.pending)){event.preventDefault();event.returnValue='';}});
 async function boot(){
+ if(redirectRecovery(location,'./reset-password.html'))return;
  if(local_preview){await start({id:'local-preview'});return;}
  if(!config.supabase_url||!config.publishable_key){$('login-form').hidden=true;$('setup').hidden=false;return;}
  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config.supabase_url))throw Error('Use the HTTPS project URL from Supabase configuration.');

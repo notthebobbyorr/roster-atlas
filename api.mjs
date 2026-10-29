@@ -11,6 +11,11 @@ export class Cloud {
   return data;
  }
  async sign_in(email,password){const session=await this.request('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password}});this.store(session);return session.user;}
+ async request_password_reset(email,redirect){return this.request('/auth/v1/recover?redirect_to='+encodeURIComponent(redirect),{method:'POST',body:{email:email.trim()}});}
+ async recovery_user(token){return this.request('/auth/v1/user',{token});}
+ async verify_recovery(token_hash){return this.request('/auth/v1/verify',{method:'POST',body:{type:'recovery',token_hash}});}
+ async reset_password(password,token){return this.request('/auth/v1/user',{method:'PUT',body:{password},token});}
+ async close_recovery(token){return this.request('/auth/v1/logout?scope=local',{method:'POST',token});}
  async token(){
   const refresh=async()=>{let s=this.session;if(!s)throw Error('Sign in again to sync your rankings.');
    if(s.expires_at>Date.now()/1000+60)return s.access_token;

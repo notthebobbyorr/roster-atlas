@@ -6,7 +6,7 @@
 <body>
 <header><div class="brand"><span class="monogram">RA</span><div><strong>Roster Atlas</strong><small id="snapshot-label">Your ranking workspace</small></div></div><button id="account" class="quiet" hidden>Sign out</button></header>
 <main>
-<section id="login" class="login panel"><span class="eyebrow">YOUR DRAFT BOARD</span><h1>A season of possibilities.<br>Your order.</h1><p>Sign in to open your projections and saved rankings.</p><form id="login-form"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Sign in</button></form><p id="setup" hidden>This copy needs its Supabase connection configured. See the deployment guide included with the app.</p></section>
+<section id="login" class="login panel"><span class="eyebrow">YOUR DRAFT BOARD</span><h1>A season of possibilities.<br>Your order.</h1><p>Sign in to open your projections and saved rankings.</p><form id="login-form"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Sign in</button></form><p><a href="reset-password.html">Forgot password?</a></p><p id="setup" hidden>This copy needs its Supabase connection configured. See the deployment guide included with the app.</p></section>
 <div id="workspace" hidden>
 <section class="workspace-bar"><div><span class="eyebrow">WORKSPACE</span><h1 id="page-title">Discover players</h1></div><button id="new-list">+ New list</button></section>
 <div id="notice" role="status" aria-live="polite"></div>
@@ -25,5 +25,5 @@
 </main>
 <nav id="navigation" aria-label="Workspace" hidden><button data-view="discover" class="active">Discover</button><button data-view="ranking">Ranking <span id="rank-count">0</span></button><button data-view="library">My lists</button></nav>
 <dialog id="confirm"><form method="dialog"><h2 id="confirm-title">Confirm</h2><p id="confirm-text"></p><div class="toolbar"><button value="cancel" class="secondary">Cancel</button><button value="ok">Continue</button></div></form></dialog>
-<script type="module" src="app.mjs?v=pitch-grades-1"></script>
+<script type="module" src="app.mjs?v=auth-recovery-1"></script>
 </body></html>

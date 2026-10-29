@@ -1,5 +1,6 @@
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
-import {Cloud} from '../api.mjs';
+import {Cloud} from '../api.mjs?v=auth-recovery-1';
+import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
 import * as skillRegistry from './skill-models.mjs?v=platoon-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
@@ -133,4 +134,4 @@ if($('downloadForecasts'))$('downloadForecasts').onclick=async()=>{
 $('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;showView();};
 window.addEventListener('hashchange',showView);
 window.addEventListener('storage',event=>{if(event.key===cloud.session_key&&!cloud.session){clear();$('status').textContent='Signed out.';}});
-if(cloud.session)open();
+if(!redirectRecovery(location,'../reset-password.html')&&cloud.session)open();
