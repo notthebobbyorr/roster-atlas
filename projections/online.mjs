@@ -13,6 +13,12 @@ const defaultModel=['platoon','hybrid_full','recommended'].find(id=>Object.hasOw
 let modelKey=defaultModel,modelEpoch=0,runtimes=new Map(),savesRoles={};
 const activeModel=()=>skillModels[modelKey];
 $('model').value=defaultModel;
+for(const id of ['projection-controls','grade-rubric']){
+ const panel=$(id);if(!panel)continue;
+ const key='ra-display:'+id;
+ try{panel.open=localStorage.getItem(key)==='open';}catch{}
+ panel.ontoggle=()=>{try{localStorage.setItem(key,panel.open?'open':'closed');}catch{}};
+}
 window.projectionEligiblePositions=eligiblePositions;window.projectionPositionOptions=positionOptions;window.projectionPositionNote=positionNote;
 window.projectionPitcherHand=pitcherHand;window.projectionPitcherHandLabel=pitcherHandLabel;
 window.projectionRankingOwner=null;
@@ -100,6 +106,7 @@ async function showView(){
  if(!authenticated)return;
  const id=++requestId,roster=selectedView()==='roster';
  $('modelControls').hidden=false;
+ if($('active-model-label'))$('active-model-label').textContent=activeModel().label;
  if($('downloadForecasts'))$('downloadForecasts').hidden=!activeModel().downloads?.projections_csv;
  if($('downloadSkills'))$('downloadSkills').hidden=!activeModel().downloads?.skills_csv;
  $('rankingsTab').setAttribute('aria-pressed',String(!roster));$('rosterTab').setAttribute('aria-pressed',String(roster));

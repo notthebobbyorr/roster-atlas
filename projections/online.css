@@ -17,3 +17,13 @@ body{margin:0;font:15px system-ui;background:#f3f5f4;color:#183d34}header{displa
 #grade-rubric .reference{background:#edf3f0;font-weight:700}
 #grade-rubric p{margin:5px 0 0;color:#436256;font-size:11px;line-height:1.4}
 @media(max-width:600px){#grade-rubric summary>span{display:block;margin-left:0}#grade-rubric th,#grade-rubric td{padding:4px 7px}}
+
+body{height:100dvh;display:flex;flex-direction:column}
+body>header,body>nav,#modelControls{flex-shrink:0}
+#modelControls{display:block;padding:0}
+#projection-controls>summary{cursor:pointer;padding:9px 20px;font-size:13px;font-weight:650;line-height:1.5}
+#active-model-label{font-weight:400;font-size:12px;color:#436256;margin-left:10px}
+.projection-options{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:0 20px 12px}
+#dashboard{flex:1 0 320px;height:auto;min-height:320px}
+summary:focus-visible{outline:3px solid #d99c32;outline-offset:-3px}
+@media(max-width:600px){#projection-controls>summary{padding:8px 12px}#active-model-label{display:block;margin-left:14px;font-size:11px}.projection-options{padding:0 12px 10px;gap:8px}.projection-options button{padding:8px 10px;font-size:12px}#grade-rubric summary>span{display:none}}
