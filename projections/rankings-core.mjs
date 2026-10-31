@@ -105,5 +105,14 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  const context=core.runs_rbi_context?.players?.[String(p.mlbid)];
  const contextualTotal=category=>!context||!finite(variant?.PA)||!finite(context[category])?null:context.PA>0?context[category]*variant.PA/context.PA:context.PA===0&&variant.PA===0?0:null;
  const runStats=contextMode&&p.kind==='Hitter'?{R:contextualTotal('R'),RBI:contextualTotal('RBI')}:{};
- return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null,...runStats},saves:save,grades,sum:categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null};
+ const sum=categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null;
+ if(contextMode&&p.kind==='Hitter'&&core.runs_rbi_context?.standards){
+  const references=core.runs_rbi_context.standards[view==='quality'?'quality':'contribution'];
+  for(const c of ['R','RBI']){
+   const st=references?.[c],value=view==='quality'?(context?.PA>0?context[c]/context.PA:null):runStats[c];
+   grades[c]=st&&st.sd>0&&finite(value)?(value-st.mean)/st.sd:null;
+  }
+ }
+ const sum_with_runs_rbi=p.kind==='Pitcher'?sum:finite(sum)&&finite(grades.R)&&finite(grades.RBI)?sum+grades.R+grades.RBI:null;
+ return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null,...runStats},saves:save,grades,sum,sum_with_runs_rbi};
 }
