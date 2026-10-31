@@ -4,7 +4,7 @@ import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=platoon-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=SP-workload-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=slam-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
@@ -151,7 +151,7 @@ function savesRoleCell(p){
 function processValue(p,field){if(field==='pitching_grade')return p.kind==='Pitcher'?p.profile?.pitching_grade:null;if(field==='offense_grade')return p.kind==='Hitter'?p.profile?.offense_grade:null;return (['stuff','SwStr'].includes(field)?p.kind==='Pitcher':p.kind==='Hitter')?p.profile?.input_skills?.[field]:null;}
 function statCell(f,c,d){
  const value=c==='IP'?formatInnings(f.IP):fmt(f[c]??f.stats[c],d);
- const title=c==='IP_per_start'?' title="Three-year MLB starter-only innings/start estimate; '+(f.startLength?.observed_starts??0)+' observed starts. Selected playing-time recency weights; no extra age/park adjustment."':c==='SV'&&f.saves?.detailText?' title="'+esc(f.saves.detailText)+'"':'';
+ const title=c==='IP_per_start'&&f.startLength?.model?' title="Projected SP length from BF/start and the retained out rate; expected starts '+esc(fmt(f.startLength.expected_starts))+'."':c==='IP_per_start'?' title="Three-year MLB starter-only innings/start estimate; '+(f.startLength?.observed_starts??0)+' observed starts. Selected playing-time recency weights; no extra age/park adjustment."':c==='SV'&&f.saves?.detailText?' title="'+esc(f.saves.detailText)+'"':'';
  return '<td class="number"'+title+'>'+value+'</td>';
 }
 function renderSortOptions(value=$('sort').value,direction=$('sort-direction').value){

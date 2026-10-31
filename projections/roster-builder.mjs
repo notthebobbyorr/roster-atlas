@@ -1,5 +1,5 @@
 import {projectedSkillsHTML} from './projected-skills.mjs?v=1';
-import {compileLists,projection} from './rankings-core.mjs?v=platoon-1';
+import {compileLists,projection} from './rankings-core.mjs?v=SP-workload-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -89,8 +89,8 @@ function renderTotals(){
   return '<dl class="total"><dt>'+label+'</dt><dd>'+value+'</dd><small>'+(c.known<c.total?'Partial · '+c.known+'/'+c.total+' players':'')+'</small></dl>';
  }).join('');
  const saved=rosterRows.filter(row=>!row.live&&!row.pick.placeholder).length,manual=rosterRows.filter(row=>row.pick.placeholder).length;
- $('projection-label').textContent=season+' · '+(modelNames[model]||model);
- $('totals-note').textContent='AVG is weighted by AB; ERA and WHIP by IP. Missing projections are excluded and marked partial. R, RBI and wins are not yet projected. Saves use the existing role/IP model. IP/Start is a separate three-year MLB starter-only length estimate using the selected playing-time recency weights; it does not change projected IP. No MLB starts in the window means unavailable. '+(saved?saved+' player(s) use their saved projection because the current pool has no usable profile.':'Available players use the current selected model.')+(manual?' '+manual+' placeholder(s) count toward roster and position targets; their projections and ages are unknown.':'');
+ $('projection-label').textContent=season+' · '+(core.model_name||modelNames[model]||model);
+ $('totals-note').textContent='AVG is weighted by AB; ERA and WHIP by IP. Missing projections are excluded and marked partial. R, RBI and wins are not yet projected. Saves use the existing role/IP model. '+(model==='platoon'?'Supported SPs use projected starts and BF/start to determine workload. Their projected IP/Start uses that depth estimate. Saves allocation retains its previous workload assumptions for this SP-only release. Other roles and workload alternatives retain their previous estimates. ':'IP/Start is a separate three-year MLB starter-only length estimate using the selected playing-time recency weights; it does not change projected IP. No MLB starts in the window means unavailable. ')+''+(saved?saved+' player(s) use their saved projection because the current pool has no usable profile.':'Available players use the current selected model.')+(manual?' '+manual+' placeholder(s) count toward roster and position targets; their projections and ages are unknown.':'');
 }
 function statValue(f,key){return key==='PA'||key==='AB'||key==='IP'||key==='IP_per_start'?f?.[key]:f?.stats?.[key];}
 function statCells(f,showStart=true){return playerColumns.map(([key,,digits])=>'<td class="number">'+(key==='IP'?formatInnings(statValue(f,key)):fmt(key==='IP_per_start'&&!showStart?null:statValue(f,key),digits))+'</td>').join('');}
