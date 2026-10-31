@@ -1,9 +1,9 @@
 import {projectedSkillsHTML} from './projected-skills.mjs?v=1';
-import {compileLists,projection} from './rankings-core.mjs?v=SP-workload-1';
+import {compileLists,projection} from './rankings-core.mjs?v=fa-context-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=placeholders-1';
+import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=fa-context-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
 
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -18,6 +18,7 @@ try{
 }catch(error){$('status').textContent=error.message;throw error;}
 const model=parent.skillGradesModel(),season=core.projection_season||2027;
 if($('selected-model-note'))$('selected-model-note').textContent=core.projection_note||'';
+if(!core.runs_rbi_context)$('workload').querySelector?.('[value=fa_context]')?.remove();
 if(core.park_mode==='as_projected'){$('park').disabled=true;$('park').title='This variant uses its selected projection context without an additional park transformation.';}
 const pool=compileLists(starterRoles,core.players,parent.projectionEligiblePositions)['All Players'];
 const entryByKey=new Map(pool.map(entry=>[entry.key,entry]));
@@ -33,9 +34,10 @@ try{
  }
 }catch(error){loadError='Saved teams could not be loaded: '+error.message;}
 if(!Object.keys(teams).length){const team=createTeam();teams[team.id]=team;}
+if(!core.runs_rbi_context)for(const team of Object.values(teams))if(team.method==='fa_context')team.method='projected';
 if(!Object.hasOwn(teams,activeId))activeId=Object.keys(teams)[0];
-const totalsColumns=[['PA','PA',0],['AB','AB',0],['HR','HR',1],['SB','SB',1],['AVG','AVG',3],['IP','IP',2],['K','K',1],['SV','SV',1],['ERA','ERA',2],['WHIP','WHIP',3]];
-const playerColumns=[...totalsColumns.slice(0,6),['IP_per_start','IP/Start est.',1],...totalsColumns.slice(6)];
+const totalsColumns=[['PA','PA',0],['AB','AB',0],['R','R',1],['HR','HR',1],['RBI','RBI',1],['SB','SB',1],['AVG','AVG',3],['IP','IP',2],['K','K',1],['SV','SV',1],['ERA','ERA',2],['WHIP','WHIP',3]];
+const playerColumns=[...totalsColumns.slice(0,8),['IP_per_start','IP/Start est.',1],...totalsColumns.slice(8)];
 const gradeColumns=['Power','Speed','AVG','K','ERA','WHIP'];
 const modelNames={platoon:'Platoon skill-aged · parks + outcome refit',hybrid_full:'Full skills-first hybrid',recommended:'Recommended cutoffs',native:'Native sample regression',research:'Bayesian feature model',original:'Original live model'};
 function currentTeam(){return teams[activeId];}
@@ -90,7 +92,8 @@ function renderTotals(){
  }).join('');
  const saved=rosterRows.filter(row=>!row.live&&!row.pick.placeholder).length,manual=rosterRows.filter(row=>row.pick.placeholder).length;
  $('projection-label').textContent=season+' · '+(core.model_name||modelNames[model]||model);
- $('totals-note').textContent='AVG is weighted by AB; ERA and WHIP by IP. Missing projections are excluded and marked partial. R, RBI and wins are not yet projected. Saves use the existing role/IP model. '+(model==='platoon'?'Supported SPs use projected starts and BF/start to determine workload. Their projected IP/Start uses that depth estimate. Saves allocation retains its previous workload assumptions for this SP-only release. Other roles and workload alternatives retain their previous estimates. ':'IP/Start is a separate three-year MLB starter-only length estimate using the selected playing-time recency weights; it does not change projected IP. No MLB starts in the window means unavailable. ')+''+(saved?saved+' player(s) use their saved projection because the current pool has no usable profile.':'Available players use the current selected model.')+(manual?' '+manual+' placeholder(s) count toward roster and position targets; their projections and ages are unknown.':'');
+ $('runs-rbi-note').textContent=currentTeam().method==='fa_context'?(core.runs_rbi_context?.note||''):core.runs_rbi_context?'Choose Projected + FA-aware R/RBI under Playing time to show runs and RBI.':'FA-aware R/RBI is available with the Platoon skill-aged model.';
+ $('totals-note').textContent='AVG is weighted by AB; ERA and WHIP by IP. Missing projections are excluded and marked partial. Wins are not yet projected. R/RBI are available through Projected + FA-aware R/RBI and do not enter Sum SD. Saves use the existing role/IP model. '+(model==='platoon'?'Supported SPs use projected starts and BF/start to determine workload. Their projected IP/Start uses that depth estimate. Saves allocation retains its previous workload assumptions for this SP-only release. Other roles and workload alternatives retain their previous estimates. ':'IP/Start is a separate three-year MLB starter-only length estimate using the selected playing-time recency weights; it does not change projected IP. No MLB starts in the window means unavailable. ')+''+(saved?saved+' player(s) use their saved projection because the current pool has no usable profile.':'Available players use the current selected model.')+(manual?' '+manual+' placeholder(s) count toward roster and position targets; their projections and ages are unknown.':'');
 }
 function statValue(f,key){return key==='PA'||key==='AB'||key==='IP'||key==='IP_per_start'?f?.[key]:f?.stats?.[key];}
 function statCells(f,showStart=true){return playerColumns.map(([key,,digits])=>'<td class="number">'+(key==='IP'?formatInnings(statValue(f,key)):fmt(key==='IP_per_start'&&!showStart?null:statValue(f,key),digits))+'</td>').join('');}

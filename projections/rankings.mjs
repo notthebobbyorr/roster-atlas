@@ -4,9 +4,9 @@ import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=SP-workload-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=fa-context-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=slam-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=fa-context-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -22,6 +22,7 @@ try{
 }catch(error){$('status').textContent=error.message;throw error;}
 const model=parent.skillGradesModel(),positionLists=attachContracts(compileLists(starterRoles,core.players,parent.projectionEligiblePositions),contracts,core.projection_season||2027);
 if($('selected-model-note'))$('selected-model-note').textContent=core.projection_note||'';
+if(!core.runs_rbi_context)$('workload').querySelector?.('[value=fa_context]')?.remove();
 if(core.park_mode==='as_projected'){$('park').disabled=true;$('park').title='This variant uses its selected projection context without an additional park transformation.';}
 const lists={...positionLists},entries=uniqueRankingEntries(positionLists),entryByKey=new Map(entries.map(p=>[p.key,p]));
 const available=Object.fromEntries(fantasyRoles.map(role=>[role,lists[role].map(p=>p.key)]));
@@ -37,6 +38,7 @@ const exclusions=Object.fromEntries(fantasyRoles.map(role=>[role,new Set((Array.
 rebuildCustomLists(saved||{});renderListOptions(saved?.preferences?.role);
 $('team').innerHTML+=[...new Set(entries.map(p=>p.team))].sort().map(t=>'<option value="'+esc(t)+'">'+esc(t.replaceAll('-',' '))+'</option>').join('');
 for(const id of ['role','workload','view','park','search','team','throws','forty-man','options-remaining'])if(saved?.preferences?.[id]!=null)$(id).value=saved.preferences[id];
+if(!$('workload').value)$('workload').value='projected';
 for(const [id,values] of [['forty-man',['','yes','no','unknown']],['options-remaining',['','0','1','2','3','4','remaining','unknown']]])if(!values.includes($(id).value))$(id).value='';
 if(!['','L','R','S','unknown'].includes($('throws').value))$('throws').value='';
 if(!Object.hasOwn(lists,$('role').value))$('role').value='SP';
@@ -182,12 +184,13 @@ function render(){
  if(!hitter)processColumns.unshift(['pitching_grade','ACE']);
  if(hitter||mixed)processColumns.unshift(['offense_grade','SLAM']);
  categoryColumns=cats;
- columns=mixed?[['PA','PA',0],['AB','AB',0],['HR','HR',0],['SB','SB',0],['AVG','AVG',3],['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]]:hitter?[['PA','PA',0],['AB','AB',0],['HR','HR',0],['SB','SB',0],['AVG','AVG',3]]:[['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]];
+ columns=mixed?[['PA','PA',0],['AB','AB',0],['R','R',0],['HR','HR',0],['RBI','RBI',0],['SB','SB',0],['AVG','AVG',3],['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]]:hitter?[['PA','PA',0],['AB','AB',0],['R','R',0],['HR','HR',0],['RBI','RBI',0],['SB','SB',0],['AVG','AVG',3]]:[['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]];
  $('head').innerHTML='<tr><th><label class="select-all-control" title="Select or deselect all players matching the current filters across every page"><input id="select-all-displayed" class="select-player" type="checkbox" data-select-all aria-label="Select all matching players"><span>Select all matches</span></label></th><th class="player">Player</th>'+sortableHeader('Rank / reorder','rank')+(mixed?'<th>Player type</th>':'')+'<th>MLB org</th><th>RR role</th>'+sortableHeader('FA year','fa')+'<th>40-man</th><th>Options remaining</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([key,name])=>sortableHeader(name,'stat:'+key)).join('')+cats.map(c=>sortableHeader(c+' SD','grade:'+c)).join('')+sortableHeader('Sum SD','sum')+processColumns.map(([key,label])=>sortableHeader(label,'input:'+key)).join('')+'</tr>';
  const pages=Math.max(1,Math.ceil(displayed.length/pageSize));page=Math.min(page,pages-1);
  $('previous-page').disabled=page===0;$('next-page').disabled=page>=pages-1;
  $('page-status').textContent='Page '+(page+1)+' of '+pages+' · '+displayed.length+' matches';
  $('rows').innerHTML=displayed.slice(page*pageSize,(page+1)*pageSize).map(({entry:p,rank,forecast:f},rowIndex)=>{const i=page*pageSize+rowIndex;return '<tr draggable="'+reordering+'" data-key="'+esc(p.key)+'"><td><input class="select-player" type="checkbox" data-select="'+esc(p.key)+'" aria-label="Select '+esc(p.name)+'"'+(selectedKeys.has(p.key)?' checked':'')+'></td><td class="player"><button type="button" class="exclude-player" data-exclude="'+esc(p.key)+'" aria-label="'+(customLists[role]?'Remove ':'Exclude ')+esc(p.name)+' from '+esc(listLabel(role))+'" title="'+(customLists[role]?'Remove from this custom list':'Exclude from this position list')+'">×</button>'+esc(p.name)+(p.profile?'':'<small>Projection unavailable</small>')+projectedSkillsHTML(p.profile,core.projected_skill_dictionary)+'</td><td><input aria-label="Rank for '+esc(p.name)+'" data-rank="'+esc(p.key)+'" type="number" min="1" max="'+orders[role].length+'" value="'+rank+'" title="Saved personal rank; editable in any sort view"><button data-move="up" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' up" '+(!reordering||i===0?'disabled':'')+'>↑</button><button data-move="down" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' down" '+(!reordering||i===displayed.length-1?'disabled':'')+'>↓</button></td>'+(mixed?'<td>'+esc(p.kind)+'</td>':'')+'<td>'+esc(p.team.replaceAll('-',' '))+'</td><td><a href="'+esc(p.source_url)+'" target="_blank" rel="noopener">'+esc(p.rr_role==='Unassigned'?(p.organization_id?'No MLB role':'Unassigned / FA'):p.role==='Hitter'?(p.section==='mlb-bn'?'Platoon starter':'Lineup '+p.rr_role):p.rr_role)+'</a>'+(p.platoon?' · '+esc(p.platoon):'')+'</td>'+contractCell(p)+rosterCells(p)+'<td>'+esc(p.positions.join(' / ')||p.role)+'</td>'+(!hitter?'<td>'+(p.kind==='Pitcher'?esc(pitcherHandLabel(p.mlbid)):'—')+'</td>'+(p.kind==='Pitcher'?savesRoleCell(p):'<td>—</td>'):'')+columns.map(([c,,d])=>statCell(f,c,d)).join('')+[...cats,'Sum'].map(c=>{const value=c==='Sum'?f.sum:f.grades[c];return '<td class="number '+(finite(value)?value>=0?'good':'bad':'')+'">'+fmt(value)+'</td>'}).join('')+processColumns.map(([field])=>'<td class="number">'+fmt(processValue(p,field))+'</td>').join('')+'</tr>';}).join('')||'<tr><td colspan="'+(10+columns.length+cats.length+processColumns.length+(!hitter?2:0)+(mixed?1:0))+'">'+(customLists[role]&&!orders[role].length?'This custom list is empty. Select players from a position list and send them here.':'No matching players.')+'</td></tr>';
+ $('runs-rbi-note').textContent=$('workload').value==='fa_context'?(core.runs_rbi_context?.note||''):core.runs_rbi_context?'Choose Projected + FA-aware R/RBI under Playing time to show runs and RBI.':'FA-aware R/RBI is available with the Platoon skill-aged model.';
  $('count').textContent=displayed.length+' of '+orders[role].length+' players · '+listLabel(role)+' · '+(({recommended:'Recommended cutoffs',hybrid_full:'Full skills-first hybrid'})[model]||model)+' · '+$('view').selectedOptions[0].text+(exclusions[role].size?' · '+exclusions[role].size+' excluded':'');
  renderCustomTools();
 }

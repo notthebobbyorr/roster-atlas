@@ -75,21 +75,22 @@ export function readExclusions(data,available){
 export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={}}={}){
  const p=entry.profile;
  if(!p)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,offense_grade:null,pitching_grade:null};
+ const contextMode=method==='fa_context',workloadMethod=contextMode?'projected':method;
  const r={...p.rates},factor=core.park_mode==='as_projected'||park==='neutral'?null:(p.parks?.[String(entry.team_id)]||core.park_priors?.[p.kind]?.[String(entry.team_id)]);
  if(factor&&finite(r.HR_rate)&&finite(r.H_rate)){
   const hr=r.HR_rate,nh=r.H_rate-hr;r.HR_rate=hr*factor.HR;r.H_rate=r.HR_rate+nh*factor.NH;
   if(p.kind==='Pitcher'&&finite(r.ER_rate))r.ER_rate=Math.max(0,r.ER_rate+core.run_weights.HR*(r.HR_rate-hr)+core.run_weights.NH*(nh*factor.NH-nh));
  }
- const record=pt.players[entry.key],variant=method==='standard'?null:roundWorkloadVariant(record?.variants[method==='projected'?record.selected.replace(/_age$/,''):method]);
- const startVariant=method==='standard'?record?.variants[record.selected?.replace(/_age$/,'')]:variant;
- const startLength=p.kind==='Pitcher'&&method==='projected'&&p.sp_workload?{...p.sp_workload,model:'SP appearances × BF/appearance'}:p.kind==='Pitcher'&&[entry.role,p.assigned_role].some(role=>['SP','Swingman'].includes(role))?projectInningsPerStart(p.mlbid,startVariant?.weights):null;
- const workload=method==='standard'?(p.kind==='Hitter'?600:entry.role==='SP'?175:entry.role==='Swingman'?100:60):(p.kind==='Hitter'?variant?.AB:variant?.IP),load=p.kind==='Pitcher'?roundInnings(workload):workload;
+ const record=pt.players[entry.key],variant=workloadMethod==='standard'?null:roundWorkloadVariant(record?.variants[workloadMethod==='projected'?record.selected.replace(/_age$/,''):workloadMethod]);
+ const startVariant=workloadMethod==='standard'?record?.variants[record.selected?.replace(/_age$/,'')]:variant;
+ const startLength=p.kind==='Pitcher'&&workloadMethod==='projected'&&p.sp_workload?{...p.sp_workload,model:'SP appearances × BF/appearance'}:p.kind==='Pitcher'&&[entry.role,p.assigned_role].some(role=>['SP','Swingman'].includes(role))?projectInningsPerStart(p.mlbid,startVariant?.weights):null;
+ const workload=workloadMethod==='standard'?(p.kind==='Hitter'?600:entry.role==='SP'?175:entry.role==='Swingman'?100:60):(p.kind==='Hitter'?variant?.AB:variant?.IP),load=p.kind==='Pitcher'?roundInnings(workload):workload;
  const cat=(rates,c)=>({Power:rates.HR_rate,Speed:rates.SB_rate,AVG:rates.H_rate,K:rates.K_rate,ERA:finite(rates.ER_rate)?9*rates.ER_rate:null,WHIP:finite(rates.H_rate)&&finite(rates.BB_rate)?rates.H_rate+rates.BB_rate:null})[c];
  const categories=p.kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'],grades={},stats={};
  for(const c of categories){
   const rate=cat(r,c),base=cat(p.rates,c),env=core.standardized_model.environment[c],sign=['ERA','WHIP'].includes(c)?-1:1;
   stats[c]=finite(rate)?rate:null;
-  const st=method==='standard'?core.standards[c]:core.projected_contribution_standards?.[method]?.[c]??pt.standards[model]?.[method]?.[c];
+  const st=workloadMethod==='standard'?core.standards[c]:core.projected_contribution_standards?.[workloadMethod]?.[c]??pt.standards[model]?.[workloadMethod]?.[c];
   let z=null;
   if(view==='quality'&&finite(rate)&&finite(base)&&finite(p.category_standardized?.[c]))z=p.category_standardized[c]+sign*(rate-base)/env.sd;
   if(view==='contribution'&&st&&finite(rate)&&finite(load)){
@@ -99,7 +100,10 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
   grades[c]=finite(z)?z:null;
  }
  const total=c=>finite(stats[c])&&finite(load)?stats[c]*load:null;
- const savesLoad=method==='projected'&&p.sp_workload?roundInnings(p.sp_workload.saves_reference_IP):load;
- const save=p.kind==='Pitcher'?projectSaves(saves,p.mlbid,savesLoad,savesRole,{method,overrides:savesOverrides}):null;
- return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null},saves:save,grades,sum:categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null};
+ const savesLoad=workloadMethod==='projected'&&p.sp_workload?roundInnings(p.sp_workload.saves_reference_IP):load;
+ const save=p.kind==='Pitcher'?projectSaves(saves,p.mlbid,savesLoad,savesRole,{method:workloadMethod,overrides:savesOverrides}):null;
+ const context=core.runs_rbi_context?.players?.[String(p.mlbid)];
+ const contextualTotal=category=>!context||!finite(variant?.PA)||!finite(context[category])?null:context.PA>0?context[category]*variant.PA/context.PA:context.PA===0&&variant.PA===0?0:null;
+ const runStats=contextMode&&p.kind==='Hitter'?{R:contextualTotal('R'),RBI:contextualTotal('RBI')}:{};
+ return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null,...runStats},saves:save,grades,sum:categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null};
 }
