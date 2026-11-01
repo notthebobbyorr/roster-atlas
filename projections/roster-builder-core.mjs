@@ -33,7 +33,8 @@ export function createTeam(name='My draft'){
 export function cleanForecast(forecast){
  const number=value=>finite(value)?value:null;
  return {pitching_grade:number(forecast?.pitching_grade),offense_grade:number(forecast?.offense_grade),IP_per_start:number(forecast?.IP_per_start),PA:number(forecast?.PA),AB:number(forecast?.AB),IP:number(forecast?.IP),
-  stats:Object.fromEntries(['R','HR','RBI','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),
+  ...(plain(forecast?.batting)?{batting:Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(key=>[key,number(forecast.batting[key])]))}:{}),
+  stats:{...Object.fromEntries(['R','HR','RBI','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),...(Object.hasOwn(forecast?.stats||{},'OPS')?{OPS:number(forecast.stats.OPS)}:{})},
   grades:Object.fromEntries(['Power','Speed','AVG','K','ERA','WHIP','R','RBI'].map(key=>[key,number(forecast?.grades?.[key])])),sum:number(forecast?.sum),sum_with_runs_rbi:number(forecast?.sum_with_runs_rbi)};
 }
 export function defaultAssignment(entry,team){
@@ -89,6 +90,11 @@ export function teamTotals(rows){
   coverage[metric]={known:valid.length,total:group.length};
  };
  ratio('AVG','Hitter','AB');ratio('ERA','Pitcher','IP');ratio('WHIP','Pitcher','IP');
+ const hitters=rows.filter(row=>row.pick.kind==='Hitter'),valid=hitters.filter(row=>['H','BB','AB','TB','HBP','SF'].every(c=>finite(row.forecast?.batting?.[c])&&row.forecast.batting[c]>=0));
+ const counts=Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,valid.reduce((sum,row)=>sum+row.forecast.batting[c],0)]));
+ const obpDen=counts.AB+counts.BB+counts.HBP+counts.SF;
+ totals.OPS=obpDen>0&&counts.AB>0?(counts.H+counts.BB+counts.HBP)/obpDen+counts.TB/counts.AB:null;
+ coverage.OPS={known:valid.length,total:hitters.length};
  if(finite(totals.IP))totals.IP=roundInnings(totals.IP);
  return {totals,coverage};
 }
@@ -108,7 +114,7 @@ export function validateTeam(raw){
   if(!Number.isInteger(p.round)||p.round<1||p.round>50||!text(p.note,500)||!['closer','spec','other'].includes(p.reliefType))throw Error('Invalid draft round, note, or relief designation.');
   if(!plain(p.snapshot)||!text(p.snapshot.model,40)||!Number.isInteger(p.snapshot.season)||!text(p.snapshot.saved_at,60)||!plain(p.snapshot.forecast))throw Error('Missing saved projection.');
   const forecast=cleanForecast(manual?null:p.snapshot.forecast);
-  if([forecast.IP_per_start,forecast.PA,forecast.AB,forecast.IP,...Object.values(forecast.stats)].some(value=>finite(value)&&value<0))throw Error('Saved workload and outcome stats cannot be negative.');
+  if([forecast.IP_per_start,forecast.PA,forecast.AB,forecast.IP,...Object.values(forecast.stats),...Object.values(forecast.batting||{})].some(value=>finite(value)&&value<0))throw Error('Saved workload and outcome stats cannot be negative.');
   return {...p,eligible:[...new Set(p.eligible)],snapshot:{model:manual?'placeholder':p.snapshot.model,season:p.snapshot.season,age:manual?null:validAge(p.snapshot.age)?p.snapshot.age:null,saved_at:p.snapshot.saved_at,forecast}};
  });
  return {id:raw.id,name:raw.name.trim(),split:raw.split,method:raw.method,park:raw.park,view:raw.view,sumSort:raw.sumSort||'sum',showGuidelines:raw.showGuidelines===true,picks};

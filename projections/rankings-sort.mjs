@@ -4,7 +4,7 @@ const finite=value=>typeof value==='number'&&Number.isFinite(value);
 export function rankingSortOptions(role){
  if(role==='All Players')return [...new Map([...rankingSortOptions('All P'),...rankingSortOptions('UT-only')].map(option=>[option.value,option])).values()];
  const pitcher=['SP','RP','All P'].includes(role);
- const totals=pitcher?[['IP','Innings (IP)'],['IP_per_start','IP/Start estimate'],['K','Strikeouts (K)'],['SV','Saves (SV)'],['ERA','ERA'],['WHIP','WHIP']]:[['PA','Plate appearances (PA)'],['AB','At bats (AB)'],['R','Runs (R)'],['HR','Home runs (HR)'],['RBI','Runs batted in (RBI)'],['SB','Stolen bases (SB)'],['AVG','Batting average (AVG)']];
+ const totals=pitcher?[['IP','Innings (IP)'],['IP_per_start','IP/Start estimate'],['K','Strikeouts (K)'],['SV','Saves (SV)'],['ERA','ERA'],['WHIP','WHIP']]:[['PA','Plate appearances (PA)'],['AB','At bats (AB)'],['R','Runs (R)'],['HR','Home runs (HR)'],['RBI','Runs batted in (RBI)'],['SB','Stolen bases (SB)'],['AVG','Batting average (AVG)'],['OPS','On-base plus slugging (OPS)']];
  const grades=pitcher?[['K','Strikeouts SD'],['ERA','ERA SD'],['WHIP','WHIP SD']]:[['Power','Power SD'],['Speed','Speed SD'],['AVG','AVG SD'],['R','Runs SD'],['RBI','RBI SD']];
  const inputs=pitcher?[['pitching_grade','ACE'],['stuff','Stuff (pitch grade)'],['SwStr','SwStr %']]:[['offense_grade','SLAM'],['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs expected']];
  return [{value:'rank',label:'My ranking'},{value:'sum',label:'Sum SD · without R/RBI'},{value:'sum_with_runs_rbi',label:'Sum SD · with R/RBI'},

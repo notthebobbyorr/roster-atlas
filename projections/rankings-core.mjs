@@ -114,5 +114,8 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
   }
  }
  const sum_with_runs_rbi=p.kind==='Pitcher'?sum:finite(sum)&&finite(grades.R)&&finite(grades.RBI)?sum+grades.R+grades.RBI:null;
- return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null,...runStats},saves:save,grades,sum,sum_with_runs_rbi};
+ const batting=p.kind==='Hitter'?p.projected_batting?.combined:null;
+ const scale=batting&&finite(load)&&batting.AB_PA>0?load/batting.AB_PA:null;
+ const battingCounts=batting?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,finite(scale)?batting[c+'_PA']*scale:null])):null;
+ return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,...(batting?{batting:battingCounts}:{}),stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null,...runStats,...(batting?{OPS:batting.OPS}:{})},saves:save,grades,sum,sum_with_runs_rbi};
 }
