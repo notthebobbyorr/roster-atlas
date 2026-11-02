@@ -75,7 +75,7 @@ export function readExclusions(data,available){
 export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={}}={}){
  const p=entry.profile;
  if(!p)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,offense_grade:null,pitching_grade:null};
- const contextMode=method==='fa_context',workloadMethod=contextMode?'projected':method;
+ const contextMode=method==='fa_context'||core.runs_rbi_default===true,workloadMethod=method==='fa_context'?'projected':method;
  const r={...p.rates},factor=core.park_mode==='as_projected'||park==='neutral'?null:(p.parks?.[String(entry.team_id)]||core.park_priors?.[p.kind]?.[String(entry.team_id)]);
  if(factor&&finite(r.HR_rate)&&finite(r.H_rate)){
   const hr=r.HR_rate,nh=r.H_rate-hr;r.HR_rate=hr*factor.HR;r.H_rate=r.HR_rate+nh*factor.NH;
@@ -103,7 +103,9 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  const savesLoad=workloadMethod==='projected'&&p.sp_workload?roundInnings(p.sp_workload.saves_reference_IP):load;
  const save=p.kind==='Pitcher'?projectSaves(saves,p.mlbid,savesLoad,savesRole,{method:workloadMethod,overrides:savesOverrides}):null;
  const context=core.runs_rbi_context?.players?.[String(p.mlbid)];
- const contextualTotal=category=>!context||!finite(variant?.PA)||!finite(context[category])?null:context.PA>0?context[category]*variant.PA/context.PA:context.PA===0&&variant.PA===0?0:null;
+ const batting=p.kind==='Hitter'?p.projected_batting?.combined:null;
+ const contextPA=finite(variant?.PA)?variant.PA:workloadMethod==='standard'&&finite(load)&&batting?.AB_PA>0?load/batting.AB_PA:null;
+ const contextualTotal=category=>!context||!finite(contextPA)||!finite(context[category])?null:context.PA>0?context[category]*contextPA/context.PA:context.PA===0&&contextPA===0?0:null;
  const runStats=contextMode&&p.kind==='Hitter'?{R:contextualTotal('R'),RBI:contextualTotal('RBI')}:{};
  const sum=categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null;
  if(contextMode&&p.kind==='Hitter'&&core.runs_rbi_context?.standards){
@@ -114,7 +116,6 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
   }
  }
  const sum_with_runs_rbi=p.kind==='Pitcher'?sum:finite(sum)&&finite(grades.R)&&finite(grades.RBI)?sum+grades.R+grades.RBI:null;
- const batting=p.kind==='Hitter'?p.projected_batting?.combined:null;
  const scale=batting&&finite(load)&&batting.AB_PA>0?load/batting.AB_PA:null;
  const battingCounts=batting?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,finite(scale)?batting[c+'_PA']*scale:null])):null;
  return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,...(batting?{batting:battingCounts}:{}),stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null,...runStats,...(batting?{OPS:batting.OPS}:{})},saves:save,grades,sum,sum_with_runs_rbi};

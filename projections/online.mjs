@@ -2,7 +2,7 @@ import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
-import * as skillRegistry from './skill-models.mjs?v=hybrid-trust-1';
+import * as skillRegistry from './skill-models.mjs?v=hybrid-runs-rbi-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=hybrid-full-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -28,7 +28,7 @@ window.skillGradesState=null;
 window.skillGradesModel=()=>modelKey;
 async function runtimeLoad(){
  if(!authenticated)throw Error('Sign in to view projections.');
- const version=activeModel().runtime,epoch=sessionEpoch,generation=modelEpoch,cache=runtimes;
+ const selectedModel=activeModel(),version=selectedModel.runtime,epoch=sessionEpoch,generation=modelEpoch,cache=runtimes;
  if(!cache.has(version))cache.set(version,(async()=>{
   const ready=await(await privateFetch(version,'index.json')).json();
   if(ready.kind!=='fantasy-atlas-runtime'||ready.version!==version)throw Error('The Atlas snapshot is not ready.');
@@ -37,6 +37,7 @@ async function runtimeLoad(){
   const data=compressed?await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json():await response.json();
   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
   if(data.kind!=='roster-atlas-runtime'||data.schema_version!==1||!Array.isArray(data.core?.players)||!data.workloads?.players||!data.saves?.players||!data.contracts?.players)throw Error('The Atlas data format is not supported.');
+  data.core.runs_rbi_default=selectedModel.runs_rbi_default===true;
   for(const p of data.core.players)p.parks=data.core.park_sets[p.park_index];
   delete data.core.park_sets;
   for(const p of Object.values(data.saves.players))p.scenarios=data.saves.scenario_sets[p.scenario_index];
@@ -117,7 +118,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=OPS-split-sort-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=hybrid-runs-rbi-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
