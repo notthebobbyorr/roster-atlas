@@ -6,7 +6,7 @@ import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=OPS-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=OPS-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=OPS-split-sort-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
