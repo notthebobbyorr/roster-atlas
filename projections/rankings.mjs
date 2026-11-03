@@ -2,10 +2,10 @@ import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=OPS-1';
 import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
-import {saveRoleOptions,savesExplainer} from './saves.mjs?v=roster-refresh-1';
+import {saveRoleOptions,savesExplainer} from './saves.mjs?v=unassigned-table-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=rotation-context-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=unassigned-table-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=roster-refresh-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
@@ -149,7 +149,7 @@ function contractCell(p){
  return '<td class="fa'+(info.upcoming?' fa-upcoming':'')+'" title="'+esc(info.title)+'">'+link+'<small>'+esc(info.detail)+'</small>'+(info.flag?'<strong>'+esc(info.flag)+'</strong>':'')+'</td>';
 }
 function savesRoleCell(p){
- const selected=parent.projectionSavesRole?.(p.mlbid)||'auto',auto=saves?.players?.[String(p.mlbid)]?.auto_role||'unassigned';
+ const selected=parent.projectionSavesRole?.(p.mlbid)||'auto',record=saves?.players?.[String(p.mlbid)],auto=record?.auto_role||(record?.fallback_role?record.fallback_role+' · prior/projected role':'unassigned');
  return '<td><select data-save-role="'+esc(p.mlbid)+'" aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' · '+auto:''))+'</option>').join('')+'</select></td>';
 }
 function processValue(p,field){if(field==='pitching_grade')return p.kind==='Pitcher'?p.profile?.pitching_grade:null;if(field==='offense_grade')return p.kind==='Hitter'?p.profile?.offense_grade:null;return (['stuff','SwStr'].includes(field)?p.kind==='Pitcher':p.kind==='Hitter')?p.profile?.input_skills?.[field]:null;}

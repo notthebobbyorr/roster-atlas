@@ -12,3 +12,6 @@
 .column-sort{border:0;background:transparent;padding:0;color:inherit;font:inherit;font-weight:600;text-align:left;white-space:nowrap;min-height:30px}.column-sort:hover{color:#83dbc4}
 
 #model-notes{width:100%;height:70vh;border:1px solid #304353;border-radius:8px;margin-top:12px}#model-explainer{padding:14px;border:1px solid #304353;border-radius:8px}#model-explainer summary{cursor:pointer;color:#83dbc4}#page-status{align-self:center;color:#a8bac9}
+
+/* Player rows take priority; long notes open on demand. */
+main{padding:14px 18px}.controls,.actions{margin:9px 0;gap:8px}p:empty{display:none}h1{font-size:25px;margin:0 0 8px}.compact-notes,.compact-tools{border:1px solid #304653;border-radius:7px;padding:8px 11px;margin:8px 0}.compact-notes summary,.compact-tools summary{cursor:pointer;color:#87ddc2;font-size:12px}.compact-notes{margin-top:12px}.compact-tools .list-tools{border:0;margin:0;padding:8px 0}.scroll,.scroll.pool{max-height:78vh}th,td{padding:7px 8px}#status:empty{display:none}#count{margin:4px 0}

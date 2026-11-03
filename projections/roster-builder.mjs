@@ -1,6 +1,6 @@
 import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=OPS-1';
-import {compileLists,projection} from './rankings-core.mjs?v=rotation-context-1';
+import {compileLists,projection} from './rankings-core.mjs?v=unassigned-table-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';

@@ -13,7 +13,7 @@ function poolFor(data,teamId){
  }
  return teamPools.get(data).get(String(teamId))||[];
 }
-const selectedRole=(record,override)=>saveRoleOptions.some(([id])=>id===override)&&override!=='auto'?override:record?.auto_role||'unassigned';
+const selectedRole=(record,override)=>saveRoleOptions.some(([id])=>id===override)&&override!=='auto'?override:record?.auto_role||record?.fallback_role||'unassigned';
 const overrideFor=(overrides,id)=>overrides instanceof Map?overrides.get(id):overrides?.[id];
 export function projectSaves(data,mlbid,IP,override='auto',options={}){
  IP=roundInnings(IP);
@@ -38,6 +38,7 @@ export function projectSaves(data,mlbid,IP,override='auto',options={}){
   else pieces.push('No positive team saves weights; team budget cannot be allocated in this role scenario');
   }else pieces.push('Team assigned · saves unavailable without a valid workload and individual rate');
  }else if(data?.teams&&record)pieces.push('No team budget assigned · conditional individual forecast');
+ if(selected==='auto'&&!record?.auto_role&&record?.fallback_role)pieces.push('No current role · '+saveRoleLabel(record.fallback_role)+' from '+(record.fallback_role_source||'prior usage'));
  if(finite(rate))pieces.push(rate.toFixed(2)+' saves/IP'+(teamAllocated?' after team allocation':''));
  if(teamAllocated)pieces.push('individual input '+rawRate.toFixed(2)+' saves/IP');
  if(role!=='starter'&&finite(opportunitiesPerIP)&&finite(scenario?.conversion_rate))pieces.push(opportunitiesPerIP.toFixed(2)+' official SVO/IP'+(teamAllocated?' after allocation':'')+' × '+(100*scenario.conversion_rate).toFixed(0)+'% conversion');
