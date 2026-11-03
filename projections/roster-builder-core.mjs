@@ -100,7 +100,7 @@ export function teamTotals(rows){
 }
 export function validateTeam(raw){
  if(!plain(raw)||!text(raw.id,100)||!/^team:[A-Za-z0-9_-]+$/.test(raw.id)||!text(raw.name,80)||!raw.name.trim())throw Error('Invalid team identity or name.');
- if(!['27/23','28/22'].includes(raw.split)||!['projected','fa_context','direct','ordered_ballast','standard'].includes(raw.method)||!['current','neutral'].includes(raw.park)||!['contribution','quality'].includes(raw.view))throw Error('Invalid roster settings.');
+ if(!['27/23','28/22'].includes(raw.split)||!['projected','fa_context','rotation_context','direct','ordered_ballast','standard'].includes(raw.method)||!['current','neutral'].includes(raw.park)||!['contribution','quality'].includes(raw.view))throw Error('Invalid roster settings.');
  if(raw.sumSort!==undefined&&!['sum','sum_with_runs_rbi','sum_full'].includes(raw.sumSort))throw Error('Invalid Sum SD sort setting.');
  if(!Array.isArray(raw.picks)||raw.picks.length>50)throw Error('A team must contain at most 50 players.');
  const seen=new Set(),picks=raw.picks.map(p=>{

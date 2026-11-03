@@ -1,3 +1,4 @@
+import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
 import {projectInningsPerStart} from './pitcher-starts.mjs?v=hybrid-full-1';
 import {projectSaves} from './saves.mjs?v=roster-refresh-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -75,6 +76,10 @@ export function readExclusions(data,available){
  return result;
 }
 export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={}}={}){
+ if(method==='rotation_context'){
+  const next=rotationContext(core,pt,entry);
+  return projection(next.core,next.pt,next.entry,{model,method:'projected',park,view,saves,savesRole,savesOverrides});
+ }
  const p=entry.profile;
  if(!p)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,offense_grade:null,pitching_grade:null};
  const contextMode=method==='fa_context'||core.runs_rbi_default===true,workloadMethod=method==='fa_context'?'projected':method;
