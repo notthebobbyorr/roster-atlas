@@ -33,7 +33,8 @@ export function compileLists(rr,players,eligible){
   const role=profile.kind==='Pitcher'?profile.assigned_role:'Hitter';
   if(!['Hitter','SP','RP','Swingman'].includes(role))continue;
   const positions=eligible(profile.mlbid,profile.kind,2026);
-  const membership=playerOrganizations.players[String(profile.mlbid)],org=membership?playerOrganizations.teams[String(membership[0])]:null;
+  const membership=playerOrganizations.players[String(profile.mlbid)],savedOrganization=profile.projection_organization,
+    org=membership?playerOrganizations.teams[String(membership[0])]:savedOrganization?[savedOrganization.id,savedOrganization.slug]:null;
   // Team filtering may use an organization; only RR assigns an MLB park/role.
   const entry={key,mlbid:profile.mlbid,kind:profile.kind,role,name:profile.player_name,profile,positions,
     team:org?.[1]||'unassigned',team_id:null,organization_id:org?.[0]??null,

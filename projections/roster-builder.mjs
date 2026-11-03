@@ -1,5 +1,5 @@
 import {projectedSkillsHTML} from './projected-skills.mjs?v=OPS-1';
-import {compileLists,projection} from './rankings-core.mjs?v=hybrid-runs-rbi-1';
+import {compileLists,projection} from './rankings-core.mjs?v=coverage-1';
 import {starterRoles} from './starter-roles.mjs?v=starter-rankings-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-filters-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
