@@ -34,8 +34,8 @@ export function cleanForecast(forecast){
  const number=value=>finite(value)?value:null;
  return {pitching_grade:number(forecast?.pitching_grade),offense_grade:number(forecast?.offense_grade),IP_per_start:number(forecast?.IP_per_start),PA:number(forecast?.PA),AB:number(forecast?.AB),IP:number(forecast?.IP),
   ...(plain(forecast?.batting)?{batting:Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(key=>[key,number(forecast.batting[key])]))}:{}),
-  stats:{...Object.fromEntries(['R','HR','RBI','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),...(Object.hasOwn(forecast?.stats||{},'OPS')?{OPS:number(forecast.stats.OPS)}:{})},
-  grades:Object.fromEntries(['Power','Speed','AVG','K','ERA','WHIP','R','RBI'].map(key=>[key,number(forecast?.grades?.[key])])),sum:number(forecast?.sum),sum_with_runs_rbi:number(forecast?.sum_with_runs_rbi)};
+  stats:{...Object.fromEntries(['R','HR','RBI','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),...Object.fromEntries(['OPS','W'].filter(key=>Object.hasOwn(forecast?.stats||{},key)).map(key=>[key,number(forecast.stats[key])]))},
+  grades:Object.fromEntries([...['Power','Speed','AVG','K','ERA','WHIP','R','RBI'],...['W','SV'].filter(key=>Object.hasOwn(forecast?.grades||{},key))].map(key=>[key,number(forecast?.grades?.[key])])),sum:number(forecast?.sum),sum_with_runs_rbi:number(forecast?.sum_with_runs_rbi),...(Object.hasOwn(forecast||{},'sum_full')?{sum_full:number(forecast.sum_full)}:{})};
 }
 export function defaultAssignment(entry,team){
  const options=assignmentOptions(entry),counts=positionProgress(team).counts,targets=rosterTargets(team.split).positions;
@@ -82,7 +82,7 @@ export function teamTotals(rows){
   totals[metric]=values.length?values.reduce((a,b)=>a+b,0):null;coverage[metric]={known:values.length,total:group.length};
  };
  for(const metric of ['PA','AB','R','HR','RBI','SB'])sum(metric,'Hitter',row=>metric==='PA'||metric==='AB'?row.forecast?.[metric]:row.forecast?.stats?.[metric]);
- for(const metric of ['IP','K','SV'])sum(metric,'Pitcher',row=>metric==='IP'?row.forecast?.IP:row.forecast?.stats?.[metric]);
+ for(const metric of ['IP','K','W','SV'])sum(metric,'Pitcher',row=>metric==='IP'?row.forecast?.IP:row.forecast?.stats?.[metric]);
  const ratio=(metric,kind,weight)=>{
   const group=rows.filter(row=>row.pick.kind===kind),valid=group.filter(row=>finite(row.forecast?.[weight])&&row.forecast[weight]>=0&&finite(row.forecast?.stats?.[metric]));
   const denominator=valid.reduce((sum,row)=>sum+row.forecast[weight],0);
@@ -101,7 +101,7 @@ export function teamTotals(rows){
 export function validateTeam(raw){
  if(!plain(raw)||!text(raw.id,100)||!/^team:[A-Za-z0-9_-]+$/.test(raw.id)||!text(raw.name,80)||!raw.name.trim())throw Error('Invalid team identity or name.');
  if(!['27/23','28/22'].includes(raw.split)||!['projected','fa_context','direct','ordered_ballast','standard'].includes(raw.method)||!['current','neutral'].includes(raw.park)||!['contribution','quality'].includes(raw.view))throw Error('Invalid roster settings.');
- if(raw.sumSort!==undefined&&!['sum','sum_with_runs_rbi'].includes(raw.sumSort))throw Error('Invalid Sum SD sort setting.');
+ if(raw.sumSort!==undefined&&!['sum','sum_with_runs_rbi','sum_full'].includes(raw.sumSort))throw Error('Invalid Sum SD sort setting.');
  if(!Array.isArray(raw.picks)||raw.picks.length>50)throw Error('A team must contain at most 50 players.');
  const seen=new Set(),picks=raw.picks.map(p=>{
   if(!plain(p)||!['Hitter','Pitcher'].includes(p.kind)||!text(p.name,120)||!p.name.trim())throw Error('Invalid or duplicate player.');
