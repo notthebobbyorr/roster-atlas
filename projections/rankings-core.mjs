@@ -1,8 +1,8 @@
 import {projectInningsPerStart} from './pitcher-starts.mjs?v=hybrid-full-1';
-import {projectSaves} from './saves.mjs?v=wins-1';
+import {projectSaves} from './saves.mjs?v=roster-refresh-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
-import {playerOrganizations} from './player-organizations.mjs?v=organizations-1';
-import {projectWins} from './pitcher-wins.mjs?v=wins-1';
+import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
+import {projectWins} from './pitcher-wins.mjs?v=roster-refresh-1';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
