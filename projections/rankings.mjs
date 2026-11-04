@@ -1,18 +1,18 @@
-import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=playing-time-preview-1';
+import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=complete-20261104-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
-import {projectedSkillsHTML} from './projected-skills.mjs?v=OPS-1';
+import {projectedSkillsHTML} from './projected-skills.mjs?v=complete-20261104-1';
 import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=playing-time-preview-1';
-import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
+import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=complete-20261104-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=playing-time-preview-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=complete-20261104-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=roster-refresh-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const finite=x=>typeof x==='number'&&Number.isFinite(x),fmt=(x,d=1)=>finite(x)?x.toFixed(d):'—';
+const finite=x=>typeof x==='number'&&Number.isFinite(x),fmt=(x,d=1)=>finite(x)?x.toFixed(d):'â€”';
 const parent=window.parent;
 const localPreviews=playingTimePreviewStore();
 function workloadPreviews(){return parent.projectionWorkloadPreviews?.()??localPreviews.get(model);}
@@ -57,8 +57,8 @@ if(!['','L','R','S','unknown'].includes($('throws').value))$('throws').value='';
 if(!Object.hasOwn(lists,$('role').value))$('role').value='SP';
 const restoredSort=normalizeRankingSort(sortRole(),saved?.preferences?.sort,saved?.preferences?.['sort-direction']);
 renderSortOptions(restoredSort.value,restoredSort.direction);
-$('source').innerHTML='2027 projections · RosterResource roles retrieved '+esc(new Date(starterRoles.retrieved_at).toLocaleDateString('en-US',{timeZone:'America/New_York'}))+' · <a href="'+esc(starterRoles.source)+'" target="_blank" rel="noopener">RosterResource roster grid</a>. New position lists start in projected contribution Sum order. Custom lists start in the order players are added; each list saves your edits.';
-$('policy').textContent=parent.projectionPositionNote(2026)+' Players without an RR role use their current FanGraphs MLB organization when linked by player IDs. Organization membership does not imply an MLB job or change their neutral park, workload or save role. Players without a known org remain unassigned. Current RR roles determine pitcher position lists; hitter eligibility retains the existing rules. FanGraphs org snapshot: '+playerOrganizations.as_of.slice(0,10)+(playerOrganizations.membership_refreshed_at?' · RR organization memberships refreshed '+playerOrganizations.membership_refreshed_at.slice(0,10):'')+'.';
+$('source').innerHTML='2027 projections Â· RosterResource roles retrieved '+esc(new Date(starterRoles.retrieved_at).toLocaleDateString('en-US',{timeZone:'America/New_York'}))+' Â· <a href="'+esc(starterRoles.source)+'" target="_blank" rel="noopener">RosterResource roster grid</a>. New position lists start in projected contribution Sum order. Custom lists start in the order players are added; each list saves your edits.';
+$('policy').textContent=parent.projectionPositionNote(2026)+' Players without an RR role use their current FanGraphs MLB organization when linked by player IDs. Organization membership does not imply an MLB job or change their neutral park, workload or save role. Players without a known org remain unassigned. Current RR roles determine pitcher position lists; hitter eligibility retains the existing rules. FanGraphs org snapshot: '+playerOrganizations.as_of.slice(0,10)+(playerOrganizations.membership_refreshed_at?' Â· RR organization memberships refreshed '+playerOrganizations.membership_refreshed_at.slice(0,10):'')+'.';
 $('roster-policy').textContent=(rosterStatus.membership_source?'40-man membership and option years: '+rosterStatus.membership_source+' as of '+rosterStatus.as_of+'. '+rosterStatus.membership_policy+' ':'40-man membership: all 30 official MLB rosters (60-day IL excluded). Minor-league option years: RosterResource snapshot '+rosterStatus.as_of+'. ')+'Blank/non-numeric option values are Unknown, not zero. These are observed values, not projected 2027 roster decisions or contract options.';
 $('contract-policy').textContent='FA year is the first season of free agency: 2027 means after 2026; 2028 means after the projected 2027 season. * marks conditional option or opt-out scenarios. Source-listed service-time control years may change with service time. No control end is inferred when absent. Payroll contracts retrieved '+contracts.as_of+'. FA sorting uses the earliest listed scenario; unknown years stay last. Your saved ranking order is preserved.';
 const savesMarkup=()=>savesError?'<p>'+esc(savesError)+'</p>':savesExplainer(saves);
@@ -66,7 +66,7 @@ $('saves-explainer').addEventListener('toggle',()=>{if($('saves-explainer').open
 let page=0;const pageSize=100;let pageFilterKey='',forecastSettings='';const forecastCache=new Map();
 let displayed=[],columns=[],processColumns=[],categoryColumns=[],dragged=null,selectedKeys=new Set(),selectionKind=listKind(),lastSentList=null;
 $('create-list-kind').value=listKind()==='Mixed'?'Pitcher':listKind();
-function persist(message='Saved on this device · export a backup to transfer lists.'){
+function persist(message='Saved on this device Â· export a backup to transfer lists.'){
  if(parent.projectionRankingOwner!==owner)throw Error('Session changed. Sign in again.');
  syncCustomOrders();
  const preferences=readPreferences();
@@ -92,7 +92,7 @@ function rebuildCustomLists(seed={}){
  syncCustomOrders();
 }
 function renderListOptions(value=$('role').value){
- $('role').innerHTML='<optgroup label="Positions">'+fantasyRoles.map(id=>'<option value="'+esc(id)+'">'+esc(id)+'</option>').join('')+'</optgroup>'+(Object.keys(customLists).length?'<optgroup label="Custom lists">'+Object.values(customLists).map(list=>'<option value="'+esc(list.id)+'">'+esc(list.name)+' · '+(list.kind==='Pitcher'?'Pitchers':'Hitters')+'</option>').join('')+'</optgroup>':'');
+ $('role').innerHTML='<optgroup label="Positions">'+fantasyRoles.map(id=>'<option value="'+esc(id)+'">'+esc(id)+'</option>').join('')+'</optgroup>'+(Object.keys(customLists).length?'<optgroup label="Custom lists">'+Object.values(customLists).map(list=>'<option value="'+esc(list.id)+'">'+esc(list.name)+' Â· '+(list.kind==='Pitcher'?'Pitchers':'Hitters')+'</option>').join('')+'</optgroup>':'');
  $('role').value=Object.hasOwn(lists,value)?value:'SP';
 }
 function enterList(id){
@@ -104,7 +104,7 @@ function enterList(id){
 function renderCustomTools(){
  const id=$('role').value,list=customLists[id],destination=$('list-destination').value,compatible=Object.values(customLists).filter(item=>selectionKind==='Mixed'||item.kind===selectionKind);
  $('custom-controls').hidden=!list;if(list)$('custom-list-name').value=list.name;
- $('list-membership-policy').textContent=list?'Click × to remove a player from this custom list. Other lists and projections stay unchanged. Add them again from a position list whenever needed.':'Click × beside a player to exclude them from this position list. Exclusions apply across its filters and all models; other lists and projections stay unchanged. Restore players below. Rank numbers retain their place in the complete list.';
+ $('list-membership-policy').textContent=list?'Click Ã— to remove a player from this custom list. Other lists and projections stay unchanged. Add them again from a position list whenever needed.':'Click Ã— beside a player to exclude them from this position list. Exclusions apply across its filters and all models; other lists and projections stay unchanged. Restore players below. Rank numbers retain their place in the complete list.';
  $('selected-count').textContent=selectedKeys.size+' '+(selectionKind==='Mixed'?'player':selectionKind==='Pitcher'?'pitcher':'hitter')+(selectedKeys.size===1?'':'s')+' selected';
  $('list-destination').innerHTML='<option value="">Choose a custom list</option>'+compatible.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.name)+'</option>').join('');
  $('list-destination').value=compatible.some(item=>item.id===destination)?destination:'';
@@ -140,10 +140,10 @@ function playerForecast(entry){if(!forecastCache.has(entry.key))forecastCache.se
 function change(key,index){const role=$('role').value;orders[role]=moveRank(orders[role],key,index);persist();render();}
 function excludePlayer(key){const role=$('role').value;if(!available[role].includes(key))return;selectedKeys.delete(key);if(customLists[role]){customLists={...customLists,[role]:removeCustomMember(customLists[role],key)};rebuildCustomLists();persist('Player removed from '+listLabel(role)+'. Other lists are unchanged.');}else{exclusions[role].add(key);persist('Player excluded from '+role+' on this device. Restore them under Excluded players.');}render();}
 function restorePlayer(key){exclusions[$('role').value].delete(key);persist('Player restored to this position list.');render();}
-function renderExcluded(){const role=$('role').value,removed=lists[role].filter(p=>exclusions[role].has(p.key));$('excluded-count').textContent=removed.length;$('excluded-panel').hidden=removed.length===0;$('excluded-rows').innerHTML=removed.map(p=>'<div><span>'+esc(p.name)+' · '+esc(p.team.replaceAll('-',' '))+'</span> <button type="button" data-restore="'+esc(p.key)+'">Restore</button></div>').join('');$('restore-all').disabled=removed.length===0;}
+function renderExcluded(){const role=$('role').value,removed=lists[role].filter(p=>exclusions[role].has(p.key));$('excluded-count').textContent=removed.length;$('excluded-panel').hidden=removed.length===0;$('excluded-rows').innerHTML=removed.map(p=>'<div><span>'+esc(p.name)+' Â· '+esc(p.team.replaceAll('-',' '))+'</span> <button type="button" data-restore="'+esc(p.key)+'">Restore</button></div>').join('');$('restore-all').disabled=removed.length===0;}
 function renderRRRoles(){
  const role=$('role').value,options=rrRoleOptions(lists[role]),selected=rrSelections[role];
- $('rr-checks').innerHTML=options.map(o=>'<label><input type="checkbox" data-rr-role="'+esc(o.value)+'" '+(selected.has(o.value)?'checked':'')+'>'+esc(o.label)+' · '+o.count+'</label>').join('');
+ $('rr-checks').innerHTML=options.map(o=>'<label><input type="checkbox" data-rr-role="'+esc(o.value)+'" '+(selected.has(o.value)?'checked':'')+'>'+esc(o.label)+' Â· '+o.count+'</label>').join('');
  $('rr-summary').textContent=selected.size===options.length?'All '+options.length+' roles':selected.size===0?'No roles selected':options.filter(o=>selected.has(o.value)).map(o=>o.value).join(' + ');
 }
 function rosterFacts(p){
@@ -160,8 +160,8 @@ function contractCell(p){
  return '<td class="fa'+(info.upcoming?' fa-upcoming':'')+'" title="'+esc(info.title)+'">'+link+'<small>'+esc(info.detail)+'</small>'+(info.flag?'<strong>'+esc(info.flag)+'</strong>':'')+'</td>';
 }
 function savesRoleCell(p){
- const selected=parent.projectionSavesRole?.(p.mlbid)||'auto',record=saves?.players?.[String(p.mlbid)],auto=record?.auto_role||(record?.fallback_role?record.fallback_role+' · prior/projected role':'unassigned');
- return '<td><select data-save-role="'+esc(p.mlbid)+'" aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' · '+auto:''))+'</option>').join('')+'</select></td>';
+ const selected=parent.projectionSavesRole?.(p.mlbid)||'auto',record=saves?.players?.[String(p.mlbid)],auto=record?.auto_role||(record?.fallback_role?record.fallback_role+' Â· prior/projected role':'unassigned');
+ return '<td><select data-save-role="'+esc(p.mlbid)+'" aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' Â· '+auto:''))+'</option>').join('')+'</select></td>';
 }
 function processValue(p,field){if(field==='pitching_grade')return p.kind==='Pitcher'?p.profile?.pitching_grade:null;if(field==='offense_grade')return p.kind==='Hitter'?p.profile?.offense_grade:null;return (['stuff','SwStr'].includes(field)?p.kind==='Pitcher':p.kind==='Hitter')?p.profile?.input_skills?.[field]:null;}
 function statCell(f,c,d,entry){
@@ -180,7 +180,7 @@ function renderSortOptions(value=$('sort').value,direction=$('sort-direction').v
 }
 function sortableHeader(label,value){
  const active=$('sort').value===value,ascending=value==='rank'||$('sort-direction').value==='asc';
- return '<th'+(active?' aria-sort="'+(ascending?'ascending':'descending')+'"':'')+'><button type="button" class="column-sort" data-sort="'+esc(value)+'" title="Sort by '+esc(label)+'; click again to reverse">'+esc(label)+(active?(ascending?' ↑':' ↓'):'')+'</button></th>';
+ return '<th'+(active?' aria-sort="'+(ascending?'ascending':'descending')+'"':'')+'><button type="button" class="column-sort" data-sort="'+esc(value)+'" title="Sort by '+esc(label)+'; click again to reverse">'+esc(label)+(active?(ascending?' â†‘':' â†“'):'')+'</button></th>';
 }
 function render(){
  renderPreviewControls();
@@ -197,7 +197,7 @@ function render(){
  const sorting=$('sort').value,reordering=sorting==='rank';
  displayed=sortRankingRows(displayed,sorting,$('sort-direction').value);
  processColumns=mixed?[['stuff','Pitch grade'],['SwStr','SwStr %'],['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:hitter?[['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:[['stuff','Pitch grade'],['SwStr','SwStr %']];const cats=mixed?['Power','Speed','AVG','R','RBI','K','ERA','WHIP','W','SV']:hitter?['Power','Speed','AVG','R','RBI']:['K','ERA','WHIP','W','SV'];
- if(model==='platoon')processColumns=[];
+ if(['platoon','complete_20261104'].includes(model))processColumns=[];
  if(!hitter)processColumns.unshift(['pitching_grade','ACE']);
  if(hitter||mixed)processColumns.unshift(['offense_grade','SLAM']);
  categoryColumns=cats;
@@ -205,10 +205,10 @@ function render(){
  $('head').innerHTML='<tr><th><label class="select-all-control" title="Select or deselect all players matching the current filters across every page"><input id="select-all-displayed" class="select-player" type="checkbox" data-select-all aria-label="Select all matching players"><span>Select all matches</span></label></th><th class="player">Player</th>'+sortableHeader('Rank / reorder','rank')+(mixed?'<th>Player type</th>':'')+'<th>MLB org</th><th>RR role</th>'+sortableHeader('FA year','fa')+'<th>40-man</th><th>Options remaining</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([key,name])=>sortableHeader(name,'stat:'+key)).join('')+cats.map(c=>sortableHeader(c+' SD','grade:'+c)).join('')+sortableHeader('Sum SD (base 3)','sum')+sortableHeader('Sum SD (with R/RBI)','sum_with_runs_rbi')+sortableHeader('Sum SD (all 5)','sum_full')+processColumns.map(([key,label])=>sortableHeader(label,'input:'+key)).join('')+'</tr>';
  const pages=Math.max(1,Math.ceil(displayed.length/pageSize));page=Math.min(page,pages-1);
  $('previous-page').disabled=page===0;$('next-page').disabled=page>=pages-1;
- $('page-status').textContent='Page '+(page+1)+' of '+pages+' · '+displayed.length+' matches';
- $('rows').innerHTML=displayed.slice(page*pageSize,(page+1)*pageSize).map(({entry:p,rank,forecast:f},rowIndex)=>{const i=page*pageSize+rowIndex;return '<tr draggable="'+reordering+'" data-key="'+esc(p.key)+'"><td><input class="select-player" type="checkbox" data-select="'+esc(p.key)+'" aria-label="Select '+esc(p.name)+'"'+(selectedKeys.has(p.key)?' checked':'')+'></td><td class="player"><button type="button" class="exclude-player" data-exclude="'+esc(p.key)+'" aria-label="'+(customLists[role]?'Remove ':'Exclude ')+esc(p.name)+' from '+esc(listLabel(role))+'" title="'+(customLists[role]?'Remove from this custom list':'Exclude from this position list')+'">×</button>'+esc(p.name)+(p.profile?'':'<small>Projection unavailable</small>')+projectedSkillsHTML($('workload').value==='rotation_context'?rotationContext(core,pt,p).entry.profile:p.profile,core.projected_skill_dictionary)+'</td><td><input aria-label="Rank for '+esc(p.name)+'" data-rank="'+esc(p.key)+'" type="number" min="1" max="'+orders[role].length+'" value="'+rank+'" title="Saved personal rank; editable in any sort view"><button data-move="up" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' up" '+(!reordering||i===0?'disabled':'')+'>↑</button><button data-move="down" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' down" '+(!reordering||i===displayed.length-1?'disabled':'')+'>↓</button></td>'+(mixed?'<td>'+esc(p.kind)+'</td>':'')+'<td>'+esc(p.team.replaceAll('-',' '))+'</td><td><a href="'+esc(p.source_url)+'" target="_blank" rel="noopener">'+esc(p.rr_role==='Unassigned'?(p.organization_id?'No MLB role':'Unassigned / FA'):p.role==='Hitter'?(p.section==='mlb-bn'?'Platoon starter':'Lineup '+p.rr_role):p.rr_role)+'</a>'+(p.platoon?' · '+esc(p.platoon):'')+'</td>'+contractCell(p)+rosterCells(p)+'<td>'+esc(p.positions.join(' / ')||p.role)+'</td>'+(!hitter?'<td>'+(p.kind==='Pitcher'?esc(pitcherHandLabel(p.mlbid)):'—')+'</td>'+(p.kind==='Pitcher'?savesRoleCell(p):'<td>—</td>'):'')+columns.map(([c,,d])=>statCell(f,c,d,p)).join('')+[...cats,'Sum','SumWithRunsRBI','SumFull'].map(c=>{const value=c==='Sum'?f.sum:c==='SumWithRunsRBI'?f.sum_with_runs_rbi:c==='SumFull'?f.sum_full:f.grades[c];return '<td class="number '+(finite(value)?value>=0?'good':'bad':'')+'">'+fmt(value)+'</td>'}).join('')+processColumns.map(([field])=>'<td class="number">'+fmt(processValue(p,field))+'</td>').join('')+'</tr>';}).join('')||'<tr><td colspan="'+(12+columns.length+cats.length+processColumns.length+(!hitter?2:0)+(mixed?1:0))+'">'+(customLists[role]&&!orders[role].length?'This custom list is empty. Select players from a position list and send them here.':'No matching players.')+'</td></tr>';
+ $('page-status').textContent='Page '+(page+1)+' of '+pages+' Â· '+displayed.length+' matches';
+ $('rows').innerHTML=displayed.slice(page*pageSize,(page+1)*pageSize).map(({entry:p,rank,forecast:f},rowIndex)=>{const i=page*pageSize+rowIndex;return '<tr draggable="'+reordering+'" data-key="'+esc(p.key)+'"><td><input class="select-player" type="checkbox" data-select="'+esc(p.key)+'" aria-label="Select '+esc(p.name)+'"'+(selectedKeys.has(p.key)?' checked':'')+'></td><td class="player"><button type="button" class="exclude-player" data-exclude="'+esc(p.key)+'" aria-label="'+(customLists[role]?'Remove ':'Exclude ')+esc(p.name)+' from '+esc(listLabel(role))+'" title="'+(customLists[role]?'Remove from this custom list':'Exclude from this position list')+'">Ã—</button>'+esc(p.name)+(p.profile?'':'<small>Projection unavailable</small>')+projectedSkillsHTML($('workload').value==='rotation_context'?rotationContext(core,pt,p).entry.profile:p.profile,core.projected_skill_dictionary)+'</td><td><input aria-label="Rank for '+esc(p.name)+'" data-rank="'+esc(p.key)+'" type="number" min="1" max="'+orders[role].length+'" value="'+rank+'" title="Saved personal rank; editable in any sort view"><button data-move="up" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' up" '+(!reordering||i===0?'disabled':'')+'>â†‘</button><button data-move="down" data-key="'+esc(p.key)+'" aria-label="Move '+esc(p.name)+' down" '+(!reordering||i===displayed.length-1?'disabled':'')+'>â†“</button></td>'+(mixed?'<td>'+esc(p.kind)+'</td>':'')+'<td>'+esc(p.team.replaceAll('-',' '))+'</td><td><a href="'+esc(p.source_url)+'" target="_blank" rel="noopener">'+esc(p.rr_role==='Unassigned'?(p.organization_id?'No MLB role':'Unassigned / FA'):p.role==='Hitter'?(p.section==='mlb-bn'?'Platoon starter':'Lineup '+p.rr_role):p.rr_role)+'</a>'+(p.platoon?' Â· '+esc(p.platoon):'')+'</td>'+contractCell(p)+rosterCells(p)+'<td>'+esc(p.positions.join(' / ')||p.role)+'</td>'+(!hitter?'<td>'+(p.kind==='Pitcher'?esc(pitcherHandLabel(p.mlbid)):'â€”')+'</td>'+(p.kind==='Pitcher'?savesRoleCell(p):'<td>â€”</td>'):'')+columns.map(([c,,d])=>statCell(f,c,d,p)).join('')+[...cats,'Sum','SumWithRunsRBI','SumFull'].map(c=>{const value=c==='Sum'?f.sum:c==='SumWithRunsRBI'?f.sum_with_runs_rbi:c==='SumFull'?f.sum_full:f.grades[c];return '<td class="number '+(finite(value)?value>=0?'good':'bad':'')+'">'+fmt(value)+'</td>'}).join('')+processColumns.map(([field])=>'<td class="number">'+fmt(processValue(p,field))+'</td>').join('')+'</tr>';}).join('')||'<tr><td colspan="'+(12+columns.length+cats.length+processColumns.length+(!hitter?2:0)+(mixed?1:0))+'">'+(customLists[role]&&!orders[role].length?'This custom list is empty. Select players from a position list and send them here.':'No matching players.')+'</td></tr>';
  $('runs-rbi-note').textContent=$('workload').value==='rotation_context'?(core.rotation_context?.note||''):(core.runs_rbi_default||$('workload').value==='fa_context')?(core.runs_rbi_context?.note||''):core.runs_rbi_context?'Choose Projected + FA-aware R/RBI under Playing time to show runs and RBI.':'FA-aware R/RBI is available with the Platoon skill-aged model.';
- $('count').textContent=displayed.length+' of '+orders[role].length+' players · '+listLabel(role)+' · '+(({recommended:'Recommended cutoffs',hybrid_full:'Full skills-first hybrid'})[model]||model)+' · '+$('view').selectedOptions[0].text+(exclusions[role].size?' · '+exclusions[role].size+' excluded':'');
+ $('count').textContent=displayed.length+' of '+orders[role].length+' players Â· '+listLabel(role)+' Â· '+(({recommended:'Recommended cutoffs',hybrid_full:'Full skills-first hybrid'})[model]||model)+' Â· '+$('view').selectedOptions[0].text+(exclusions[role].size?' Â· '+exclusions[role].size+' excluded':'');
  renderCustomTools();
 }
 $('head').addEventListener('click',event=>{const button=event.target.closest('button[data-sort]');if(!button)return;const value=button.dataset.sort;if(!rankingSortOptions(sortRole()).some(option=>option.value===value))return;$('sort-direction').value=value==='rank'?'asc':$('sort').value===value?($('sort-direction').value==='asc'?'desc':'asc'):['stat:ERA','stat:WHIP','fa'].includes(value)?'asc':'desc';$('sort').value=value;dragged=null;render();persist();document.querySelector?.('button[data-sort="'+value+'"]')?.focus();});

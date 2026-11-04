@@ -6,6 +6,7 @@ const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const plain=value=>value&&typeof value==='object'&&!Array.isArray(value);
 const text=(value,max)=>typeof value==='string'&&value.length<=max;
 const validAge=value=>finite(value)&&value>0&&value<100;
+const externalIdentity=(id,identity)=>Number.isInteger(id)&&id<0&&identity?.source==='adp'&&Number.isInteger(identity.id)&&identity.id===-id;
 export function projectionAge(entry,pick,season){
  if(validAge(entry?.profile?.projection_age))return entry.profile.projection_age;
  const snapshot=pick?.snapshot;
@@ -48,10 +49,10 @@ export function defaultAssignment(entry,team){
 export function addPick(team,entry,forecast,{model,season}={}){
  if(team.picks.length>=50)throw Error('This roster already has 50 players. Remove a player before adding another.');
  if(team.picks.some(p=>p.mlbid===Number(entry.mlbid)))throw Error('That player is already on this team. Each player occupies one roster spot.');
- if(!Number.isInteger(Number(entry.mlbid))||Number(entry.mlbid)<=0)throw Error('This player has no usable MLB ID.');
+ if(!Number.isInteger(Number(entry.mlbid))||(Number(entry.mlbid)<=0&&!externalIdentity(Number(entry.mlbid),entry.identity)))throw Error('This player has no usable player identity.');
  const position=defaultAssignment(entry,team),eligible=assignmentOptions(entry),used=new Set(team.picks.map(p=>p.round));
  const round=Array.from({length:50},(_,i)=>i+1).find(value=>!used.has(value))||50;
- const pick={key:entry.key,mlbid:Number(entry.mlbid),name:entry.name,kind:entry.kind,eligible,position,round,note:'',reliefType:position==='RP'?(entry.rr_role==='CL'?'closer':'spec'):'other',
+ const pick={key:entry.key,mlbid:Number(entry.mlbid),...(externalIdentity(Number(entry.mlbid),entry.identity)?{identity:entry.identity}:{}),name:entry.name,kind:entry.kind,eligible,position,round,note:'',reliefType:position==='RP'?(entry.rr_role==='CL'?'closer':'spec'):'other',
   snapshot:{model:model||'recommended',season:season||2027,age:projectionAge(entry,null,season||2027),saved_at:new Date().toISOString(),forecast:cleanForecast(forecast)}};
  return {...team,picks:[...team.picks,pick]};
 }
@@ -108,7 +109,7 @@ export function validateTeam(raw){
   if(!plain(p)||!['Hitter','Pitcher'].includes(p.kind)||!text(p.name,120)||!p.name.trim())throw Error('Invalid or duplicate player.');
   const manual=p.placeholder===true;
   if(manual? p.mlbid!==null||!text(p.key,100)||!/^manual:[A-Za-z0-9_-]+$/.test(p.key)
-    : !Number.isInteger(p.mlbid)||p.mlbid<=0||p.key!==p.mlbid+':'+p.kind)throw Error('Invalid player identity.');
+    : !Number.isInteger(p.mlbid)||(p.mlbid<=0&&!externalIdentity(p.mlbid,p.identity))||p.key!==p.mlbid+':'+p.kind)throw Error('Invalid player identity.');
   const identity=manual?p.key:'mlb:'+p.mlbid;
   if(seen.has(identity))throw Error('Invalid or duplicate player.');seen.add(identity);
   if(!Array.isArray(p.eligible)||!p.eligible.length||p.eligible.some(pos=>!rosterPositions.includes(pos)||(p.kind==='Pitcher'?!['SP','RP'].includes(pos):['SP','RP'].includes(pos)))||!p.eligible.includes(p.position))throw Error('Invalid position assignment.');

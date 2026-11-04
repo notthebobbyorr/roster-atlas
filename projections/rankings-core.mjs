@@ -1,10 +1,11 @@
 import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
-import {hitterABPerPA} from './playing-time-preview.mjs?v=playing-time-preview-1';
+import {hitterABPerPA} from './playing-time-preview.mjs?v=complete-20261104-1';
 import {projectInningsPerStart} from './pitcher-starts.mjs?v=hybrid-full-1';
 import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
 import {projectWins} from './pitcher-wins.mjs?v=roster-refresh-1';
+import {completedProjection} from './complete-projection.mjs?v=complete-20261104-1';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
@@ -25,8 +26,8 @@ export function compileLists(rr,players,eligible){
  const profiles=new Map(players.map(p=>[`${p.mlbid}:${p.kind}`,p]));
  const lists=Object.fromEntries(fantasyRoles.map(role=>[role,[]]));
  for(const row of rr.players){
-  const profile=profiles.get(row.key)||null,positions=eligible(row.mlbid,row.kind,2026);
-  const entry={...row,profile,name:profile?.player_name||row.name,positions};
+  const profile=profiles.get(row.key)||null,positions=profile?.fantasy_positions?.length?profile.fantasy_positions:eligible(row.mlbid,row.kind,2026);
+  const entry={...row,profile,identity:profile?.identity,name:profile?.player_name||row.name,positions};
   for(const role of listRoles(row,positions))lists[role].push(entry);
  }
  const assigned=new Set(rr.players.map(row=>row.key));
@@ -35,11 +36,11 @@ export function compileLists(rr,players,eligible){
   if(assigned.has(key)||!categories.every(field=>finite(profile.rates?.[field])))continue;
   const role=profile.kind==='Pitcher'?profile.assigned_role:'Hitter';
   if(!['Hitter','SP','RP','Swingman'].includes(role))continue;
-  const positions=eligible(profile.mlbid,profile.kind,2026);
-  const membership=playerOrganizations.players[String(profile.mlbid)],savedOrganization=profile.projection_organization,
+  const positions=profile.fantasy_positions?.length?profile.fantasy_positions:eligible(profile.mlbid,profile.kind,2026);
+  const membership=profile.neutral_context?null:playerOrganizations.players[String(profile.mlbid)],savedOrganization=profile.neutral_context?null:profile.projection_organization,
     org=membership?playerOrganizations.teams[String(membership[0])]:savedOrganization?[savedOrganization.id,savedOrganization.slug]:null;
   // Team filtering may use an organization; only RR assigns an MLB park/role.
-  const entry={key,mlbid:profile.mlbid,kind:profile.kind,role,name:profile.player_name,profile,positions,
+  const entry={key,mlbid:profile.mlbid,identity:profile.identity,kind:profile.kind,role,name:profile.player_name,profile,positions,
     team:org?.[1]||'unassigned',team_id:null,organization_id:org?.[0]??null,
     organization_fgid:membership?.[1]??null,rr_role:'Unassigned',section:'unassigned',source_url:rr.source};
   for(const position of listRoles(entry,positions))lists[position].push(entry);
@@ -77,6 +78,7 @@ export function readExclusions(data,available){
  return result;
 }
 export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
+ if(core.projection_model==='complete_20261104')return completedProjection(core,pt,entry,{method,view,saves,savesRole,savesOverrides,workloadOverrides});
  if(method==='rotation_context'){
   const next=rotationContext(core,pt,entry);
   return projection(next.core,next.pt,next.entry,{model,method:'projected',park,view,saves,savesRole,savesOverrides,workloadOverrides});

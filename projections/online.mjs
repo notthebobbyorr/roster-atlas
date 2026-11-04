@@ -1,16 +1,16 @@
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
-import {playingTimePreviewStore} from './playing-time-preview.mjs?v=dc-pace-1';
+import {playingTimePreviewStore} from './playing-time-preview.mjs?v=complete-20261104-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
-import * as skillRegistry from './skill-models.mjs?v=dc-pace-1';
+import * as skillRegistry from './skill-models.mjs?v=complete-20261104-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
-import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
+import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=complete-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let authenticated=false,requestId=0,sessionEpoch=0;
-const defaultModel=['platoon','hybrid_full','recommended'].find(id=>Object.hasOwn(skillModels,id));
+const defaultModel=[skillRegistry.defaultSkillModel,'complete_20261104','platoon','hybrid_full','recommended'].find(id=>id&&Object.hasOwn(skillModels,id));
 let modelKey=defaultModel,modelEpoch=0,runtimes=new Map(),savesRoles={};
 const activeModel=()=>skillModels[modelKey];
 const workloadPreviews=playingTimePreviewStore();
@@ -66,7 +66,7 @@ window.projectionSavesExplainer=savesExplainer;
 window.projectionSetSavesRole=(mlbid,role)=>{
  if(!authenticated||!window.projectionRankingOwner)throw Error('Sign in to change saves scenarios.');
  const id=String(mlbid);
- if(!/^\d+$/.test(id)||!saveRoleOptions.some(([code])=>code===role))throw Error('Invalid saves role.');
+ if(!/^-?[1-9]\d*$/.test(id)||!saveRoleOptions.some(([code])=>code===role))throw Error('Invalid saves role.');
  if(role==='auto')delete savesRoles[id];else savesRoles[id]=role;
  try{localStorage.setItem('ra-save-role-overrides:v1:'+window.projectionRankingOwner,JSON.stringify(savesRoles));return true;}
  catch{$('status').textContent='Saves role changed for this session; device storage is unavailable.';return false;}
@@ -74,7 +74,7 @@ window.projectionSetSavesRole=(mlbid,role)=>{
 function restoreSavesRoles(owner){
  savesRoles={};
  try{const stored=JSON.parse(localStorage.getItem('ra-save-role-overrides:v1:'+owner)||'{}');
-  if(stored&&typeof stored==='object'&&!Array.isArray(stored))for(const [id,role] of Object.entries(stored))if(/^\d+$/.test(id)&&role!=='auto'&&saveRoleOptions.some(([code])=>code===role))savesRoles[id]=role;
+  if(stored&&typeof stored==='object'&&!Array.isArray(stored))for(const [id,role] of Object.entries(stored))if(/^-?[1-9]\d*$/.test(id)&&role!=='auto'&&saveRoleOptions.some(([code])=>code===role))savesRoles[id]=role;
  }catch{}
 }
 const selectedView=()=>location.hash==='#roster'?'roster':'rankings';
@@ -124,7 +124,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=dc-pace-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=complete-20261104-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

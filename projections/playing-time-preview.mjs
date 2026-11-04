@@ -16,7 +16,7 @@ export function hitterABPerPA(profile,record,variant){
 export function playingTimePreviewStore(){
  const values=new Map();
  return {get:model=>Object.fromEntries(values.get(model)||[]),
-  set(model,key,value){if(!/^\d+:(Hitter|Pitcher)$/.test(key))throw Error('Invalid player.');const kind=key.split(':')[1],n=parsePlayingTime(value??'',kind);if(!values.has(model))values.set(model,new Map());if(n===null)values.get(model).delete(key);else values.get(model).set(key,n);},
+  set(model,key,value){if(!/^-?[1-9]\d*:(Hitter|Pitcher)$/.test(key))throw Error('Invalid player.');const kind=key.split(':')[1],n=parsePlayingTime(value??'',kind);if(!values.has(model))values.set(model,new Map());if(n===null)values.get(model).delete(key);else values.get(model).set(key,n);},
   clear(model){model===undefined?values.clear():values.delete(model);}};
 }
 export function playingTimeInput(entry,forecast,overrides,record){
