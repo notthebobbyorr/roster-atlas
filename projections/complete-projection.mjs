@@ -1,7 +1,12 @@
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
+import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
+ if(method==='rotation_context'){
+  const next=rotationContext(core,pt,entry);
+  return completedProjection(next.core,next.pt,next.entry,{method:'projected',view,saves,savesRole,savesOverrides,workloadOverrides});
+ }
  const p=entry.profile,line=p?.complete_projection;
  if(!line)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,sum_full:null,sum_with_runs_rbi:null};
  const kind=p.kind,record=pt.players[entry.key],mode=method==='fa_context'?'projected':method,
@@ -14,6 +19,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  if(kind==='Hitter')Object.assign(stats,{Power:rates.HR_PA/rates.AB_PA,Speed:rates.SB_PA/rates.AB_PA,AVG:rates.H_PA/rates.AB_PA,OPS:line.OPS,
   HR:finite(pa)?rates.HR_PA*pa:null,SB:finite(pa)?rates.SB_PA*pa:null,R:pa===0?0:finite(pa)&&finite(rates.R_PA)?rates.R_PA*pa:null,RBI:pa===0?0:finite(pa)&&finite(rates.RBI_PA)?rates.RBI_PA*pa:null});
  else Object.assign(stats,{K:finite(ip)?rates.K_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)?rates.W_IP*ip:null,SV:finite(ip)?rates.SV_IP*ip:null});
+ stats.K_pct=finite(rates.K_PA)?100*rates.K_PA:null;stats.BB_pct=finite(rates.BB_PA)?100*rates.BB_PA:null;
  let save=null;
  if(kind==='Pitcher'){
   if(savesRole!=='auto')save=projectSaves(saves,p.mlbid,ip,savesRole,{method:mode,overrides:savesOverrides,workloadOverrides});

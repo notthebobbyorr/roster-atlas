@@ -1,14 +1,14 @@
-import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=complete-20261104-2';
-import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
-import {projectedSkillsHTML} from './projected-skills.mjs?v=complete-20261104-2';
+import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=rotation-rates-20261104-1';
+import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
+import {projectedSkillsHTML} from './projected-skills.mjs?v=rotation-rates-20261104-1';
 import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=playing-time-preview-1';
-import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=complete-20261104-2';
+import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=complete-20261104-2';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=rotation-rates-20261104-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=roster-refresh-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=rotation-rates-20261104-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -202,6 +202,7 @@ function render(){
  if(hitter||mixed)processColumns.unshift(['offense_grade','SLAM']);
  categoryColumns=cats;
  columns=mixed?[['PA','PA',0],['AB','AB',0],['R','R',0],['HR','HR',0],['RBI','RBI',0],['SB','SB',0],['AVG','AVG',3],['OPS','OPS',3],['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['W','W',1],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]]:hitter?[['PA','PA',0],['AB','AB',0],['R','R',0],['HR','HR',0],['RBI','RBI',0],['SB','SB',0],['AVG','AVG',3],['OPS','OPS',3]]:[['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['W','W',1],['SV','SV',0],['ERA','ERA',2],['WHIP','WHIP',3]];
+ columns.push(['K_pct','K%',1],['BB_pct','BB%',1]);
  $('head').innerHTML='<tr><th><label class="select-all-control" title="Select or deselect all players matching the current filters across every page"><input id="select-all-displayed" class="select-player" type="checkbox" data-select-all aria-label="Select all matching players"><span>Select all matches</span></label></th><th class="player">Player</th>'+sortableHeader('Rank / reorder','rank')+(mixed?'<th>Player type</th>':'')+'<th>MLB org</th><th>RR role</th>'+sortableHeader('FA year','fa')+'<th>40-man</th><th>Options remaining</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([key,name])=>sortableHeader(name,'stat:'+key)).join('')+cats.map(c=>sortableHeader(c+' SD','grade:'+c)).join('')+sortableHeader('Sum SD (base 3)','sum')+sortableHeader('Sum SD (with R/RBI)','sum_with_runs_rbi')+sortableHeader('Sum SD (all 5)','sum_full')+processColumns.map(([key,label])=>sortableHeader(label,'input:'+key)).join('')+'</tr>';
  const pages=Math.max(1,Math.ceil(displayed.length/pageSize));page=Math.min(page,pages-1);
  $('previous-page').disabled=page===0;$('next-page').disabled=page>=pages-1;

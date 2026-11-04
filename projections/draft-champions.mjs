@@ -1,4 +1,4 @@
-import {teamTotals} from './roster-builder-core.mjs?v=complete-20261104-2';
+import {teamTotals} from './roster-builder-core.mjs?v=rotation-rates-20261104-1';
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export const dcLevels=[50,80,90];
 // User-supplied category percentiles. Totals and rates are independent targets.

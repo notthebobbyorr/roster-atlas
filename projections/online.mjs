@@ -1,11 +1,11 @@
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
-import {playingTimePreviewStore} from './playing-time-preview.mjs?v=complete-20261104-2';
+import {playingTimePreviewStore} from './playing-time-preview.mjs?v=rotation-rates-20261104-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
-import * as skillRegistry from './skill-models.mjs?v=complete-20261104-2';
+import * as skillRegistry from './skill-models.mjs?v=rotation-rates-20261104-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
-import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=complete-20261104-2';
+import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
@@ -117,6 +117,7 @@ async function showView(){
  if($('downloadForecasts'))$('downloadForecasts').hidden=!activeModel().downloads?.projections_csv;
  if($('downloadRunsRBI'))$('downloadRunsRBI').hidden=!activeModel().downloads?.runs_rbi_csv;
  if($('downloadSkills'))$('downloadSkills').hidden=!activeModel().downloads?.skills_csv;
+ if($('downloadRotation'))$('downloadRotation').hidden=!activeModel().downloads?.rotation_csv;
  $('rankingsTab').setAttribute('aria-pressed',String(!roster));$('rosterTab').setAttribute('aria-pressed',String(roster));
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');$('retry').hidden=true;
  $('status').textContent=roster?'Loading roster builder…':'Loading rankings…';
@@ -124,7 +125,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=complete-20261104-2&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=rotation-rates-20261104-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -155,6 +156,11 @@ if($('downloadRunsRBI'))$('downloadRunsRBI').onclick=async()=>{
 if($('downloadSkills'))$('downloadSkills').onclick=async()=>{
  if(!authenticated||!activeModel().downloads?.skills_csv)return;
  try{await download(activeModel().snapshot,activeModel().downloads.skills_csv);}
+ catch(error){$('status').textContent=error.message;}
+};
+if($('downloadRotation'))$('downloadRotation').onclick=async()=>{
+ if(!authenticated||!activeModel().downloads?.rotation_csv)return;
+ try{await download(activeModel().snapshot,activeModel().downloads.rotation_csv);}
  catch(error){$('status').textContent=error.message;}
 };
 $('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;showView();};
