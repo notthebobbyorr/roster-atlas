@@ -1,11 +1,12 @@
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=playing-time-preview-1';
+import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=dc-pace-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=OPS-1';
 import {compileLists,projection} from './rankings-core.mjs?v=playing-time-preview-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=rotation-context-1';
+import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=dc-pace-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
 
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -83,6 +84,7 @@ function persist(message='Saved on this device · export a team file for backup 
 function action(fn){try{assertOwner();fn();}catch(error){$('status').textContent=error.message;}}
 function teamControls(){
  const team=currentTeam();
+ $('dc-target').value=String(team.dcTarget??80);
  $('team').innerHTML=Object.values(teams).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('');$('team').value=activeId;
  $('team-name').value=team.name;$('split').value=team.split;$('workload').value=team.method;$('park').value=team.park;$('view').value=team.view;$('show-guidelines').checked=team.showGuidelines;$('pool-sum-sort').value=team.sumSort||'sum';
 }
@@ -99,6 +101,10 @@ function renderTracker(){
 }
 function renderTotals(){
  const {totals,coverage}=teamTotals(rosterRows);
+ const pace=draftChampionsPace(rosterRows,currentTeam().dcTarget??80,{totals,coverage});
+ $('dc-rates').innerHTML=draftChampionsHTML(pace);
+ $('dc-summary').textContent=pace.known?pace.met+'/10 rates meet '+pace.level+'% pace'+(pace.known<10?' · '+pace.known+'/10 rated':'')+(pace.partial?' · partial coverage':''):'Add players to compare pace';
+ $('dc-export').disabled=!pace.known;
  $('totals').innerHTML=totalsColumns.map(([key,label,digits])=>{
   const value=key==='IP'?formatInnings(totals[key]):fmt(totals[key],digits),c=coverage[key];
   return '<dl class="total"><dt>'+label+'</dt><dd>'+value+'</dd><small>'+(c.known<c.total?'Partial · '+c.known+'/'+c.total+' players':'')+'</small></dl>';
@@ -139,6 +145,8 @@ function renderGuidelines(){
 function render(){renderPreviewControls();teamControls();rosterRows=currentTeam().picks.map(pickForecast);renderTracker();renderTotals();renderRoster();renderGuidelines();renderPool();}
 function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 const fileName=()=>currentTeam().name.replace(/[^A-Za-z0-9_-]+/g,'-')||'draft-team';
+$('dc-target').addEventListener('change',()=>action(()=>{const level=Number($('dc-target').value);if(![50,80,90].includes(level))throw Error('Choose a DC target.');currentTeam().dcTarget=level;renderTotals();persist('Draft Champions target saved for this roster.');}));
+$('dc-export').onclick=()=>action(()=>download(fileName()+'-dc-pace.csv',draftChampionsCSV(draftChampionsPace(rosterRows,currentTeam().dcTarget??80)),'text/csv;charset=utf-8'));
 $('team').addEventListener('change',()=>action(()=>{if(!Object.hasOwn(teams,$('team').value))return;activeId=$('team').value;page=0;render();persist();}));
 $('new-team').onclick=()=>action(()=>{if(Object.keys(teams).length>=100)throw Error('You can save at most 100 teams.');const team=createTeam('Draft '+(Object.keys(teams).length+1));teams[team.id]=team;activeId=team.id;page=0;render();persist('New team created. Change its name above.');});
 $('rename-team').onclick=()=>action(()=>{const name=$('team-name').value.trim();if(!name||name.length>80)throw Error('Enter a team name from 1 to 80 characters.');currentTeam().name=name;render();persist('Team name saved.');});

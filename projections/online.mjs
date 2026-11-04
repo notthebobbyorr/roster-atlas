@@ -1,10 +1,10 @@
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
-import {playingTimePreviewStore} from './playing-time-preview.mjs?v=playing-time-preview-1';
+import {playingTimePreviewStore} from './playing-time-preview.mjs?v=dc-pace-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
-import * as skillRegistry from './skill-models.mjs?v=playing-time-preview-1';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=playing-time-preview-1';
+import * as skillRegistry from './skill-models.mjs?v=dc-pace-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
@@ -124,7 +124,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=playing-time-preview-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=dc-pace-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
