@@ -1,5 +1,5 @@
 import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
-import {hitterABPerPA} from './playing-time-preview.mjs?v=complete-20261104-1';
+import {hitterABPerPA} from './playing-time-preview.mjs?v=complete-20261104-2';
 import {projectInningsPerStart} from './pitcher-starts.mjs?v=hybrid-full-1';
 import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';

@@ -1,4 +1,4 @@
-import {pitcherHands} from './pitcher-handedness.mjs?v=complete-20261104-1';
+import {pitcherHands} from './pitcher-handedness.mjs?v=complete-20261104-2';
 
 export function pitcherHand(mlbid){
  const hand=pitcherHands[String(mlbid)];
