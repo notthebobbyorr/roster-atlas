@@ -1,9 +1,10 @@
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
+import {playingTimePreviewStore} from './playing-time-preview.mjs?v=playing-time-preview-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
-import * as skillRegistry from './skill-models.mjs?v=unassigned-table-1';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=unassigned-table-1';
+import * as skillRegistry from './skill-models.mjs?v=playing-time-preview-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=playing-time-preview-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=handedness-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
@@ -12,6 +13,10 @@ let authenticated=false,requestId=0,sessionEpoch=0;
 const defaultModel=['platoon','hybrid_full','recommended'].find(id=>Object.hasOwn(skillModels,id));
 let modelKey=defaultModel,modelEpoch=0,runtimes=new Map(),savesRoles={};
 const activeModel=()=>skillModels[modelKey];
+const workloadPreviews=playingTimePreviewStore();
+window.projectionWorkloadPreviews=()=>authenticated?workloadPreviews.get(modelKey):{};
+window.projectionSetWorkloadPreview=(key,value)=>{if(!authenticated||!window.projectionRankingOwner)throw Error('Sign in to preview playing time.');workloadPreviews.set(modelKey,key,value);};
+window.projectionClearWorkloadPreviews=()=>workloadPreviews.clear(modelKey);
 $('model').value=defaultModel;
 for(const id of ['projection-controls','grade-rubric']){
  const panel=$(id);if(!panel)continue;
@@ -99,6 +104,7 @@ window.skillGradesDownload=async path=>{
 };
 
 function clear(){
+ workloadPreviews.clear();
  authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;runtimes=new Map();savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
@@ -118,7 +124,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=unassigned-table-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=playing-time-preview-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

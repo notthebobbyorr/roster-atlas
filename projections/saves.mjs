@@ -30,7 +30,7 @@ export function projectSaves(data,mlbid,IP,override='auto',options={}){
   if(finite(SV)){
   let denominator=0;
   for(const [id,mate] of poolFor(data,record.team_id)){
-   const own=id===String(mlbid),mateIP=own?IP:roundInnings(mate.team_workloads?.[method]),mateRole=own?role:selectedRole(mate,overrideFor(options.overrides,id)),mateRate=mate.scenarios?.[mateRole]?.saves_per_ip;
+   const own=id===String(mlbid),previewIP=overrideFor(options.workloadOverrides,id+':Pitcher'),mateIP=own?IP:roundInnings(finite(previewIP)&&previewIP>=0?previewIP:mate.team_workloads?.[method]),mateRole=own?role:selectedRole(mate,overrideFor(options.overrides,id)),mateRate=mate.scenarios?.[mateRole]?.saves_per_ip;
    if(finite(mateIP)&&mateIP>=0&&finite(mateRate)&&mateRate>=0)denominator+=mateIP*mateRate;
   }
   poolTotal=denominator;

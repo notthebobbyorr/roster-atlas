@@ -1,6 +1,7 @@
+import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=playing-time-preview-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-context-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=OPS-1';
-import {compileLists,projection} from './rankings-core.mjs?v=unassigned-table-1';
+import {compileLists,projection} from './rankings-core.mjs?v=playing-time-preview-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -10,6 +11,16 @@ import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=value=>typeof value==='number'&&Number.isFinite(value),fmt=(value,digits=1)=>finite(value)?value.toFixed(digits):'—';
 const parent=window.parent;
+const localPreviews=playingTimePreviewStore();
+function workloadPreviews(){return parent.projectionWorkloadPreviews?.()??localPreviews.get(model);}
+function setWorkloadPreview(key,value){if(parent.projectionSetWorkloadPreview)parent.projectionSetWorkloadPreview(key,value);else localPreviews.set(model,key,value);}
+function renderPreviewControls(){const n=Object.keys(workloadPreviews()).length;$('playing-time-preview-count').textContent=n?n+' temporary edit'+(n===1?'':'s'):'';$('reset-playing-time').disabled=!n;}
+function editWorkload(input){
+ const key=input.dataset.workloadPreview,entry=entryByKey.get(key);if(!entry?.profile)return;
+ try{const value=parsePlayingTime(input.value,entry.kind);setWorkloadPreview(key,value);forecastCache.clear();render();$('status').textContent=value===null?'Model playing time restored.':'Temporary playing-time preview; saved projections keep model estimates.';}
+ catch(error){$('status').textContent=error.message;input.focus();}
+}
+
 let core,pt,saves,owner;
 try{
  if(parent===window||!parent.projectionRankingOwner||!parent.skillGradesLoad)throw Error('Open Roster Atlas and sign in to use the roster builder.');
@@ -44,9 +55,9 @@ const gradeColumns=['Power','Speed','AVG','K','ERA','WHIP','R','RBI','W','SV'];
 const modelNames={platoon:'Platoon skill-aged · integrated hitter splits',hybrid_full:'Full skills-first hybrid',recommended:'Recommended cutoffs',native:'Native sample regression',research:'Bayesian feature model',original:'Original live model'};
 function currentTeam(){return teams[activeId];}
 function assertOwner(){if(parent.projectionRankingOwner!==owner)throw Error('Session changed. Sign in again.');}
-function forecast(entry){
- const team=currentTeam(),key=entry.key+':'+team.method+':'+team.park+':'+team.view;
- if(!forecastCache.has(key))forecastCache.set(key,projection(core,pt,entry,{model,method:team.method,park:team.park,view:team.view,saves,savesRole:parent.projectionSavesRole?.(entry.mlbid)||'auto',savesOverrides:parent.projectionSavesRoleOverrides?.()||{}}));
+function forecast(entry,{preview=true}={}){
+ const team=currentTeam(),key=entry.key+':'+team.method+':'+team.park+':'+team.view+':'+preview;
+ if(!forecastCache.has(key))forecastCache.set(key,projection(core,pt,entry,{model,method:team.method,park:team.park,view:team.view,saves,savesRole:parent.projectionSavesRole?.(entry.mlbid)||'auto',savesOverrides:parent.projectionSavesRoleOverrides?.()||{},workloadOverrides:preview?workloadPreviews():{}}));
  return forecastCache.get(key);
 }
 function pickForecast(pick){
@@ -61,7 +72,7 @@ function refreshSnapshots(){
  const team=currentTeam();
  team.picks=team.picks.map(pick=>{
   const entry=entryByKey.get(pick.key);if(!entry?.profile)return pick;
-  return {...pick,eligible:optionsForPick(pick),snapshot:{model,season,age:projectionAge(entry,pick,season),saved_at:new Date().toISOString(),forecast:cleanForecast(forecast(entry))}};
+  return {...pick,eligible:optionsForPick(pick),snapshot:{model,season,age:projectionAge(entry,pick,season),saved_at:new Date().toISOString(),forecast:cleanForecast(forecast(entry,{preview:false}))}};
  });
 }
 function persist(message='Saved on this device · export a team file for backup or another device.'){
@@ -98,12 +109,15 @@ function renderTotals(){
  $('totals-note').textContent=(currentTeam().method==='rotation_context'?(core.rotation_context?.note||'')+' ':'')+'AVG is weighted by AB; OPS combines the OBP and SLG component counts; ERA and WHIP by IP. Missing projections are excluded and marked partial. '+(core.runs_rbi_default?'R/RBI totals and SDs are included by default.':'R/RBI SDs are available through Projected + FA-aware R/RBI.')+' '+(core.pitcher_outcomes?'Wins use ratios, start depth, innings and team R/162. All-5 Sum SD includes W/SV for pitchers and R/RBI for hitters. W/SV SDs are category grades, not forecast uncertainty. ':'')+' Base-3 and with-R/RBI sums remain available. Saves use the existing role/IP model. '+(model==='platoon'?'Supported SPs use projected starts and BF/start to determine workload. Their projected IP/Start uses that depth estimate. Saves allocation retains its previously published workload assumptions. Other roles and workload alternatives retain their previous estimates. ':'IP/Start is a separate three-year MLB starter-only length estimate using the selected playing-time recency weights; it does not change projected IP. No MLB starts in the window means unavailable. ')+''+(saved?saved+' player(s) use their saved projection because the current pool has no usable profile.':'Available players use the current selected model.')+(manual?' '+manual+' placeholder(s) count toward roster and position targets; their projections and ages are unknown.':'');
 }
 function statValue(f,key){return key==='PA'||key==='AB'||key==='IP'||key==='IP_per_start'?f?.[key]:f?.stats?.[key];}
-function statCells(f,showStart=true){return playerColumns.map(([key,,digits])=>'<td class="number">'+(key==='IP'?formatInnings(statValue(f,key)):fmt(key==='IP_per_start'&&!showStart?null:statValue(f,key),digits))+'</td>').join('');}
+function statCells(f,showStart=true,entry=null){return playerColumns.map(([key,,digits])=>{
+ const input=entry?.profile&&key===(entry.kind==='Pitcher'?'IP':'PA')?playingTimeInput(entry,f,workloadPreviews(),pt.players[entry.key]):'';
+ return '<td class="number">'+(input||(key==='IP'?formatInnings(statValue(f,key)):fmt(key==='IP_per_start'&&!showStart?null:statValue(f,key),digits)))+'</td>';
+}).join('');}
 function gradeCells(f){return gradeColumns.map(key=>'<td class="number">'+fmt(f?.grades?.[key])+'</td>').join('')+'<td class="number">'+fmt(f?.sum)+'</td><td class="number">'+fmt(f?.sum_with_runs_rbi)+'</td><td class="number">'+fmt(f?.sum_full)+'</td><td class="number">'+fmt(f?.offense_grade)+'</td><td class="number">'+fmt(f?.pitching_grade)+'</td>';}
 function statHeaders(){return playerColumns.map(([,label])=>'<th>'+label+'</th>').join('');}
 function renderRoster(){
  $('roster-head').innerHTML='<tr><th>Round</th><th class="player">Player</th><th>Assigned position</th><th>RP plan</th>'+statHeaders()+gradeColumns.map(key=>'<th>'+key+' SD</th>').join('')+'<th>Sum SD (base 3)</th><th>Sum SD (with R/RBI)</th><th>Sum SD (all 5)</th><th>SLAM</th><th>ACE</th><th>Draft notes</th><th>Remove</th></tr>';
- $('roster-rows').innerHTML=rosterRows.map(({pick,entry,live,forecast:f})=>'<tr><td><input class="round" type="number" min="1" max="50" data-round="'+esc(pick.key)+'" value="'+pick.round+'" aria-label="Draft round for '+esc(pick.name)+'"></td><td class="player">'+esc(pick.name)+'<small>'+esc(pick.kind)+' · '+(pick.placeholder?'Placeholder · no projection':live?esc(entry.team.replaceAll('-',' ')):'Saved '+esc(pick.snapshot.model)+' · '+pick.snapshot.season)+'</small>'+projectedSkillsHTML(entry?.profile,core.projected_skill_dictionary)+'</td><td><select data-position="'+esc(pick.key)+'" aria-label="Assigned position for '+esc(pick.name)+'">'+optionsForPick(pick).map(pos=>'<option value="'+pos+'"'+(pos===pick.position?' selected':'')+'>'+pos+'</option>').join('')+'</select></td><td>'+(pick.position==='RP'?'<select data-relief="'+esc(pick.key)+'" aria-label="Relief plan for '+esc(pick.name)+'">'+[['closer','Closer'],['spec','Spec'],['other','Other RP']].map(([code,label])=>'<option value="'+code+'"'+(pick.reliefType===code?' selected':'')+'>'+label+'</option>').join('')+'</select>':'—')+'</td>'+statCells(f,pick.position==='SP')+gradeCells(f)+'<td><input class="note" maxlength="500" data-note="'+esc(pick.key)+'" value="'+esc(pick.note)+'" aria-label="Draft notes for '+esc(pick.name)+'"></td><td><button class="danger" type="button" data-remove="'+esc(pick.key)+'" aria-label="Remove '+esc(pick.name)+'">×</button></td></tr>').join('')||'<tr><td class="empty" colspan="25">Your roster is empty. Find a drafted player below and click Add.</td></tr>';
+ $('roster-rows').innerHTML=rosterRows.map(({pick,entry,live,forecast:f})=>'<tr><td><input class="round" type="number" min="1" max="50" data-round="'+esc(pick.key)+'" value="'+pick.round+'" aria-label="Draft round for '+esc(pick.name)+'"></td><td class="player">'+esc(pick.name)+'<small>'+esc(pick.kind)+' · '+(pick.placeholder?'Placeholder · no projection':live?esc(entry.team.replaceAll('-',' ')):'Saved '+esc(pick.snapshot.model)+' · '+pick.snapshot.season)+'</small>'+projectedSkillsHTML(entry?.profile,core.projected_skill_dictionary)+'</td><td><select data-position="'+esc(pick.key)+'" aria-label="Assigned position for '+esc(pick.name)+'">'+optionsForPick(pick).map(pos=>'<option value="'+pos+'"'+(pos===pick.position?' selected':'')+'>'+pos+'</option>').join('')+'</select></td><td>'+(pick.position==='RP'?'<select data-relief="'+esc(pick.key)+'" aria-label="Relief plan for '+esc(pick.name)+'">'+[['closer','Closer'],['spec','Spec'],['other','Other RP']].map(([code,label])=>'<option value="'+code+'"'+(pick.reliefType===code?' selected':'')+'>'+label+'</option>').join('')+'</select>':'—')+'</td>'+statCells(f,pick.position==='SP',entry)+gradeCells(f)+'<td><input class="note" maxlength="500" data-note="'+esc(pick.key)+'" value="'+esc(pick.note)+'" aria-label="Draft notes for '+esc(pick.name)+'"></td><td><button class="danger" type="button" data-remove="'+esc(pick.key)+'" aria-label="Remove '+esc(pick.name)+'">×</button></td></tr>').join('')||'<tr><td class="empty" colspan="25">Your roster is empty. Find a drafted player below and click Add.</td></tr>';
 }
 function fortyMan(entry){return rosterStatus.players[String(entry.mlbid)]?.forty_man||(rosterStatus.official_teams===30?'no':'unknown');}
 function renderPool(){
@@ -111,7 +125,7 @@ function renderPool(){
  filtered=pool.filter(entry=>(!kind||entry.kind===kind)&&(!organization||entry.team===organization)&&(!position||assignmentOptions(entry).includes(position))&&(!forty||fortyMan(entry)===forty)&&(!query||`${entry.name} ${entry.mlbid}`.toLowerCase().includes(query))).map(entry=>({entry,forecast:forecast(entry)})).sort((a,b)=>{const field=team.sumSort||'sum',x=a.forecast[field],y=b.forecast[field];return finite(x)&&finite(y)?y-x||a.entry.name.localeCompare(b.entry.name):finite(x)?-1:finite(y)?1:a.entry.name.localeCompare(b.entry.name);});
  const pages=Math.max(1,Math.ceil(filtered.length/50));page=Math.max(0,Math.min(page,pages-1));
  $('pool-head').innerHTML='<tr><th>Add</th><th class="player">Player</th><th>Group</th><th>Eligible / plan</th>'+statHeaders()+'<th>R SD</th><th>RBI SD</th><th>W SD</th><th>SV SD</th><th>Sum SD (base 3)</th><th>Sum SD (with R/RBI)</th><th>Sum SD (all 5)</th><th>SLAM</th><th>ACE</th></tr>';
- $('pool-rows').innerHTML=filtered.slice(page*50,page*50+50).map(({entry,forecast:f})=>'<tr><td><button type="button" data-add="'+esc(entry.key)+'"'+(picked.has(Number(entry.mlbid))||team.picks.length>=50?' disabled':'')+'>'+(picked.has(Number(entry.mlbid))?'Drafted':'Add')+'</button></td><td class="player">'+esc(entry.name)+'<small>'+esc(entry.team.replaceAll('-',' '))+' · ID '+entry.mlbid+'</small>'+projectedSkillsHTML(currentTeam().method==='rotation_context'?rotationContext(core,pt,entry).entry.profile:entry.profile,core.projected_skill_dictionary)+'</td><td>'+esc(entry.kind)+'</td><td>'+assignmentOptions(entry).join(' / ')+'</td>'+statCells(f)+'<td class="number">'+fmt(f.grades?.R)+'</td><td class="number">'+fmt(f.grades?.RBI)+'</td><td class="number">'+fmt(f.grades?.W)+'</td><td class="number">'+fmt(f.grades?.SV)+'</td><td class="number">'+fmt(f.sum)+'</td><td class="number">'+fmt(f.sum_with_runs_rbi)+'</td><td class="number">'+fmt(f.sum_full)+'</td><td class="number">'+fmt(f.offense_grade)+'</td><td class="number">'+fmt(f.pitching_grade)+'</td></tr>').join('')||'<tr><td class="empty" colspan="18">No matching players. Clear a filter or try an MLB ID.</td></tr>';
+ $('pool-rows').innerHTML=filtered.slice(page*50,page*50+50).map(({entry,forecast:f})=>'<tr><td><button type="button" data-add="'+esc(entry.key)+'"'+(picked.has(Number(entry.mlbid))||team.picks.length>=50?' disabled':'')+'>'+(picked.has(Number(entry.mlbid))?'Drafted':'Add')+'</button></td><td class="player">'+esc(entry.name)+'<small>'+esc(entry.team.replaceAll('-',' '))+' · ID '+entry.mlbid+'</small>'+projectedSkillsHTML(currentTeam().method==='rotation_context'?rotationContext(core,pt,entry).entry.profile:entry.profile,core.projected_skill_dictionary)+'</td><td>'+esc(entry.kind)+'</td><td>'+assignmentOptions(entry).join(' / ')+'</td>'+statCells(f,true,entry)+'<td class="number">'+fmt(f.grades?.R)+'</td><td class="number">'+fmt(f.grades?.RBI)+'</td><td class="number">'+fmt(f.grades?.W)+'</td><td class="number">'+fmt(f.grades?.SV)+'</td><td class="number">'+fmt(f.sum)+'</td><td class="number">'+fmt(f.sum_with_runs_rbi)+'</td><td class="number">'+fmt(f.sum_full)+'</td><td class="number">'+fmt(f.offense_grade)+'</td><td class="number">'+fmt(f.pitching_grade)+'</td></tr>').join('')||'<tr><td class="empty" colspan="18">No matching players. Clear a filter or try an MLB ID.</td></tr>';
  $('pool-count').textContent=filtered.length+' matching players';$('page-count').textContent='Page '+(page+1)+' of '+pages+' · 50 per page';$('previous-page').disabled=page===0;$('next-page').disabled=page>=pages-1;
 }
 function renderGuidelines(){
@@ -122,7 +136,7 @@ function renderGuidelines(){
  const bullets=items=>'<ul>'+items.map(text=>'<li>'+esc(text)+'</li>').join('')+'</ul>';
  $('guidelines-content').innerHTML='<p class="muted">'+esc(draftGuidelines.context)+'</p><div class="guideline-live"><span>'+(team.picks.length===50?'Draft complete':'Next draft round: '+round)+'</span><span class="'+(volume<13?'attention':'')+'">400+ projected AB: '+volume+' / 13 hitters</span><span class="'+(round>=13&&catchers.length<2?'attention':'')+'">Catchers: '+catchers.length+' · two by round 13</span><span class="'+(round>=10&&closers.length<2?'attention':'')+'">Marked closers: '+closers.length+' / 2</span><span>Marked specs: '+specs.length+' / 5</span></div><p class="muted">Closer/spec labels are your draft-plan tags, not changes to saves projections. Catcher counts do not establish starting jobs. The 400-AB screen uses the selected playing-time scenario; use projected playing time for this volume check.</p>'+stages.map(stage=>'<h3>'+esc(stage.title)+'</h3><p>'+esc(stage.text)+'</p>').join('')+'<details><summary>Full cheat-sheet guidelines</summary><h3>Core principles</h3>'+bullets(draftGuidelines.principles)+'<h3>Closers & specs</h3>'+bullets(draftGuidelines.closers)+'<h3>Rounds 41–50</h3>'+bullets(draftGuidelines.late)+'<h3>When to fill each spot · historical top-12 median rounds</h3><div class="scroll"><table><thead><tr><th>Spot</th><th>Round</th></tr></thead><tbody>'+draftGuidelines.timing.map(([spot,when])=>'<tr><td>'+esc(spot)+'</td><td>'+esc(when)+'</td></tr>').join('')+'</tbody></table></div><p>'+esc(draftGuidelines.timingNote)+'</p><h3>Round-by-round plan</h3>'+bullets(draftGuidelines.stages.map(stage=>stage.title+': '+stage.text))+'</details>';
 }
-function render(){teamControls();rosterRows=currentTeam().picks.map(pickForecast);renderTracker();renderTotals();renderRoster();renderGuidelines();renderPool();}
+function render(){renderPreviewControls();teamControls();rosterRows=currentTeam().picks.map(pickForecast);renderTracker();renderTotals();renderRoster();renderGuidelines();renderPool();}
 function download(name,text,type){const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 const fileName=()=>currentTeam().name.replace(/[^A-Za-z0-9_-]+/g,'-')||'draft-team';
 $('team').addEventListener('change',()=>action(()=>{if(!Object.hasOwn(teams,$('team').value))return;activeId=$('team').value;page=0;render();persist();}));
@@ -139,16 +153,17 @@ $('add-placeholder').onclick=()=>action(()=>{
  $('placeholder-name').value='';$('placeholder-note').value='';render();persist(name.trim()+' added as a placeholder. It counts toward your roster; projections remain blank.');
 });
 $('placeholder-name').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();$('add-placeholder').onclick();}});
-$('pool-rows').addEventListener('click',event=>{const button=event.target.closest('button[data-add]');if(!button)return;action(()=>{const entry=entryByKey.get(button.dataset.add);if(!entry)throw Error('Player unavailable.');teams[activeId]=addPick(currentTeam(),entry,forecast(entry),{model,season});render();persist(entry.name+' added. Position assignment can be changed in Your roster.');});});
-$('roster-rows').addEventListener('click',event=>{const button=event.target.closest('button[data-remove]');if(!button)return;action(()=>{currentTeam().picks=currentTeam().picks.filter(pick=>pick.key!==button.dataset.remove);render();persist('Player removed.');});});
-$('roster-rows').addEventListener('change',event=>action(()=>{
+$('pool-rows').addEventListener('change',event=>{if(event.target?.dataset?.workloadPreview)action(()=>editWorkload(event.target));});
+$('pool-rows').addEventListener('click',event=>{const reset=event.target.closest('button[data-reset-workload]');if(reset?.dataset?.resetWorkload){setWorkloadPreview(reset.dataset.resetWorkload,null);forecastCache.clear();render();$('status').textContent='Model playing time restored.';return;}const button=event.target.closest('button[data-add]');if(!button)return;action(()=>{const entry=entryByKey.get(button.dataset.add);if(!entry)throw Error('Player unavailable.');teams[activeId]=addPick(currentTeam(),entry,forecast(entry,{preview:false}),{model,season});render();persist(entry.name+' added. Position assignment can be changed in Your roster.');});});
+$('roster-rows').addEventListener('click',event=>{const reset=event.target.closest('button[data-reset-workload]');if(reset?.dataset?.resetWorkload){setWorkloadPreview(reset.dataset.resetWorkload,null);forecastCache.clear();render();$('status').textContent='Model playing time restored.';return;}const button=event.target.closest('button[data-remove]');if(!button)return;action(()=>{currentTeam().picks=currentTeam().picks.filter(pick=>pick.key!==button.dataset.remove);render();persist('Player removed.');});});
+$('roster-rows').addEventListener('change',event=>{if(event.target?.dataset?.workloadPreview){action(()=>editWorkload(event.target));return;}action(()=>{
  const input=event.target,data=input.dataset||{},key=data.position||data.round||data.note||data.relief,pick=currentTeam().picks.find(p=>p.key===key);if(!pick)return;
  if(data.position){if(!optionsForPick(pick).includes(input.value))throw Error('Choose an eligible position.');pick.position=input.value;if(pick.position==='RP'&&pick.reliefType==='other')pick.reliefType='spec';}
  if(data.round){const value=Number(input.value);if(!Number.isInteger(value)||value<1||value>50){renderRoster();throw Error('Draft round must be a whole number from 1 to 50.');}pick.round=value;}
  if(data.note)pick.note=input.value.slice(0,500);
  if(data.relief){if(!['closer','spec','other'].includes(input.value))throw Error('Invalid relief designation.');pick.reliefType=input.value;}
  render();persist();
-}));
+});});
 $('export-team').onclick=()=>action(()=>{refreshSnapshots();download(fileName()+'.json',JSON.stringify({kind:'roster-atlas-draft-team',version:1,exported_at:new Date().toISOString(),team:currentTeam()},null,2),'application/json');persist('Team file exported with assignments and projection snapshots.');});
 $('import-team').onchange=async event=>{
  try{
@@ -160,8 +175,16 @@ $('import-team').onchange=async event=>{
  }catch(error){$('status').textContent=error.message;}finally{event.target.value='';}
 };
 $('export-csv').onclick=()=>action(()=>{
- const header=['Round','Player','MLB ID','Group','Assigned position','RP plan','Notes','Projection source',...playerColumns.map(([,label])=>label),...gradeColumns.map(key=>key+' SD'),'Sum SD (base 3)','Sum SD (with R/RBI)','Sum SD (all 5)','SLAM','ACE'];
- const rows=rosterRows.map(({pick,live,forecast:f})=>[pick.round,pick.name,pick.mlbid,pick.kind,pick.position,pick.position==='RP'?pick.reliefType:'',pick.note,pick.placeholder?'Placeholder (no projection)':live?model:pick.snapshot.model+' (saved)',...playerColumns.map(([key])=>key==='IP_per_start'&&pick.position!=='SP'?'':statValue(f,key)??''),...gradeColumns.map(key=>f?.grades?.[key]??''),f?.sum??'',f?.sum_with_runs_rbi??'',f?.sum_full??'',f?.offense_grade??'',f?.pitching_grade??'']);
+ const header=['Round','Player','MLB ID','Group','Assigned position','RP plan','Notes','Projection source','Temporary PA/IP',...playerColumns.map(([,label])=>label),...gradeColumns.map(key=>key+' SD'),'Sum SD (base 3)','Sum SD (with R/RBI)','Sum SD (all 5)','SLAM','ACE'];
+ const rows=rosterRows.map(({pick,live,forecast:f})=>[pick.round,pick.name,pick.mlbid,pick.kind,pick.position,pick.position==='RP'?pick.reliefType:'',pick.note,pick.placeholder?'Placeholder (no projection)':live?model:pick.snapshot.model+' (saved)',workloadPreviews()[pick.key]??'',...playerColumns.map(([key])=>key==='IP_per_start'&&pick.position!=='SP'?'':statValue(f,key)??''),...gradeColumns.map(key=>f?.grades?.[key]??''),f?.sum??'',f?.sum_with_runs_rbi??'',f?.sum_full??'',f?.offense_grade??'',f?.pitching_grade??'']);
  download(fileName()+'.csv',[header,...rows].map(row=>row.map(value=>'"'+String(value??'').replaceAll('"','""')+'"').join(',')).join('\r\n'),'text/csv;charset=utf-8');
 });
 render();if(loadError)$('status').textContent=loadError;else $('status').textContent='Ready · saved on this device; export a team file for backup.';
+
+$('pool-rows').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target?.dataset?.workloadPreview){event.preventDefault();editWorkload(event.target);}});
+
+
+$('roster-rows').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.target?.dataset?.workloadPreview){event.preventDefault();editWorkload(event.target);}});
+
+
+$('reset-playing-time').onclick=()=>{if(parent.projectionClearWorkloadPreviews)parent.projectionClearWorkloadPreviews();else localPreviews.clear(model);forecastCache.clear();render();$('status').textContent='All model playing-time estimates restored.';};
