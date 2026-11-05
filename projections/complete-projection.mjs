@@ -20,6 +20,10 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
   HR:finite(pa)?rates.HR_PA*pa:null,SB:finite(pa)?rates.SB_PA*pa:null,R:pa===0?0:finite(pa)&&finite(rates.R_PA)?rates.R_PA*pa:null,RBI:pa===0?0:finite(pa)&&finite(rates.RBI_PA)?rates.RBI_PA*pa:null});
  else Object.assign(stats,{K:finite(ip)?rates.K_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)?rates.W_IP*ip:null,SV:finite(ip)?rates.SV_IP*ip:null});
  stats.K_pct=finite(rates.K_PA)?100*rates.K_PA:null;stats.BB_pct=finite(rates.BB_PA)?100*rates.BB_PA:null;
+ if(kind==='Hitter'){
+  const bip=rates.AB_PA-rates.K_PA-rates.HR_PA+rates.SF_PA;
+  stats.BABIP=bip>0?(rates.H_PA-rates.HR_PA)/bip:null;
+ }
  let save=null;
  if(kind==='Pitcher'){
   if(savesRole!=='auto')save=projectSaves(saves,p.mlbid,ip,savesRole,{method:mode,overrides:savesOverrides,workloadOverrides});
