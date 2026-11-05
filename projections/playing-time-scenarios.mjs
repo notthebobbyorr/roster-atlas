@@ -3,13 +3,36 @@ const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export const workloadMethods=['projected','fa_context','rotation_context','direct','ordered_ballast','standard'];
 export const scenarioPositions=['C','1B','2B','3B','SS','OF','DH','SP','RP'];
 export const isSavedWorkload=value=>typeof value==='string'&&/^saved:[A-Za-z0-9_-]+$/.test(value);
+const playerKey=key=>typeof key==='string'&&/^-?[1-9]\d*:(Hitter|Pitcher)$/.test(key);
+const rounded=(key,value)=>key.endsWith(':Pitcher')?roundInnings(value):Math.round(value);
+function validateFrozen(raw){
+ if(!raw||!raw.values||typeof raw.values!=='object'||Array.isArray(raw.values)||!Array.isArray(raw.explicit))throw Error('Invalid frozen playing-time table.');
+ const entries=Object.entries(raw.values);if(!entries.length||entries.length>10000||entries.some(([key,value])=>!playerKey(key)||!finite(value)||value<0)||new Set(raw.explicit).size!==raw.explicit.length||raw.explicit.some(key=>!playerKey(key)||!Object.hasOwn(raw.values,key)))throw Error('Invalid frozen playing-time values.');
+ return {values:Object.fromEntries(entries.map(([key,value])=>[key,rounded(key,value)])),explicit:[...raw.explicit]};
+}
 export function validateWorkloadScenario(raw){
- if(!raw||!isSavedWorkload(raw.id)||typeof raw.name!=='string'||!raw.name.trim()||raw.name.length>80||!workloadMethods.includes(raw.base)||typeof raw.model!=='string'||!raw.model||typeof raw.snapshot!=='string'||!raw.snapshot||!Array.isArray(raw.locks)||!raw.locks.length||raw.locks.length>300)throw Error('Invalid playing-time scenario.');
+ if(!raw||!isSavedWorkload(raw.id)||typeof raw.name!=='string'||!raw.name.trim()||raw.name.length>80||!workloadMethods.includes(raw.base)||typeof raw.model!=='string'||!raw.model||typeof raw.snapshot!=='string'||!raw.snapshot||!Array.isArray(raw.locks)||(!raw.locks.length&&!raw.frozen)||raw.locks.length>300)throw Error('Invalid playing-time scenario.');
  const seen=new Set(),locks=raw.locks.map(lock=>{
   if(!lock||typeof lock.key!=='string'||!/^\-?[1-9]\d*:(Hitter|Pitcher)$/.test(lock.key)||seen.has(lock.key)||!finite(lock.value)||lock.value<0||!scenarioPositions.includes(lock.position)||(lock.key.endsWith(':Pitcher')?!['SP','RP'].includes(lock.position):['SP','RP'].includes(lock.position)))throw Error('Invalid or duplicate playing-time lock.');
   seen.add(lock.key);return {key:lock.key,value:lock.key.endsWith(':Pitcher')?roundInnings(lock.value):Math.round(lock.value),position:lock.position};
  });
- return {id:raw.id,name:raw.name.trim(),base:raw.base,model:raw.model,snapshot:raw.snapshot,locks};
+ return {id:raw.id,name:raw.name.trim(),base:raw.base,model:raw.model,snapshot:raw.snapshot,locks,...(raw.frozen!==undefined?{frozen:validateFrozen(raw.frozen)}:{})};
+}
+export function freezePlayingTime(records,overrides={}){
+ const values={};
+ for(const row of records){const value=overrides[row.key]??row.value;if(row.profile!==null&&finite(value)&&value>=0)values[row.key]=rounded(row.key,value);}
+ return validateFrozen({values,explicit:Object.keys(overrides).filter(key=>Object.hasOwn(values,key))});
+}
+export function scenarioPlayingTime(records,scenario){
+ const frozen=scenario.frozen,known=new Set(records.map(r=>r.key));
+ if(frozen&&Object.keys(frozen.values).some(key=>!known.has(key)))throw Error('The frozen table contains players unavailable in this snapshot.');
+ const baseline=frozen?records.map(row=>Object.hasOwn(frozen.values,row.key)?{...row,value:frozen.values[row.key]}:row):records;
+ const result=allocatePlayingTime(baseline,scenario.locks),overrides={};
+ if(frozen){
+  const explicit=new Set(frozen.explicit);
+  for(const row of records)if(Object.hasOwn(frozen.values,row.key)&&(frozen.values[row.key]!==row.value||explicit.has(row.key)))overrides[row.key]=frozen.values[row.key];
+ }
+ return {...result,overrides:{...overrides,...result.overrides}};
 }
 const positions=value=>String(value||'').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean).map(x=>['LF','CF','RF'].includes(x)?'OF':x);
 export function defaultScenarioPosition(entry){

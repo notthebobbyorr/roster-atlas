@@ -1,4 +1,4 @@
-import {isSavedWorkload,validateWorkloadScenario} from './playing-time-scenarios.mjs?v=saved-workloads-1';
+import {isSavedWorkload,validateWorkloadScenario} from './playing-time-scenarios.mjs?v=frozen-workloads-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 
 export const rosterPositions=['C','1B','2B','SS','3B','OF','UT','SP','RP'];

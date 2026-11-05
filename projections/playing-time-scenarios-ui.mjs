@@ -1,19 +1,19 @@
-import {allocatePlayingTime,defaultScenarioPosition,scenarioPositions,isSavedWorkload,validateWorkloadScenario,workloadScenarioLibrary} from './playing-time-scenarios.mjs?v=saved-workloads-1';
+import {freezePlayingTime,scenarioPlayingTime,defaultScenarioPosition,scenarioPositions,isSavedWorkload,validateWorkloadScenario,workloadScenarioLibrary} from './playing-time-scenarios.mjs?v=frozen-workloads-1';
 import {projection} from './rankings-core.mjs?v=rotation-rates-20261104-1';
+import {hitterABPerPA} from './playing-time-preview.mjs?v=saved-workloads-1';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const amount=(n,kind)=>kind==='Pitcher'?n.toFixed(2):String(Math.round(n));
 export function mountWorkloadScenarios({document,storage,owner,model,snapshot,core,pt,entries,getPreviews,select,onChange,download,assertOwner=()=>{}}){
- const $=id=>document.getElementById(id),selector=$('workload'),builtin=selector.innerHTML,byKey=new Map(entries.map(e=>[e.key,e])),cache=new Map(),allocations=new Map();
+ const $=id=>document.getElementById(id),selector=$('workload'),builtin=selector.innerHTML,byKey=new Map(entries.map(e=>[e.key,e])),cache=new Map(),allocations=new WeakMap();
  const library=workloadScenarioLibrary(storage,owner,model,snapshot);
  let draft={base:'projected',locks:[]},lastSelection=null;
  function records(base){
-  if(!cache.has(base))cache.set(base,entries.map(e=>{const f=projection(core,pt,e,{model,method:base});return {...e,value:e.kind==='Pitcher'?f.IP:f.PA};}));
+  if(!cache.has(base))cache.set(base,entries.map(e=>{const f=projection(core,pt,e,{model,method:base}),ratio=e.kind==='Hitter'?hitterABPerPA(e.profile,pt.players[e.key]):null;return {...e,value:e.kind==='Pitcher'?f.IP:Number.isFinite(f.PA)?f.PA:Number.isFinite(f.AB)&&ratio>0?Math.round(f.AB/ratio):null};}));
   return cache.get(base);
  }
  function calculate(scenario){
-  const signature=JSON.stringify(scenario);
-  if(!allocations.has(signature))allocations.set(signature,allocatePlayingTime(records(scenario.base),scenario.locks));
-  return allocations.get(signature);
+  if(!allocations.has(scenario))allocations.set(scenario,scenarioPlayingTime(records(scenario.base),scenario));
+  return allocations.get(scenario);
  }
  function valid(raw){const s=validateWorkloadScenario(raw);if(s.model!==model||s.snapshot!==snapshot)throw Error('This scenario belongs to a different projection model or snapshot.');calculate(s);return s;}
  function options(){const value=selector.value;selector.innerHTML=builtin+library.list().map(s=>'<option value="'+s.id+'">Saved: '+esc(s.name)+'</option>').join('');selector.value=value;}
@@ -33,15 +33,15 @@ export function mountWorkloadScenarios({document,storage,owner,model,snapshot,co
   const lock=draft.locks.find(l=>l.key===entry.key),row=records(draft.base).find(e=>e.key===entry.key);
   $('scenario-position').innerHTML=scenarioPositions.filter(p=>entry.kind==='Pitcher'?['SP','RP'].includes(p):!['SP','RP'].includes(p)).map(p=>'<option value="'+p+'">'+p+'</option>').join('');
   $('scenario-position').value=lock?.position||defaultScenarioPosition(entry);
-  $('scenario-amount').value=lock?.value??row.value;
+  $('scenario-amount').value=lock?.value??draft.frozen?.values[entry.key]??row.value;
   $('scenario-unit').textContent=entry.kind==='Pitcher'?'IP (decimal innings)':'PA';
  }
  function audit(){
   $('scenario-save').textContent=draft.id?'Update and select scenario':'Save and select scenario';
-  $('scenario-base').textContent='Based on '+draft.base.replaceAll('_',' ')+' · '+draft.locks.length+' locked player'+(draft.locks.length===1?'':'s');
+  $('scenario-base').textContent=(draft.frozen?'Frozen table · '+Object.keys(draft.frozen.values).length+' player workloads · ':'Based on ')+draft.base.replaceAll('_',' ')+' · '+draft.locks.length+' locked player'+(draft.locks.length===1?'':'s');
   $('scenario-locks').innerHTML=draft.locks.map(l=>'<li>'+esc(byKey.get(l.key)?.name||l.key)+' · '+l.position+' · '+l.value+' '+(l.key.endsWith(':Pitcher')?'IP':'PA')+' <button type="button" data-unlock="'+esc(l.key)+'">Remove lock</button></li>').join('');
-  $('scenario-save').disabled=!draft.locks.length;
-  if(!draft.locks.length){$('scenario-audit').innerHTML='';return;}
+  $('scenario-save').disabled=!draft.locks.length&&!draft.frozen;
+  if(!draft.locks.length){$('scenario-audit').textContent=draft.frozen?'The complete PA/IP table is captured as-is, including temporary edits. No team redistribution occurs when freezing. Add a position lock later to redistribute from this frozen baseline.':'';return;}
   try{
    const result=calculate(draft);
    $('scenario-audit').innerHTML='<p>'+result.teams.map(t=>esc(t.team)+' '+(t.kind==='Pitcher'?'IP':'PA')+': '+amount(t.before,t.kind)+' → '+amount(t.after,t.kind)).join(' · ')+'</p><div class="scenario-scroll"><table><thead><tr><th>Player</th><th>Org</th><th>Pool</th><th>Before</th><th>After</th><th>Change</th><th>Reason</th></tr></thead><tbody>'+result.changes.map(c=>'<tr><td>'+esc(c.name)+'</td><td>'+esc(c.team)+'</td><td>'+esc(c.position)+'</td><td>'+amount(c.before,c.kind)+'</td><td>'+amount(c.after,c.kind)+'</td><td>'+(c.delta>0?'+':'')+amount(c.delta,c.kind)+'</td><td>'+(c.locked?'Your lock':'Redistributed')+'</td></tr>').join('')+'</tbody></table></div>';
@@ -73,6 +73,12 @@ export function mountWorkloadScenarios({document,storage,owner,model,snapshot,co
  });
  $('scenario-locks').addEventListener('click',event=>{const key=event.target.closest('button[data-unlock]')?.dataset?.unlock;if(key){draft={...draft,locks:draft.locks.filter(l=>l.key!==key)};audit();}});
  $('scenario-new').onclick=()=>{draft={base:library.get(selector.value)?.base||selector.value||'projected',locks:[]};$('scenario-name').value='';players();audit();$('status').textContent='New scenario draft. Add workload locks, then save.';};
+ $('scenario-freeze').onclick=()=>act(()=>{
+  const settings=resolve(selector.value,getPreviews()),frozen=freezePlayingTime(records(settings.method),settings.workloadOverrides);
+  draft={base:settings.method,locks:[],frozen};
+  if(!$('scenario-name').value.trim())$('scenario-name').value='Frozen playing time';
+  players();audit();$('status').textContent='Current PA/IP captured for all players, including temporary edits. Name it, then save and select the scenario.';
+ });
  $('scenario-save').onclick=()=>act(()=>{
   if(!$('scenario-name').value.trim())throw Error('Enter a name for this playing-time scenario.');
   const s=valid({...draft,id:draft.id||'saved:'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8),name:$('scenario-name').value,model,snapshot});

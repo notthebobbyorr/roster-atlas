@@ -1,4 +1,4 @@
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=saved-workloads-1';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=frozen-workloads-1';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=rotation-rates-20261104-1';
