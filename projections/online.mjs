@@ -1,6 +1,6 @@
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
-import {playingTimePreviewStore} from './playing-time-preview.mjs?v=rotation-rates-20261104-1';
+import {playingTimePreviewStore} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
 import * as skillRegistry from './skill-models.mjs?v=rotation-rates-20261104-1';
@@ -31,6 +31,7 @@ window.projectionRoundInnings=roundInnings;window.projectionRoundPA=roundPA;wind
 window.projectionRoundWorkloadVariant=roundWorkloadVariant;window.projectionRoundOutcomeExplanation=roundOutcomeExplanation;
 window.skillGradesState=null;
 window.skillGradesModel=()=>modelKey;
+window.skillGradesSnapshot=()=>activeModel().runtime;
 async function runtimeLoad(){
  if(!authenticated)throw Error('Sign in to view projections.');
  const selectedModel=activeModel(),version=selectedModel.runtime,epoch=sessionEpoch,generation=modelEpoch,cache=runtimes;
@@ -125,7 +126,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=rotation-rates-20261104-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=saved-workloads-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

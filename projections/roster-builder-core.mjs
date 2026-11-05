@@ -1,3 +1,4 @@
+import {isSavedWorkload,validateWorkloadScenario} from './playing-time-scenarios.mjs?v=saved-workloads-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 
 export const rosterPositions=['C','1B','2B','SS','3B','OF','UT','SP','RP'];
@@ -101,7 +102,9 @@ export function teamTotals(rows){
 }
 export function validateTeam(raw){
  if(!plain(raw)||!text(raw.id,100)||!/^team:[A-Za-z0-9_-]+$/.test(raw.id)||!text(raw.name,80)||!raw.name.trim())throw Error('Invalid team identity or name.');
- if(!['27/23','28/22'].includes(raw.split)||!['projected','fa_context','rotation_context','direct','ordered_ballast','standard'].includes(raw.method)||!['current','neutral'].includes(raw.park)||!['contribution','quality'].includes(raw.view))throw Error('Invalid roster settings.');
+ if(!['27/23','28/22'].includes(raw.split)||(!['projected','fa_context','rotation_context','direct','ordered_ballast','standard'].includes(raw.method)&&!isSavedWorkload(raw.method))||!['current','neutral'].includes(raw.park)||!['contribution','quality'].includes(raw.view))throw Error('Invalid roster settings.');
+ const workloadScenario=raw.workloadScenario?validateWorkloadScenario(raw.workloadScenario):null;
+ if(isSavedWorkload(raw.method)&&workloadScenario?.id!==raw.method)throw Error('Missing saved playing-time scenario.');
  if(raw.sumSort!==undefined&&!['sum','sum_with_runs_rbi','sum_full'].includes(raw.sumSort))throw Error('Invalid Sum SD sort setting.');
  if(raw.dcTarget!==undefined&&![50,80,90].includes(raw.dcTarget))throw Error('Invalid Draft Champions target.');
  if(!Array.isArray(raw.picks)||raw.picks.length>50)throw Error('A team must contain at most 50 players.');
@@ -119,7 +122,7 @@ export function validateTeam(raw){
   if([forecast.IP_per_start,forecast.PA,forecast.AB,forecast.IP,...Object.values(forecast.stats),...Object.values(forecast.batting||{})].some(value=>finite(value)&&value<0))throw Error('Saved workload and outcome stats cannot be negative.');
   return {...p,eligible:[...new Set(p.eligible)],snapshot:{model:manual?'placeholder':p.snapshot.model,season:p.snapshot.season,age:manual?null:validAge(p.snapshot.age)?p.snapshot.age:null,saved_at:p.snapshot.saved_at,forecast}};
  });
- return {id:raw.id,name:raw.name.trim(),split:raw.split,method:raw.method,park:raw.park,view:raw.view,sumSort:raw.sumSort||'sum',...(raw.dcTarget!==undefined?{dcTarget:raw.dcTarget}:{}),showGuidelines:raw.showGuidelines===true,picks};
+ return {id:raw.id,name:raw.name.trim(),split:raw.split,method:raw.method,...(workloadScenario?{workloadScenario}:{}),park:raw.park,view:raw.view,sumSort:raw.sumSort||'sum',...(raw.dcTarget!==undefined?{dcTarget:raw.dcTarget}:{}),showGuidelines:raw.showGuidelines===true,picks};
 }
 export function readTeamFile(data){
  if(data?.kind!=='roster-atlas-draft-team'||data.version!==1)throw Error('This is not a Roster Atlas team file.');
