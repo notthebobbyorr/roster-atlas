@@ -5,7 +5,8 @@ import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
 import {projectWins} from './pitcher-wins.mjs?v=roster-refresh-1';
-import {completedProjection} from './complete-projection.mjs?v=babip-20261105-1';
+import {completedProjection} from './complete-projection.mjs?v=hitter-outcomes-20261105-1';
+import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-1';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
@@ -124,6 +125,7 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  }
  const context=core.runs_rbi_context?.players?.[String(p.mlbid)];
  const batting=p.kind==='Hitter'?p.projected_batting?.combined:null;
+ if(p.kind==='Hitter')Object.assign(stats,hitterOutcomeStats(core,p,batting));
  const contextPA=finite(previewPA)?previewPA:finite(variant?.PA)?variant.PA:workloadMethod==='standard'&&finite(load)&&batting?.AB_PA>0?load/batting.AB_PA:null;
  const contextualTotal=category=>!context||!finite(contextPA)||!finite(context[category])?null:context.PA>0?context[category]*contextPA/context.PA:context.PA===0&&contextPA===0?0:null;
  const runStats=contextMode&&p.kind==='Hitter'?{R:contextualTotal('R'),RBI:contextualTotal('RBI')}:{};

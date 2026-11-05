@@ -3,6 +3,8 @@ import {Cloud} from '../api.mjs?v=auth-recovery-1';
 import {playingTimePreviewStore} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
+import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcomes-20261105-1';
+import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-1';
 import * as skillRegistry from './skill-models.mjs?v=babip-20261105-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
@@ -43,6 +45,9 @@ async function runtimeLoad(){
   const data=compressed?await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json():await response.json();
   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
   if(data.kind!=='roster-atlas-runtime'||data.schema_version!==1||!Array.isArray(data.core?.players)||!data.workloads?.players||!data.saves?.players||!data.contracts?.players)throw Error('The Atlas data format is not supported.');
+  const outcomes=await hitterOutcomesLoad(epoch,cache);
+  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
+  data.core=attachHitterOutcomes(data.core,outcomes);
   data.core.runs_rbi_default=selectedModel.runs_rbi_default===true;
   for(const p of data.core.players)p.parks=data.core.park_sets[p.park_index];
   delete data.core.park_sets;
@@ -53,6 +58,17 @@ async function runtimeLoad(){
  const result=await cache.get(version);
  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
  return result;
+}
+async function hitterOutcomesLoad(epoch,cache){
+ const version=hitterOutcomeSource.snapshot,key='hitter-outcomes:'+version;
+ if(!cache.has(key))cache.set(key,(async()=>{
+  const ready=await(await privateFetch(version,'index.json')).json();
+  if(ready.kind!=='atlas-hitter-outcomes'||ready.version!==version)throw Error('The hitter outcome supplement is not ready.');
+  const payload=await(await privateFetch(version,'runtime.json')).json();
+  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
+  return payload;
+ })().catch(error=>{if(epoch===sessionEpoch)cache.delete(key);throw error;}));
+ return cache.get(key);
 }
 window.skillGradesLoad=async()=>(await runtimeLoad()).core;
 window.skillGradesWorkloadsLoad=async()=>(await runtimeLoad()).workloads;
@@ -126,7 +142,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=downside-or-20261105-2&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=hitter-outcomes-20261105-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

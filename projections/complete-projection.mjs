@@ -1,6 +1,7 @@
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
+import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-1';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){
@@ -21,8 +22,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  else Object.assign(stats,{K:finite(ip)?rates.K_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)?rates.W_IP*ip:null,SV:finite(ip)?rates.SV_IP*ip:null});
  stats.K_pct=finite(rates.K_PA)?100*rates.K_PA:null;stats.BB_pct=finite(rates.BB_PA)?100*rates.BB_PA:null;
  if(kind==='Hitter'){
-  const bip=rates.AB_PA-rates.K_PA-rates.HR_PA+rates.SF_PA;
-  stats.BABIP=bip>0?(rates.H_PA-rates.HR_PA)/bip:null;
+  Object.assign(stats,hitterOutcomeStats(core,p,rates));
  }
  let save=null;
  if(kind==='Pitcher'){
