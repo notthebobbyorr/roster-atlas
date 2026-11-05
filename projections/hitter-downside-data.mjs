@@ -1,0 +1,2 @@
+// Observed source-season flags. No private projected OPS values are embedded.
+export const hitterDownside={"forecast_year":2027,"source_year":2026,"ops_penalty":0.013050898128626183,"experimental":true,"players":{"664040":"Brandon Lowe","665052":"Griffin Conine","669003":"Garrett Mitchell","669065":"Kyle Stowers","670042":"Luke Raley","682987":"Spencer Jones","699013":"Esmerlyn Valdez","701762":"Nick Kurtz","808959":"Munetaka Murakami"}};

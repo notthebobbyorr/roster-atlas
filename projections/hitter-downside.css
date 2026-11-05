@@ -1,0 +1,4 @@
+.hitter-downside-flag{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin:0 0 0 6px;padding:2px 6px;min-width:28px;min-height:28px;border:1px solid #b88736;border-radius:5px;background:#352b19;color:#ffd28a;font-size:18px;line-height:1;cursor:help;flex-shrink:0}
+.hitter-downside-flag:hover,.hitter-downside-flag:focus-visible{background:#514024;border-color:#ffd28a;color:#ffe5b9;outline:2px solid #ffd28a;outline-offset:2px}
+.hitter-downside-tooltip{position:fixed;z-index:10000;box-sizing:border-box;max-width:min(350px,calc(100vw - 16px));padding:12px 14px;border:1px solid #a87d39;border-radius:8px;background:#1b2630;color:#f6e8cc;box-shadow:0 6px 24px #0008;white-space:pre-line;font:13px/1.55 system-ui,sans-serif;text-align:left;overflow-wrap:break-word}
+.hitter-downside-tooltip[hidden]{display:none}
