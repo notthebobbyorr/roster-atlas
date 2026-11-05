@@ -1,4 +1,4 @@
-import {hitterDownside} from './hitter-downside-data.mjs?v=downside-20261105-1';
+import {hitterDownside} from './hitter-downside-data.mjs?v=downside-or-20261105-2';
 
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
@@ -6,14 +6,38 @@ const rate=value=>finite(value)?value.toFixed(3):'Unavailable';
 
 export function downsideDetails(entry,forecast,season){
  const kind=entry?.kind??entry?.role??entry?.profile?.kind;
- if(kind!=='Hitter'||Number(season)!==hitterDownside.forecast_year||!Object.hasOwn(hitterDownside.players,String(entry?.mlbid)))return null;
+ if(kind!=='Hitter'||Number(season)!==hitterDownside.forecast_year)return null;
+ const id=String(entry?.mlbid),stored=hitterDownside.players[id];
+ const thresholds=hitterDownside.thresholds;
+ const labels={whiffs_vs_95:'Whiff vs 95+',secondary_whiff_pct:'Secondary whiff',contact_vs_avg:'Contact vs expected',swstr_pct:'SwStr'};
+ const cutoffs={whiffs_vs_95:thresholds.whiff95_min_pct,secondary_whiff_pct:thresholds.secondary_whiff_min_pct,contact_vs_avg:thresholds.contact_vs_expected_max_pp,swstr_pct:thresholds.swstr_min_pct};
+ const reasons=(stored?.observed??[]).map(r=>({...r,phase:'observed',year:hitterDownside.source_year}));
+ const groups=entry?.profile?.projected_skills??entry?.projected_skills??{};
+ // The strikeout head is the canonical contact projection. Fall back per
+ // feature to the hits head only when the strikeout value is unavailable.
+ for(const metric of ['whiffs_vs_95','secondary_whiff_pct','contact_vs_avg']){
+  const primary=groups.K_PA?.[metric]?.combined,fallback=groups.H_PA?.[metric]?.combined;
+  const value=finite(primary)?primary:fallback;
+  const valid=finite(value)&&value>=(metric==='contact_vs_avg'?-100:0)&&value<=100;
+  if(valid&&(metric==='contact_vs_avg'?value<=cutoffs[metric]:value>=cutoffs[metric]))reasons.push({metric,value,phase:'projected',year:hitterDownside.forecast_year});
+ }
+ if(stored?.projected_swstr_danger===true)reasons.push({metric:'swstr_pct',phase:'projected',year:hitterDownside.forecast_year,auxiliary:true});
+ if(!reasons.length)return null;
  // Use exactly the current table's OPS, including its selected model and park.
  const base=finite(forecast?.OPS)?forecast.OPS:forecast?.stats?.OPS;
- const adjusted=finite(base)?Math.max(0,base-hitterDownside.ops_penalty):null;
- const text='Elevated downside risk\nExperimental risk-adjusted OPS: '+rate(adjusted)+'\n'+
-  (finite(base)?'Displayed OPS '+rate(base)+' minus '+rate(hitterDownside.ops_penalty)+'.\n':'Projected OPS is unavailable in this view.\n')+
-  'Based on observed '+hitterDownside.source_year+' whiff/contact profile.\nMain projection and rankings stay unchanged.';
- return {base:finite(base)?base:null,adjusted,penalty:hitterDownside.ops_penalty,text};
+ const penaltyEligible=hitterDownside.penalty_players.includes(id);
+ const penalty=penaltyEligible?hitterDownside.ops_penalty:0;
+ const adjusted=penaltyEligible&&finite(base)?Math.max(0,base-penalty):null;
+ const lines=reasons.map(r=>{
+  const unit=r.metric==='contact_vs_avg'?' pp':'%',op=r.metric==='contact_vs_avg'?'≤':'≥';
+  const level=r.phase==='observed'?(r.level_id===1?'MLB':'non-MLB'):(r.auxiliary?'auxiliary forecast':'projection');
+  return r.year+' '+r.phase+' ('+level+'): '+labels[r.metric]+' '+(finite(r.value)?r.value.toFixed(1)+unit+'; ':'')+op+' '+cutoffs[r.metric]+unit;
+ });
+ const adjustment=penaltyEligible?'Experimental risk-adjusted OPS: '+rate(adjusted)+'\n'+
+  (finite(base)?'Displayed OPS '+rate(base)+' minus '+rate(penalty)+'.\n':'Projected OPS is unavailable in this view.\n')+
+  'Exploratory adjustment for the original profile; not a validated mean correction.\n':'No calibrated OPS adjustment for this broader warning.\n';
+ const text='Elevated downside risk\n'+lines.join('\n')+'\n'+adjustment+'Main projection and rankings stay unchanged.';
+ return {base:finite(base)?base:null,adjusted,penalty,reasons,text};
 }
 
 export function downsideBadgeHTML(entry,forecast,season){

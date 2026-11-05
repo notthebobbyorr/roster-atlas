@@ -1,4 +1,4 @@
-import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-20261105-1';
+import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=frozen-workloads-1';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=dc-pace-1';
