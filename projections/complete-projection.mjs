@@ -2,6 +2,7 @@ import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workl
 import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
+import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=pitcher-outcomes-20261105-1';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){
@@ -23,7 +24,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  stats.K_pct=finite(rates.K_PA)?100*rates.K_PA:null;stats.BB_pct=finite(rates.BB_PA)?100*rates.BB_PA:null;
  if(kind==='Hitter'){
   Object.assign(stats,hitterOutcomeStats(core,p,rates));
- }
+ }else Object.assign(stats,pitcherOutcomeStats(p,stats));
  let save=null;
  if(kind==='Pitcher'){
   if(savesRole!=='auto')save=projectSaves(saves,p.mlbid,ip,savesRole,{method:mode,overrides:savesOverrides,workloadOverrides});
