@@ -1,7 +1,7 @@
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
-import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-1';
+import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){

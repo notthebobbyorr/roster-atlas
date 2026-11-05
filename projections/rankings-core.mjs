@@ -5,8 +5,8 @@ import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
 import {projectWins} from './pitcher-wins.mjs?v=roster-refresh-1';
-import {completedProjection} from './complete-projection.mjs?v=hitter-outcomes-20261105-1';
-import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-1';
+import {completedProjection} from './complete-projection.mjs?v=hitter-outcomes-20261105-2';
+import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){

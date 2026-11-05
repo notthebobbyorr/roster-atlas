@@ -1,5 +1,5 @@
 import {compareFreeAgentYears} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-1';
+import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 export function rankingSortOptions(role){
