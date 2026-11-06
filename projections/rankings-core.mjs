@@ -5,9 +5,10 @@ import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
 import {projectWins} from './pitcher-wins.mjs?v=roster-refresh-1';
-import {completedProjection} from './complete-projection.mjs?v=pitcher-outcomes-20261105-1';
+import {completedProjection} from './complete-projection.mjs?v=universal-600pa-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=pitcher-outcomes-20261105-1';
+import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){
@@ -85,7 +86,7 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
   const next=rotationContext(core,pt,entry);
   return projection(next.core,next.pt,next.entry,{model,method:'projected',park,view,saves,savesRole,savesOverrides,workloadOverrides});
  }
- const p=entry.profile;
+ const p=method==='standard'?universalHitterProfile(core,entry.profile):entry.profile;
  if(!p)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,offense_grade:null,pitching_grade:null};
  const contextMode=method==='fa_context'||core.runs_rbi_default===true,workloadMethod=method==='fa_context'?'projected':method;
  const r={...p.rates},factor=core.park_mode==='as_projected'||park==='neutral'?null:(p.parks?.[String(entry.team_id)]||core.park_priors?.[p.kind]?.[String(entry.team_id)]);
@@ -97,7 +98,7 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  const startVariant=workloadMethod==='standard'?record?.variants[record.selected?.replace(/_age$/,'')]:variant;
  const startLength=p.kind==='Pitcher'&&workloadMethod==='projected'&&p.sp_workload?{...p.sp_workload,model:'SP appearances × BF/appearance'}:p.kind==='Pitcher'&&[entry.role,p.assigned_role].some(role=>['SP','Swingman'].includes(role))?projectInningsPerStart(p.mlbid,startVariant?.weights):null;
  const preview=workloadOverrides[entry.key],hasPreview=finite(preview)&&preview>=0,abPA=hitterABPerPA(p,record,variant),previewPA=hasPreview&&p.kind==='Hitter'&&abPA>0?Math.round(preview):null;
- const workload=hasPreview&&p.kind==='Pitcher'?preview:finite(previewPA)?previewPA*abPA:workloadMethod==='standard'?(p.kind==='Hitter'?600:entry.role==='SP'?175:entry.role==='Swingman'?100:60):(p.kind==='Hitter'?variant?.AB:variant?.IP),load=p.kind==='Pitcher'?roundInnings(workload):workload;
+ const workload=hasPreview&&p.kind==='Pitcher'?preview:finite(previewPA)?previewPA*abPA:workloadMethod==='standard'?(p.kind==='Hitter'?(abPA>0?600*abPA:null):entry.role==='SP'?175:entry.role==='Swingman'?100:60):(p.kind==='Hitter'?variant?.AB:variant?.IP),load=p.kind==='Pitcher'?roundInnings(workload):workload;
  const cat=(rates,c)=>({Power:rates.HR_rate,Speed:rates.SB_rate,AVG:rates.H_rate,K:rates.K_rate,ERA:finite(rates.ER_rate)?9*rates.ER_rate:null,WHIP:finite(rates.H_rate)&&finite(rates.BB_rate)?rates.H_rate+rates.BB_rate:null})[c];
  const categories=p.kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'],grades={},stats={};
  for(const c of categories){
@@ -128,7 +129,7 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  const batting=p.kind==='Hitter'?p.projected_batting?.combined:null;
  if(p.kind==='Hitter')Object.assign(stats,hitterOutcomeStats(core,p,batting));
  else Object.assign(stats,pitcherOutcomeStats(p,stats));
- const contextPA=finite(previewPA)?previewPA:finite(variant?.PA)?variant.PA:workloadMethod==='standard'&&finite(load)&&batting?.AB_PA>0?load/batting.AB_PA:null;
+ const contextPA=finite(previewPA)?previewPA:workloadMethod==='standard'&&p.kind==='Hitter'?600:finite(variant?.PA)?variant.PA:null;
  const contextualTotal=category=>!context||!finite(contextPA)||!finite(context[category])?null:context.PA>0?context[category]*contextPA/context.PA:context.PA===0&&contextPA===0?0:null;
  const runStats=contextMode&&p.kind==='Hitter'?{R:contextualTotal('R'),RBI:contextualTotal('RBI')}:{};
  const sum=categories.every(c=>finite(grades[c]))?categories.reduce((a,c)=>a+grades[c],0):null;
@@ -143,5 +144,5 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  const sum_full=p.kind==='Pitcher'?(finite(sum)&&finite(grades.W)&&finite(grades.SV)?sum+grades.W+grades.SV:null):sum_with_runs_rbi;
  const scale=batting&&finite(load)&&batting.AB_PA>0?load/batting.AB_PA:null;
  const battingCounts=batting?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,finite(scale)?batting[c+'_PA']*scale:null])):null;
- return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:finite(previewPA)?previewPA:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,...(batting?{batting:battingCounts}:{}),stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null,...(core.pitcher_outcomes&&p.kind==='Pitcher'?{W:win?.W??null}:{}),...runStats,...(batting?{OPS:batting.OPS}:{})},saves:save,...(win?{wins:win}:{}),grades,sum,sum_with_runs_rbi,...(core.pitcher_outcomes?{sum_full}:{})};
+ return {pitching_grade:p.kind==='Pitcher'&&finite(p.pitching_grade)?p.pitching_grade:null,offense_grade:p.kind==='Hitter'&&finite(p.offense_grade)?p.offense_grade:null,IP_per_start:startLength?.IP_per_start??null,startLength,PA:finite(previewPA)?previewPA:workloadMethod==='standard'&&p.kind==='Hitter'?600:variant?.PA??null,AB:p.kind==='Hitter'&&finite(load)?load:null,IP:p.kind==='Pitcher'&&finite(load)?load:null,...(batting?{batting:battingCounts}:{}),stats:{...stats,HR:total('Power'),SB:total('Speed'),K:total('K'),SV:save?.SV??null,...(core.pitcher_outcomes&&p.kind==='Pitcher'?{W:win?.W??null}:{}),...runStats,...(batting?{OPS:batting.OPS}:{})},saves:save,...(win?{wins:win}:{}),grades,sum,sum_with_runs_rbi,...(core.pitcher_outcomes?{sum_full}:{})};
 }

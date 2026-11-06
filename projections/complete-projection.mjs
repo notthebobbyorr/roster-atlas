@@ -3,18 +3,19 @@ import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=pitcher-outcomes-20261105-1';
+import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){
   const next=rotationContext(core,pt,entry);
   return completedProjection(next.core,next.pt,next.entry,{method:'projected',view,saves,savesRole,savesOverrides,workloadOverrides});
  }
- const p=entry.profile,line=p?.complete_projection;
+ const p=method==='standard'?universalHitterProfile(core,entry.profile):entry.profile,line=p?.complete_projection;
  if(!line)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,sum_full:null,sum_with_runs_rbi:null};
  const kind=p.kind,record=pt.players[entry.key],mode=method==='fa_context'?'projected':method,
   variant=mode==='standard'?null:roundWorkloadVariant(record?.variants[mode==='projected'?record.selected:mode]),
   preview=workloadOverrides[entry.key],manual=finite(preview)&&preview>=0,
-  pa=kind==='Hitter'?(manual?Math.round(preview):mode==='standard'?600/line.rates.AB_PA:variant?.PA??null):null,
+  pa=kind==='Hitter'?(manual?Math.round(preview):mode==='standard'?600:variant?.PA??null):null,
   ip=kind==='Pitcher'?roundInnings(manual?preview:mode==='standard'?(entry.role==='SP'?175:entry.role==='Swingman'?100:60):variant?.IP):null,
   load=kind==='Hitter'?pa:ip,ab=kind==='Hitter'&&finite(pa)?pa*line.rates.AB_PA:null,
   rates=line.rates,stats={},grades={},batting=kind==='Hitter'&&finite(pa)?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,pa*rates[c+'_PA']])):null;
