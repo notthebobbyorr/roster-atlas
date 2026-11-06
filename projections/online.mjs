@@ -5,7 +5,7 @@ import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
 import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcomes-20261105-2';
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
-import * as skillRegistry from './skill-models.mjs?v=babip-20261105-1';
+import * as skillRegistry from './skill-models.mjs?v=pitchers-four-stage-20261106-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
