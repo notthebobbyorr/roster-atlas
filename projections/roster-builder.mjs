@@ -13,8 +13,11 @@ import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=pitcher-outcomes-20261105-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=table-filters-20261107-1';
+import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 
 mountDownsideTooltips();
+document.getElementById('rookie-filter-note').textContent=rookieFilterNote;
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=value=>typeof value==='number'&&Number.isFinite(value),fmt=(value,digits=1)=>finite(value)?value.toFixed(digits):'—';
 const parent=window.parent;
@@ -46,6 +49,12 @@ const entryByKey=new Map(pool.map(entry=>[entry.key,entry]));
 $('organization').innerHTML+=[...new Set(pool.map(p=>p.team))].sort().map(team=>'<option value="'+esc(team)+'">'+esc(team.replaceAll('-',' '))+'</option>').join('');
 const storageKey='ra-draft-teams:v1:'+owner;
 let teams={},activeId=null,page=0,filtered=[],rosterRows=[],forecastCache=new Map(),loadError='';
+const poolFilterKey='ra-draft-pool-filters:v1:'+owner;
+let savedPoolFilters=null;try{savedPoolFilters=JSON.parse(localStorage.getItem(poolFilterKey)||'null');}catch{}
+const numericFilters=mountTableFilters({document,initial:savedPoolFilters?.numericFilters,onChange:()=>action(()=>{page=0;renderPool();persistPoolFilters();})});
+for(const id of ['search','kind','position','forty-man','organization'])if(typeof savedPoolFilters?.[id]==='string')$(id).value=savedPoolFilters[id];
+if(!['','yes','no','unknown','rookie'].includes($('forty-man').value))$('forty-man').value='';
+function persistPoolFilters(){try{localStorage.setItem(poolFilterKey,JSON.stringify({...Object.fromEntries(['search','kind','position','forty-man','organization'].map(id=>[id,$(id).value])),numericFilters:numericFilters.get()}));}catch{$('status').textContent='Pool filters are active; device storage is unavailable.';}}
 try{
  const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
  if(saved){
@@ -137,7 +146,8 @@ function renderRoster(){
 function fortyMan(entry){return rosterStatus.players[String(entry.mlbid)]?.forty_man||(rosterStatus.official_teams===30?'no':'unknown');}
 function renderPool(){
  const query=$('search').value.trim().toLowerCase(),kind=$('kind').value,position=$('position').value,forty=$('forty-man').value,organization=$('organization').value,team=currentTeam(),picked=new Set(team.picks.map(p=>p.mlbid));
- filtered=pool.filter(entry=>(!kind||entry.kind===kind)&&(!organization||entry.team===organization)&&(!position||assignmentOptions(entry).includes(position))&&(!forty||fortyMan(entry)===forty)&&(!query||`${entry.name} ${entry.mlbid}`.toLowerCase().includes(query))).map(entry=>({entry,forecast:forecast(entry)})).sort((a,b)=>{const field=team.sumSort||'sum',x=a.forecast[field],y=b.forecast[field];return finite(x)&&finite(y)?y-x||a.entry.name.localeCompare(b.entry.name):finite(x)?-1:finite(y)?1:a.entry.name.localeCompare(b.entry.name);});
+ const conditions=numericFilters.get();
+ filtered=pool.filter(entry=>(!kind||entry.kind===kind)&&(!organization||entry.team===organization)&&(!position||assignmentOptions(entry).includes(position))&&(!forty||(forty==='rookie'?is2027Rookie(entry):fortyMan(entry)===forty))&&(!query||`${entry.name} ${entry.mlbid}`.toLowerCase().includes(query))).map(entry=>({entry,forecast:forecast(entry)})).filter(row=>matchesTableFilters(row,conditions)).sort((a,b)=>{const field=team.sumSort||'sum',x=a.forecast[field],y=b.forecast[field];return finite(x)&&finite(y)?y-x||a.entry.name.localeCompare(b.entry.name):finite(x)?-1:finite(y)?1:a.entry.name.localeCompare(b.entry.name);});
  const pages=Math.max(1,Math.ceil(filtered.length/50));page=Math.max(0,Math.min(page,pages-1));
  $('pool-head').innerHTML='<tr><th>Add</th><th class="player">Player</th><th>Group</th><th>Eligible / plan</th>'+statHeaders()+'<th>R SD</th><th>RBI SD</th><th>W SD</th><th>SV SD</th><th>Sum SD (base 3)</th><th>Sum SD (with R/RBI)</th><th>Sum SD (all 5)</th><th>SLAM</th><th>ACE</th></tr>';
  $('pool-rows').innerHTML=filtered.slice(page*50,page*50+50).map(({entry,forecast:f})=>'<tr><td><button type="button" data-add="'+esc(entry.key)+'"'+(picked.has(Number(entry.mlbid))||team.picks.length>=50?' disabled':'')+'>'+(picked.has(Number(entry.mlbid))?'Drafted':'Add')+'</button></td><td class="player">'+esc(entry.name)+downsideBadgeHTML(entry,f,season)+'<small>'+esc(entry.team.replaceAll('-',' '))+' · ID '+entry.mlbid+'</small>'+projectedSkillsHTML(workloadProfile(core,pt,entry,scenarioSettings(currentTeam().method,false).method),core.projected_skill_dictionary)+'</td><td>'+esc(entry.kind)+'</td><td>'+assignmentOptions(entry).join(' / ')+'</td>'+statCells(f,true,entry)+'<td class="number">'+fmt(f.grades?.R)+'</td><td class="number">'+fmt(f.grades?.RBI)+'</td><td class="number">'+fmt(f.grades?.W)+'</td><td class="number">'+fmt(f.grades?.SV)+'</td><td class="number">'+fmt(f.sum)+'</td><td class="number">'+fmt(f.sum_with_runs_rbi)+'</td><td class="number">'+fmt(f.sum_full)+'</td><td class="number">'+fmt(f.offense_grade)+'</td><td class="number">'+fmt(f.pitching_grade)+'</td></tr>').join('')||'<tr><td class="empty" colspan="18">No matching players. Clear a filter or try an MLB ID.</td></tr>';
@@ -162,7 +172,7 @@ $('rename-team').onclick=()=>action(()=>{const name=$('team-name').value.trim();
 $('delete-team').onclick=()=>action(()=>{if(!window.confirm('Delete '+currentTeam().name+' and its drafted players from this device? Export a team file first if you want to keep it.'))return;delete teams[activeId];if(!Object.keys(teams).length){const team=createTeam();teams[team.id]=team;}activeId=Object.keys(teams)[0];page=0;render();persist('Team deleted from this device.');});
 for(const [id,field] of [['split','split'],['workload','method'],['park','park'],['view','view'],['pool-sum-sort','sumSort']])$(id).addEventListener('change',()=>action(()=>{currentTeam()[field]=$(id).value;forecastCache.clear();render();persist();}));
 $('show-guidelines').addEventListener('change',()=>action(()=>{currentTeam().showGuidelines=$('show-guidelines').checked;renderGuidelines();persist();}));
-for(const id of ['search','kind','position','forty-man','organization'])$(id).addEventListener(id==='search'?'input':'change',()=>action(()=>{page=0;renderPool();}));
+for(const id of ['search','kind','position','forty-man','organization'])$(id).addEventListener(id==='search'?'input':'change',()=>action(()=>{page=0;renderPool();persistPoolFilters();}));
 $('previous-page').onclick=()=>action(()=>{page--;renderPool();});$('next-page').onclick=()=>action(()=>{page++;renderPool();});
 $('add-placeholder').onclick=()=>action(()=>{
  const name=$('placeholder-name').value;

@@ -22,7 +22,7 @@ export function normalizeRankingSort(role,value,direction='desc'){
  if(!rankingSortOptions(role).some(option=>option.value===value))value='rank';
  return {value,direction:direction==='asc'?'asc':'desc'};
 }
-function numericValue(row,value){
+export function rankingNumericValue(row,value){
  if(value==='sum')return row.forecast.sum;
  if(value==='sum_with_runs_rbi')return row.forecast.sum_with_runs_rbi;
  if(value==='sum_full')return row.forecast.sum_full;
@@ -38,7 +38,7 @@ export function sortRankingRows(rows,value,direction='desc'){
  return [...rows].sort((a,b)=>{
   if(value==='rank')return a.rank-b.rank;
   if(value==='fa')return compareFreeAgentYears(a.entry,b.entry,order)||a.rank-b.rank;
-  const x=numericValue(a,value),y=numericValue(b,value);
+  const x=rankingNumericValue(a,value),y=rankingNumericValue(b,value);
   if(!finite(x))return finite(y)?1:a.rank-b.rank;
   if(!finite(y))return -1;
   return order*(x-y)||a.rank-b.rank;

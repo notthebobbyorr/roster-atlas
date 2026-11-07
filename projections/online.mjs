@@ -142,7 +142,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html?v=preferred-milb-20261106-1':'rankings.html?v=preferred-milb-20261106-1')+'?v=universal-600pa-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=table-filters-20261107-1':'rankings.html?v=table-filters-20261107-1')+'?v=universal-600pa-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

@@ -13,10 +13,13 @@ import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
 import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=preferred-milb-20261106-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=pitcher-outcomes-20261105-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows} from './rankings-sort.mjs?v=table-filters-20261107-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=table-filters-20261107-1';
+import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 mountDownsideTooltips();
+document.getElementById('rookie-filter-note').textContent=rookieFilterNote;
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const finite=x=>typeof x==='number'&&Number.isFinite(x),fmt=(x,d=1)=>finite(x)?x.toFixed(d):'—';
 const parent=window.parent;
@@ -49,6 +52,7 @@ const available=Object.fromEntries(fantasyRoles.map(role=>[role,lists[role].map(
 const storageKey='ra-starter-rankings:v1:'+owner;
 let saved=null;
 try{const text=localStorage.getItem(storageKey);if(text)saved=JSON.parse(text);}catch{$('status').textContent='Saved lists could not be read. Export a backup after editing; device storage may be unavailable.';}
+const numericFilters=mountTableFilters({document,initial:saved?.preferences?.numericFilters,onChange:()=>{dragged=null;render();persist();}});
 let customLists=normalizeCustomLists(saved?.customLists,entries);
 const initialGrades=new Map();
 const initial=p=>{if(!initialGrades.has(p.key))initialGrades.set(p.key,projection(core,pt,p,{model}).sum);return initialGrades.get(p.key);};
@@ -59,7 +63,7 @@ rebuildCustomLists(saved||{});renderListOptions(saved?.preferences?.role);
 $('team').innerHTML+=[...new Set(entries.map(p=>p.team))].sort().map(t=>'<option value="'+esc(t)+'">'+esc(t.replaceAll('-',' '))+'</option>').join('');
 for(const id of ['role','workload','view','park','search','team','throws','forty-man','options-remaining'])if(saved?.preferences?.[id]!=null)$(id).value=saved.preferences[id];
 if(!$('workload').value)$('workload').value='projected';
-for(const [id,values] of [['forty-man',['','yes','no','unknown']],['options-remaining',['','0','1','2','3','4','remaining','unknown']]])if(!values.includes($(id).value))$(id).value='';
+for(const [id,values] of [['forty-man',['','yes','no','unknown','rookie']],['options-remaining',['','0','1','2','3','4','remaining','unknown']]])if(!values.includes($(id).value))$(id).value='';
 if(!['','L','R','S','unknown'].includes($('throws').value))$('throws').value='';
 if(!Object.hasOwn(lists,$('role').value))$('role').value='SP';
 const restoredSort=normalizeRankingSort(sortRole(),saved?.preferences?.sort,saved?.preferences?.['sort-direction']);
@@ -84,7 +88,7 @@ function listKind(id=$('role').value){return id==='All Players'?'Mixed':customLi
 function listLabel(id=$('role').value){return customLists[id]?.name||id;}
 function sortRole(){return listKind()==='Mixed'?'All Players':listKind()==='Pitcher'?'All P':'UT-only';}
 function serializeSets(collection){return Object.fromEntries(Object.keys(lists).map(id=>[id,[...(collection[id]||[])]]));}
-function readPreferences(){return Object.fromEntries(['role','workload','view','park','search','team','throws','forty-man','options-remaining','sort','sort-direction'].map(id=>[id,$(id).value]));}
+function readPreferences(){return {...Object.fromEntries(['role','workload','view','park','search','team','throws','forty-man','options-remaining','sort','sort-direction'].map(id=>[id,$(id).value])),numericFilters:numericFilters.get()};}
 function syncCustomOrders(){for(const id of Object.keys(customLists))customLists[id]={...customLists[id],keys:[...orders[id]]};}
 function rebuildCustomLists(seed={}){
  const active=new Set([...fantasyRoles,...Object.keys(customLists)]);
@@ -105,7 +109,7 @@ function renderListOptions(value=$('role').value){
 function enterList(id){
  if(!Object.hasOwn(lists,id))return;
  const kind=listKind(id);if(kind!==selectionKind&&kind!=='Mixed')for(const key of selectedKeys)if(entryByKey.get(key)?.kind!==kind)selectedKeys.delete(key);selectionKind=kind;$('role').value=id;$('create-list-kind').value=kind==='Mixed'?'Pitcher':kind;
- if(customLists[id]){for(const control of ['search','team','throws','forty-man','options-remaining'])$(control).value='';$('sort').value='rank';}
+ if(customLists[id]){for(const control of ['search','team','throws','forty-man','options-remaining'])$(control).value='';numericFilters.set(null);$('sort').value='rank';}
  dragged=null;render();persist();
 }
 function renderCustomTools(){
@@ -159,7 +163,7 @@ function rosterFacts(p){
 }
 function matchesRosterFilters(p){
  const facts=rosterFacts(p),forty=$('forty-man').value,options=$('options-remaining').value;
- return (!forty||facts.forty===forty)&&(!options||(options==='unknown'?facts.options===null:options==='remaining'?facts.options>0:facts.options!==null&&facts.options===Number(options)));
+ return (!forty||(forty==='rookie'?is2027Rookie(p):facts.forty===forty))&&(!options||(options==='unknown'?facts.options===null:options==='remaining'?facts.options>0:facts.options!==null&&facts.options===Number(options)));
 }
 function rosterCells(p){const facts=rosterFacts(p);return '<td>'+({yes:'On 40-man',no:'Off 40-man',unknown:'Unknown'})[facts.forty]+'</td><td class="number">'+(facts.options??'Unknown')+'</td>';}
 function contractCell(p){
@@ -202,6 +206,7 @@ function render(){
  const role=$('role').value,entries=new Map(lists[role].map(p=>[p.key,p])),query=$('search').value.trim().toLowerCase(),team=$('team').value,hand=$('throws').value,hitter=listKind(role)==='Hitter',mixed=listKind(role)==='Mixed';
  $('throws-filter').hidden=hitter;
  displayed=orders[role].map((key,index)=>({entry:entries.get(key),rank:index+1})).filter(({entry:p})=>!exclusions[role].has(p.key)&&matchesRosterFilters(p)&&rrSelections[role].has(p.rr_role||'Unlisted')&&(!team||p.team===team)&&(hitter||!hand||(p.kind==='Pitcher'&&(pitcherHand(p.mlbid)??'unknown')===hand))&&(!query||`${p.name} ${p.mlbid||''}`.toLowerCase().includes(query))).map(row=>({...row,forecast:playerForecast(row.entry)}));
+ const conditions=numericFilters.get();displayed=displayed.filter(row=>matchesTableFilters(row,conditions));
  const sorting=$('sort').value,reordering=sorting==='rank';
  displayed=sortRankingRows(displayed,sorting,$('sort-direction').value);
  processColumns=mixed?[['stuff','Pitch grade'],['SwStr','SwStr %'],['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:hitter?[['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs exp (pp)']]:[['stuff','Pitch grade'],['SwStr','SwStr %']];const cats=mixed?['Power','Speed','AVG','R','RBI','K','ERA','WHIP','W','SV']:hitter?['Power','Speed','AVG','R','RBI']:['K','ERA','WHIP','W','SV'];
@@ -248,6 +253,8 @@ $('import').onchange=async event=>{try{
  if(data.version===2)for(const [id,list] of Object.entries(nextCustoms)){const keys=data.excluded?.[id]||[];if(!Array.isArray(keys)||keys.some(key=>typeof key!=='string')||new Set(keys).size!==keys.length)throw Error('Invalid custom list exclusions.');}
  Object.assign(orders,imported);for(const role of fantasyRoles)exclusions[role]=new Set(removed[role]);
  if(data.version===2){for(const id of Object.keys(customLists)){delete lists[id];delete orders[id];delete exclusions[id];delete rrSelections[id];delete available[id];}customLists=nextCustoms;rebuildCustomLists({...data,orders:{}});}
+ if(data.preferences?.numericFilters)numericFilters.set(data.preferences.numericFilters);
+ if(['','yes','no','unknown','rookie'].includes(data.preferences?.['forty-man']))$('forty-man').value=data.preferences['forty-man'];
  renderListOptions();selectedKeys.clear();selectionKind=listKind();$('create-list-kind').value=selectionKind==='Mixed'?'Pitcher':selectionKind;render();persist('Imported lists and saved on this device. Inactive players were removed; new starters appended to position lists.');
  }catch(error){$('status').textContent=error.message;}finally{event.target.value='';}};
 let searchTimer;
