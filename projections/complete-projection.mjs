@@ -29,7 +29,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  let save=null;
  if(kind==='Pitcher'){
   if(savesRole!=='auto')save=projectSaves(saves,p.mlbid,ip,savesRole,{method:mode,overrides:savesOverrides,workloadOverrides});
-  else save={SV:stats.SV,role:line.role==='SP'?'starter':saves?.players?.[String(p.mlbid)]?.auto_role||'other',override:'auto',rate:rates.SV_IP,source:'Complete Projections 11.4',teamAllocated:false,detailText:'Completed team-context saves forecast, scaled with innings.'};
+  else save={SV:stats.SV,role:line.role==='SP'?'starter':saves?.players?.[String(p.mlbid)]?.auto_role||'other',override:'auto',rate:rates.SV_IP,source:core.model_name||'Complete projections',teamAllocated:false,detailText:'Completed team-context saves forecast, scaled with innings.'};
   if(savesRole!=='auto')stats.SV=save?.SV??null;
  }
  const categories=kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'];
