@@ -2,7 +2,7 @@ import {workloadProfile,universalHitterNote} from './universal-hitter-context.mj
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
 import {pitcherRateColumns,withPitcherDifference} from './pitcher-outcomes.mjs?v=babip-both-20261108-1';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=babip-both-20261108-1';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=survivorship-20261108-1';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
@@ -11,7 +11,7 @@ import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=playing-time-preview-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=babip-both-20261108-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=survivorship-20261108-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=babip-both-20261108-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';

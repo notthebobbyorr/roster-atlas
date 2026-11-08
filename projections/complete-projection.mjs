@@ -50,5 +50,5 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  const sum=keys=>keys.every(c=>finite(grades[c]))?keys.reduce((s,c)=>s+grades[c],0):null,base=sum(categories),all=sum([...categories,...(kind==='Hitter'?['R','RBI']:['W','SV'])]);
  return {PA:pa,AB:ab,IP:ip,batting,stats,grades,sum:base,sum_with_runs_rbi:kind==='Hitter'?all:base,sum_full:all,
   offense_grade:finite(p.offense_grade)?p.offense_grade:null,pitching_grade:finite(p.pitching_grade)?p.pitching_grade:null,
-  IP_per_start:line.IP_per_start??null,startLength:p.sp_workload??null,saves:save,wins:kind==='Pitcher'?{W:stats.W,source:'Complete Projections 11.4'}:null};
+  IP_per_start:line.IP_per_start??null,startLength:p.sp_workload??null,saves:save,wins:kind==='Pitcher'?{W:stats.W,source:core.model_name||'Complete projections'}:null};
 }
