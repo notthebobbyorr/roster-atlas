@@ -1,8 +1,8 @@
 import {workloadProfile,universalHitterNote} from './universal-hitter-context.mjs?v=universal-600pa-1';
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
-import {pitcherRateColumns,withPitcherDifference} from './pitcher-outcomes.mjs?v=pitcher-outcomes-20261105-1';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=preferred-milb-20261106-1';
+import {pitcherRateColumns,withPitcherDifference} from './pitcher-outcomes.mjs?v=babip-both-20261108-1';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=babip-both-20261108-1';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
@@ -11,12 +11,12 @@ import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=playing-time-preview-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=preferred-milb-20261106-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=babip-both-20261108-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=age-column-20261108-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=babip-both-20261108-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=age-column-20261108-1';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=babip-both-20261108-1';
 import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 mountDownsideTooltips();
 document.getElementById('rookie-filter-note').textContent=rookieFilterNote;
@@ -225,7 +225,7 @@ function render(){
  $('count').textContent=displayed.length+' of '+orders[role].length+' players · '+listLabel(role)+' · '+(({recommended:'Recommended cutoffs',hybrid_full:'Full skills-first hybrid'})[model]||model)+' · '+$('view').selectedOptions[0].text+(exclusions[role].size?' · '+exclusions[role].size+' excluded':'');
  renderCustomTools();
 }
-$('head').addEventListener('click',event=>{const button=event.target.closest('button[data-sort]');if(!button)return;const value=button.dataset.sort;if(!rankingSortOptions(sortRole()).some(option=>option.value===value))return;$('sort-direction').value=value==='rank'?'asc':$('sort').value===value?($('sort-direction').value==='asc'?'desc':'asc'):['stat:ERA','stat:WHIP','fa','age'].includes(value)?'asc':'desc';$('sort').value=value;dragged=null;render();persist();document.querySelector?.('button[data-sort="'+value+'"]')?.focus();});
+$('head').addEventListener('click',event=>{const button=event.target.closest('button[data-sort]');if(!button)return;const value=button.dataset.sort;if(!rankingSortOptions(sortRole()).some(option=>option.value===value))return;$('sort-direction').value=value==='rank'?'asc':$('sort').value===value?($('sort-direction').value==='asc'?'desc':'asc'):['stat:ERA','stat:WHIP','stat:BABIP_against','fa','age'].includes(value)?'asc':'desc';$('sort').value=value;dragged=null;render();persist();document.querySelector?.('button[data-sort="'+value+'"]')?.focus();});
 $('head').addEventListener('change',event=>{const checkbox=event.target.closest('input[data-select-all]');if(!checkbox||!displayed.length)return;setDisplayedSelection(checkbox.checked);$('select-all-displayed')?.focus();});
 $('rows').addEventListener('click',event=>{const reset=event.target.closest('button[data-reset-workload]');if(reset?.dataset?.resetWorkload){setWorkloadPreview(reset.dataset.resetWorkload,null);forecastCache.clear();render();$('status').textContent='Selected playing-time estimate restored.';return;}
  const excluded=event.target.closest('button[data-exclude]');if(excluded){excludePlayer(excluded.dataset.exclude);return;}

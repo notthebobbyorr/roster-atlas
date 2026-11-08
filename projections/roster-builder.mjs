@@ -1,19 +1,19 @@
 import {workloadProfile,universalHitterNote} from './universal-hitter-context.mjs?v=universal-600pa-1';
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
-import {withPitcherDifference} from './pitcher-outcomes.mjs?v=pitcher-outcomes-20261105-1';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=preferred-milb-20261106-1';
+import {withPitcherDifference} from './pitcher-outcomes.mjs?v=babip-both-20261108-1';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=babip-both-20261108-1';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
-import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=dc-pace-1';
+import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=babip-both-20261108-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
-import {compileLists,projection} from './rankings-core.mjs?v=preferred-milb-20261106-1';
+import {compileLists,projection} from './rankings-core.mjs?v=babip-both-20261108-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=pitcher-outcomes-20261105-1';
+import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=babip-both-20261108-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
-import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=age-column-20261108-1';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=babip-both-20261108-1';
 import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 
 mountDownsideTooltips();

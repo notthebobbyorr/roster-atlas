@@ -36,7 +36,7 @@ export function cleanForecast(forecast){
  const number=value=>finite(value)?value:null;
  return {pitching_grade:number(forecast?.pitching_grade),offense_grade:number(forecast?.offense_grade),IP_per_start:number(forecast?.IP_per_start),PA:number(forecast?.PA),AB:number(forecast?.AB),IP:number(forecast?.IP),
   ...(plain(forecast?.batting)?{batting:Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(key=>[key,number(forecast.batting[key])]))}:{}),
-  stats:{...Object.fromEntries(['R','HR','RBI','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),...Object.fromEntries(['OBP','SLG','OPS','BABIP','W','K_pct','BB_pct','K_minus_BB_pct','SwStr_pct'].filter(key=>Object.hasOwn(forecast?.stats||{},key)).map(key=>[key,number(forecast.stats[key])]))},
+  stats:{...Object.fromEntries(['R','HR','RBI','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),...Object.fromEntries(['OBP','SLG','OPS','BABIP','BABIP_against','W','K_pct','BB_pct','K_minus_BB_pct','SwStr_pct'].filter(key=>Object.hasOwn(forecast?.stats||{},key)).map(key=>[key,number(forecast.stats[key])]))},
   grades:Object.fromEntries([...['Power','Speed','AVG','K','ERA','WHIP','R','RBI'],...['W','SV'].filter(key=>Object.hasOwn(forecast?.grades||{},key))].map(key=>[key,number(forecast?.grades?.[key])])),sum:number(forecast?.sum),sum_with_runs_rbi:number(forecast?.sum_with_runs_rbi),...(Object.hasOwn(forecast||{},'sum_full')?{sum_full:number(forecast.sum_full)}:{})};
 }
 export function defaultAssignment(entry,team){
@@ -121,6 +121,7 @@ export function validateTeam(raw){
   const forecast=cleanForecast(manual?null:p.snapshot.forecast);
   if([forecast.IP_per_start,forecast.PA,forecast.AB,forecast.IP,...Object.entries(forecast.stats).filter(([key])=>key!=='K_minus_BB_pct').map(([,value])=>value),...Object.values(forecast.batting||{})].some(value=>finite(value)&&value<0))throw Error('Saved workload and outcome stats cannot be negative.');
   if(finite(forecast.stats.K_minus_BB_pct)&&Math.abs(forecast.stats.K_minus_BB_pct)>100)throw Error('Saved K-BB% must be between -100 and 100 percentage points.');
+  if(finite(forecast.stats.BABIP_against)&&forecast.stats.BABIP_against>1)throw Error('Saved BABIP against must be between zero and one.');
   return {...p,eligible:[...new Set(p.eligible)],snapshot:{model:manual?'placeholder':p.snapshot.model,season:p.snapshot.season,age:manual?null:validAge(p.snapshot.age)?p.snapshot.age:null,saved_at:p.snapshot.saved_at,forecast}};
  });
  return {id:raw.id,name:raw.name.trim(),split:raw.split,method:raw.method,...(workloadScenario?{workloadScenario}:{}),park:raw.park,view:raw.view,sumSort:raw.sumSort||'sum',...(raw.dcTarget!==undefined?{dcTarget:raw.dcTarget}:{}),showGuidelines:raw.showGuidelines===true,picks};

@@ -5,7 +5,7 @@ import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
 import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcomes-20261105-2';
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
-import * as skillRegistry from './skill-models.mjs?v=preferred-milb-20261106-1';
+import * as skillRegistry from './skill-models.mjs?v=babip-both-20261108-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
@@ -142,7 +142,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=age-column-20261108-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=babip-both-20261108-1':'rankings.html?v=babip-both-20261108-1')+'?v=age-column-20261108-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
