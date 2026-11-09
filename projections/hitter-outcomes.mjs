@@ -1,4 +1,4 @@
-import {expectedHomeRunColumns} from './expected-home-runs.mjs?v=xhr-20261108-1';
+import {expectedHomeRunColumns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
 const finite=Number.isFinite;
 
 // Keep one column definition for Rankings, the roster pool and drafted hitters.

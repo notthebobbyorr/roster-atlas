@@ -1,12 +1,13 @@
-import {expectedHomeRunColumns} from './expected-home-runs.mjs?v=xhr-20261108-1';
+import {expectedHomeRunColumns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
 const finite=Number.isFinite;
 export const pitcherDifferenceColumn=['K_minus_BB_pct','K-BB%',1];
 export const pitcherBABIPColumn=['BABIP_against','BABIP against',3];
-export const pitcherRateColumns=[pitcherBABIPColumn,...expectedHomeRunColumns,['K_pct','K%',1],['BB_pct','BB%',1],pitcherDifferenceColumn,['SwStr_pct','SwStr%',1]];
+const pitcherHomeRunsColumn=['HR_allowed','HR allowed',0];
+export const pitcherRateColumns=[pitcherHomeRunsColumn,pitcherBABIPColumn,...expectedHomeRunColumns,['K_pct','K%',1],['BB_pct','BB%',1],pitcherDifferenceColumn,['SwStr_pct','SwStr%',1]];
 
 // Mixed tables share K%, BB% and SwStr% with hitter rows. Insert the
 // pitcher-only difference without repeating those existing columns.
-export const withPitcherDifference=columns=>columns.flatMap(column=>column[0]==='BABIP'?[column,pitcherBABIPColumn]:column[0]==='SwStr_pct'?[pitcherDifferenceColumn,column]:[column]);
+export const withPitcherDifference=columns=>columns.flatMap(column=>column[0]==='HR'?[column,pitcherHomeRunsColumn]:column[0]==='BABIP'?[column,pitcherBABIPColumn]:column[0]==='SwStr_pct'?[pitcherDifferenceColumn,column]:[column]);
 
 export function pitcherOutcomeStats(profile,stats){
  const projections=profile?.projected_skills;

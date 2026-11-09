@@ -1,10 +1,10 @@
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
-import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=xhr-20261108-1';
-import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=xhr-20261108-1';
+import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
+import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
-import {expectedHomeRunStats} from './expected-home-runs.mjs?v=xhr-20261108-1';
+import {expectedHomeRunStats} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){
@@ -22,7 +22,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
   rates=line.rates,stats={},grades={},batting=kind==='Hitter'&&finite(pa)?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,pa*rates[c+'_PA']])):null;
  if(kind==='Hitter')Object.assign(stats,{Power:rates.HR_PA/rates.AB_PA,Speed:rates.SB_PA/rates.AB_PA,AVG:rates.H_PA/rates.AB_PA,OPS:line.OPS,
   HR:finite(pa)?rates.HR_PA*pa:null,SB:finite(pa)?rates.SB_PA*pa:null,R:pa===0?0:finite(pa)&&finite(rates.R_PA)?rates.R_PA*pa:null,RBI:pa===0?0:finite(pa)&&finite(rates.RBI_PA)?rates.RBI_PA*pa:null});
- else Object.assign(stats,{K:finite(ip)?rates.K_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)?rates.W_IP*ip:null,SV:finite(ip)?rates.SV_IP*ip:null});
+ else Object.assign(stats,{K:finite(ip)?rates.K_IP*ip:null,HR_allowed:finite(ip)&&finite(rates.HR_IP)?rates.HR_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)?rates.W_IP*ip:null,SV:finite(ip)?rates.SV_IP*ip:null});
  stats.K_pct=finite(rates.K_PA)?100*rates.K_PA:null;stats.BB_pct=finite(rates.BB_PA)?100*rates.BB_PA:null;
  if(kind==='Hitter'){
   Object.assign(stats,hitterOutcomeStats(core,p,rates));

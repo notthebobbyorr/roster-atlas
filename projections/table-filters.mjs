@@ -1,11 +1,11 @@
-import {rankingSortOptions,rankingNumericValue} from './rankings-sort.mjs?v=xhr-20261108-1';
+import {rankingSortOptions,rankingNumericValue} from './rankings-sort.mjs?v=single-hr-total-20261109-1';
 
 export const filterCategories=rankingSortOptions('All Players').filter(o=>!['rank','fa'].includes(o.value)).map(o=>({...o,label:o.value==='grade:K'?'K SD':o.value==='stat:IP'?'IP (decimal innings)':o.label}));
 const fields=new Set(filterCategories.map(o=>o.value));
 export const filterOperators=['=','!=','>','>=','<','<='];
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function normalizeTableFilters(raw){
- return {mode:raw?.mode==='any'?'any':'all',rules:(Array.isArray(raw?.rules)?raw.rules:[]).slice(0,20).map(rule=>({
+ return {mode:raw?.mode==='any'?'any':'all',rules:(Array.isArray(raw?.rules)?raw.rules:[]).filter(rule=>rule?.field!=='stat:xHR').slice(0,20).map(rule=>({
   field:fields.has(rule?.field)?rule.field:'stat:PA',operator:filterOperators.includes(rule?.operator)?rule.operator:'>=',
   value:['string','number'].includes(typeof rule?.value)&&String(rule.value).length<=40?String(rule.value):''
  }))};

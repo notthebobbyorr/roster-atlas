@@ -4,9 +4,9 @@ import {playingTimePreviewStore} from './playing-time-preview.mjs?v=saved-worklo
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
 import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcomes-20261105-2';
-import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=xhr-20261108-1';
+import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
-import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=xhr-20261108-1';
+import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
 import * as skillRegistry from './skill-models.mjs?v=hr-likelihood-era-20261108-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
@@ -153,7 +153,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=xhr-20261108-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=single-hr-total-20261109-1':'rankings.html?v=single-hr-total-20261109-1')+'?v=xhr-20261108-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

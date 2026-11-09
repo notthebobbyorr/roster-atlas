@@ -2,7 +2,7 @@ const finite = Number.isFinite;
 const rate = value => finite(value) && value >= 0 && value <= 1;
 const ratePair = value => Array.isArray(value) && value.length === 2 && value.every(rate);
 
-export const expectedHomeRunColumns = [['xHR_FB_pct','xHR/FB%',1], ['xHR','xHR (20°+)',1]];
+export const expectedHomeRunColumns = [['xHR_FB_pct','xHR/FB%',1]];
 
 export function attachExpectedHomeRuns(core, payload) {
  const season = Number(core.projection_season ?? core.season);
