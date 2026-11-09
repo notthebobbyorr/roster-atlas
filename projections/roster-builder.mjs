@@ -13,7 +13,8 @@ import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=closing-opportunities-20261109-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
-import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=closing-opportunities-20261109-1';
+import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=fa-year-filter-20261109-1';
 import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 
 mountDownsideTooltips();
@@ -32,11 +33,16 @@ function editWorkload(input){
  catch(error){$('status').textContent=error.message;input.focus();}
 }
 
-let core,pt,saves,owner;
+let core,pt,saves,contracts,owner;
 try{
  if(parent===window||!parent.projectionRankingOwner||!parent.skillGradesLoad)throw Error('Open Roster Atlas and sign in to use the roster builder.');
  owner=parent.projectionRankingOwner;
- [core,pt,saves]=await Promise.all([parent.skillGradesLoad(),parent.skillGradesWorkloadsLoad(),parent.projectionSavesLoad?.().catch(()=>null)||null]);
+ [core,pt,saves,contracts]=await Promise.all([
+  parent.skillGradesLoad(),
+  parent.skillGradesWorkloadsLoad(),
+  parent.projectionSavesLoad?.().catch(()=>null)??null,
+  parent.projectionContractsLoad?.()??null
+ ]);
  if(owner!==parent.projectionRankingOwner)throw Error('Session changed. Sign in again.');
 }catch(error){$('status').textContent=error.message;throw error;}
 const model=parent.skillGradesModel(),season=core.projection_season||2027;
@@ -45,6 +51,7 @@ if(!core.runs_rbi_context)$('workload').querySelector?.('[value=fa_context]')?.r
 if(!core.rotation_context)$('workload').querySelector?.('[value=rotation_context]')?.remove();
 if(core.park_mode==='as_projected'){$('park').disabled=true;$('park').title='This variant uses its selected projection context without an additional park transformation.';}
 const pool=compileLists(starterRoles,core.players,parent.projectionEligiblePositions)['All Players'];
+attachContracts({pool},contracts,season);
 const entryByKey=new Map(pool.map(entry=>[entry.key,entry]));
 $('organization').innerHTML+=[...new Set(pool.map(p=>p.team))].sort().map(team=>'<option value="'+esc(team)+'">'+esc(team.replaceAll('-',' '))+'</option>').join('');
 const storageKey='ra-draft-teams:v1:'+owner;

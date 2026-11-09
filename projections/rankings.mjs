@@ -13,10 +13,10 @@ import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
 import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=closing-opportunities-20261109-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=closing-opportunities-20261109-1';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=fa-year-filter-20261109-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=closing-opportunities-20261109-1';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=fa-year-filter-20261109-1';
 import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 mountDownsideTooltips();
 document.getElementById('rookie-filter-note').textContent=rookieFilterNote;

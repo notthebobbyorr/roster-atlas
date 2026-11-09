@@ -1,6 +1,7 @@
-import {rankingSortOptions,rankingNumericValue} from './rankings-sort.mjs?v=closing-opportunities-20261109-1';
+import {rankingSortOptions,rankingNumericValue} from './rankings-sort.mjs?v=fa-year-filter-20261109-1';
 
-export const filterCategories=rankingSortOptions('All Players').filter(o=>!['rank','fa'].includes(o.value)).map(o=>({...o,label:o.value==='grade:K'?'K SD':o.value==='stat:IP'?'IP (decimal innings)':o.label}));
+const filterLabels={'grade:K':'K SD','stat:IP':'IP (decimal innings)',fa:'Free agent year'};
+export const filterCategories=rankingSortOptions('All Players').filter(option=>option.value!=='rank').map(option=>({...option,label:filterLabels[option.value]??option.label}));
 const fields=new Set(filterCategories.map(o=>o.value));
 export const filterOperators=['=','!=','>','>=','<','<='];
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

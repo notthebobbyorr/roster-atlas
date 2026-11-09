@@ -25,6 +25,7 @@ export function normalizeRankingSort(role,value,direction='desc'){
 }
 export function rankingNumericValue(row,value){
  if(value==='age')return projectionAge(row.entry,row.pick,row.season??2027);
+ if(value==='fa')return row.entry?.contractInfo?.listed??row.entry?.contractInfo?.earliest??null;
  if(value==='sum')return row.forecast.sum;
  if(value==='sum_with_runs_rbi')return row.forecast.sum_with_runs_rbi;
  if(value==='sum_full')return row.forecast.sum_full;
