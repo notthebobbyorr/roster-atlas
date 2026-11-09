@@ -2,18 +2,18 @@ import {workloadProfile,universalHitterNote} from './universal-hitter-context.mj
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {withPitcherDifference} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=single-hr-total-20261109-1';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=closing-opportunities-20261109-1';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=single-hr-total-20261109-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
-import {compileLists,projection} from './rankings-core.mjs?v=single-hr-total-20261109-1';
+import {compileLists,projection} from './rankings-core.mjs?v=closing-opportunities-20261109-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=single-hr-total-20261109-1';
+import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=closing-opportunities-20261109-1';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
-import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=single-hr-total-20261109-1';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=closing-opportunities-20261109-1';
 import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 
 mountDownsideTooltips();
@@ -67,7 +67,7 @@ if(!Object.keys(teams).length){const team=createTeam();teams[team.id]=team;}
 if(!core.runs_rbi_context)for(const team of Object.values(teams))if(team.method==='fa_context')team.method='projected';
 if(!Object.hasOwn(teams,activeId))activeId=Object.keys(teams)[0];
 const totalsColumns=[['PA','PA',0],['AB','AB',0],['R','R',1],['HR','HR',1],['RBI','RBI',1],['SB','SB',1],['AVG','AVG',3],['OPS','OPS',3],['IP','IP',2],['K','K',1],['W','W',1],['SV','SV',1],['ERA','ERA',2],['WHIP','WHIP',3]];
-const playerColumns=[...withPitcherDifference(hitterOutcomeColumns),...totalsColumns.filter(([key])=>['IP','K','W','SV','ERA','WHIP'].includes(key)).flatMap(col=>col[0]==='IP'?[col,['IP_per_start','IP/Start est.',1]]:[col])];
+const playerColumns=[...withPitcherDifference(hitterOutcomeColumns),...totalsColumns.filter(([key])=>['IP','K','W','SV','ERA','WHIP'].includes(key)).flatMap(col=>col[0]==='IP'?[col,['IP_per_start','IP/Start est.',1]]:col[0]==='SV'?[col,['SVO_share_pct','Team SVO %',1]]:[col])];
 const gradeColumns=['Power','Speed','AVG','K','ERA','WHIP','R','RBI','W','SV'];
 const modelNames={platoon:'Platoon skill-aged · integrated hitter splits',hybrid_full:'Full skills-first hybrid',recommended:'Recommended cutoffs',native:'Native sample regression',research:'Bayesian feature model',original:'Original live model'};
 function currentTeam(){return teams[activeId];}

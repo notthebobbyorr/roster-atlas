@@ -15,9 +15,53 @@ function poolFor(data,teamId){
 }
 const selectedRole=(record,override)=>saveRoleOptions.some(([id])=>id===override)&&override!=='auto'?override:record?.auto_role||record?.fallback_role||'unassigned';
 const overrideFor=(overrides,id)=>overrides instanceof Map?overrides.get(id):overrides?.[id];
+const closingPools=new WeakMap();
+function closingPool(forecast,teamId){
+ if(!closingPools.has(forecast)){
+  const pools=new Map();
+  for(const [id,row] of Object.entries(forecast.players)){
+   const key=row.team_id??null;
+   if(!pools.has(key))pools.set(key,[]);
+   pools.get(key).push([id,row]);
+  }
+  closingPools.set(forecast,{pools,reserve:Object.values(forecast.teams).reduce((sum,team)=>sum+team.budget*team.reserve_share,0)});
+ }
+ const {pools,reserve}=closingPools.get(forecast);
+ return {entries:pools.get(teamId??null)||[],reserve};
+}
+function closingSave(data,forecast,mlbid,IP,override,options){
+ const id=String(mlbid),row=forecast.players[id];
+ if(!row)return {SV:0,SVO:0,teamOpportunityShare:null,conversionRate:null,role:'unassigned',override,
+  source:'Closing opportunity model',detailText:'Outside the current modeled pitcher and free-agent pools.'};
+ const team=forecast.teams[String(row.team_id)],{entries,reserve}=closingPool(forecast,row.team_id);
+ const roleFor=(pid,value)=>{
+  const requested=pid===id?override:overrideFor(options.overrides,pid);
+  return saveRoleOptions.some(([key])=>key===requested)&&requested!=='auto'?requested:value.role;
+ };
+ const weight=(pid,value)=>{
+  const base=team?value.share:value.reserve_weight,role=roleFor(pid,value);
+  if(role===value.role)return base;
+  const scenarios=data.players?.[pid]?.scenarios;
+  const current=scenarios?.[role]?.opportunities_per_ip;
+  const original=scenarios?.[value.role]?.opportunities_per_ip||scenarios?.other?.opportunities_per_ip;
+  return finite(current)&&original>0?base*current/original:base;
+ };
+ const total=entries.reduce((sum,[pid,value])=>sum+weight(pid,value),0),own=weight(id,row);
+ const fraction=total>0?own/total:0;
+ const share=team?fraction*(1-team.reserve_share):null;
+ const SVO=team?team.budget*share:reserve*fraction,role=roleFor(id,row);
+ const alternate=data.players?.[id]?.scenarios?.[role]?.conversion_rate;
+ const conversionRate=role!==row.role&&finite(alternate)?alternate:row.conversion;
+ const SV=SVO*conversionRate;
+ const origin=team?team.team+' · '+(100*share).toFixed(1)+'% of team save opportunities':'Unassigned · share of pooled free-agent opportunities';
+ return {SV,SVO,teamOpportunityShare:share,conversionRate,role,override,teamAllocated:Boolean(team),
+  source:'Closing opportunity model',rate:IP>0?SV/IP:null,
+  detailText:origin+' · '+SVO.toFixed(1)+' SVO × '+(100*conversionRate).toFixed(1)+'% conversion'};
+}
 export function projectSaves(data,mlbid,IP,override='auto',options={}){
  IP=roundInnings(IP);
  const record=data?.players?.[String(mlbid)],selected=saveRoleOptions.some(([id])=>id===override)?override:'auto';
+ if(data?.closing_opportunities)return closingSave(data,data.closing_opportunities,mlbid,IP,selected,options);
  const role=selectedRole(record,selected),rawRate=record?.scenarios?.[role]?.saves_per_ip;
  const baselineRole=selected==='auto'?record?.baseline?.auto_role||'unassigned':selected,baselineRate=record?.baseline?.scenarios?.[baselineRole]?.saves_per_ip;
  const baselineSV=finite(IP)&&IP>=0&&finite(baselineRate)&&baselineRate>=0?IP*baselineRate:null,scenario=record?.scenarios?.[role];
@@ -50,6 +94,12 @@ export function projectSaves(data,mlbid,IP,override='auto',options={}){
 }
 export function savesExplainer(data){
  if(!data)return '<p class="note">Saves projections are not available in this snapshot.</p>';
+ if(data.closing_opportunities){
+  const forecast=data.closing_opportunities;
+  return '<p class="note">Team SVO % is the modeled share of a club’s save opportunities. Projected saves equal the team opportunity budget × the pitcher’s share × the pitcher’s Atlas conversion rate. SV SD uses that saves forecast.</p>'+
+   '<p class="note">The model uses full-season closing shares from the '+esc(forecast.roster_date)+' roster snapshot. The team budgets cover official opportunities. The share model learned from relievers starting the ninth with a one- to three-run lead.</p>'+
+   '<p class="note">The outside-roster shares fund the free-agent pool. Eligible unassigned relievers receive a portion based on their Atlas innings and opportunity rate. Their team share is blank until a team is known. Manual role changes adjust the allocation within the relevant pool.</p>';
+ }
  const metadata=data.metadata||{},evaluation=metadata.evaluation||metadata.validation||data.validation||{};
  const descriptions=['description','method','selection','personal_record','personal_record_policy','input_policy','regression','recency','role_policy','certainty_policy','component_policy','workload_policy','target_policy','forecast_ip_policy','recency_policy','weighting','mase_definition','validation_scope','limitations'].map(key=>metadata[key]).filter(value=>typeof value==='string');
  const teams=Object.values(data.teams||{});

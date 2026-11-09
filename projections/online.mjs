@@ -8,7 +8,8 @@ import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-2026
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
 import * as skillRegistry from './skill-models.mjs?v=hr-likelihood-era-20261108-1';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=closing-opportunities-20261109-1';
+import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=closing-opportunities-20261109-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 const {skillModels,skillWorkloads}=skillRegistry;
@@ -64,6 +65,11 @@ async function runtimeLoad(){
   delete data.core.park_sets;
   for(const p of Object.values(data.saves.players))p.scenarios=data.saves.scenario_sets[p.scenario_index];
   delete data.saves.scenario_sets;
+  if(Number(data.core.projection_season??data.core.season)===closingOpportunitySource.season){
+   const closing=await supplementLoad(closingOpportunitySource,'atlas-closing-opportunities',epoch,cache);
+   if(closing.kind!=='atlas-closing-opportunities'||closing.season!==closingOpportunitySource.season||!closing.teams||!closing.players)throw Error('Closing opportunity forecasts have an unsupported format.');
+   data.saves.closing_opportunities=closing;
+  }
   return data;
  })().catch(error=>{if(epoch===sessionEpoch)cache.delete(version);throw error;}));
  const result=await cache.get(version);
@@ -153,7 +159,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html?v=single-hr-total-20261109-1':'rankings.html?v=single-hr-total-20261109-1')+'?v=xhr-20261108-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=closing-opportunities-20261109-1':'rankings.html?v=closing-opportunities-20261109-1')+'&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

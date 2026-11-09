@@ -36,7 +36,7 @@ export function cleanForecast(forecast){
  const number=value=>finite(value)?value:null;
  return {pitching_grade:number(forecast?.pitching_grade),offense_grade:number(forecast?.offense_grade),IP_per_start:number(forecast?.IP_per_start),PA:number(forecast?.PA),AB:number(forecast?.AB),IP:number(forecast?.IP),
   ...(plain(forecast?.batting)?{batting:Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(key=>[key,number(forecast.batting[key])]))}:{}),
-  stats:{...Object.fromEntries(['R','HR','RBI','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),...Object.fromEntries(['OBP','SLG','OPS','BABIP','BABIP_against','xHR_FB_pct','xHR','HR_allowed','W','K_pct','BB_pct','K_minus_BB_pct','SwStr_pct'].filter(key=>Object.hasOwn(forecast?.stats||{},key)).map(key=>[key,number(forecast.stats[key])]))},
+  stats:{...Object.fromEntries(['R','HR','RBI','SB','AVG','K','SV','ERA','WHIP'].map(key=>[key,number(forecast?.stats?.[key])])),...Object.fromEntries(['OBP','SLG','OPS','BABIP','BABIP_against','xHR_FB_pct','xHR','HR_allowed','W','K_pct','BB_pct','K_minus_BB_pct','SwStr_pct','SVO_share_pct'].filter(key=>Object.hasOwn(forecast?.stats||{},key)).map(key=>[key,number(forecast.stats[key])]))},
   grades:Object.fromEntries([...['Power','Speed','AVG','K','ERA','WHIP','R','RBI'],...['W','SV'].filter(key=>Object.hasOwn(forecast?.grades||{},key))].map(key=>[key,number(forecast?.grades?.[key])])),sum:number(forecast?.sum),sum_with_runs_rbi:number(forecast?.sum_with_runs_rbi),...(Object.hasOwn(forecast||{},'sum_full')?{sum_full:number(forecast.sum_full)}:{})};
 }
 export function defaultAssignment(entry,team){

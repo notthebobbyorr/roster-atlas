@@ -1,13 +1,13 @@
 import {compareFreeAgentYears} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherRateColumns} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
-import {projectionAge} from './roster-builder-core.mjs?v=single-hr-total-20261109-1';
+import {projectionAge} from './roster-builder-core.mjs?v=closing-opportunities-20261109-1';
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 export function rankingSortOptions(role){
  if(role==='All Players')return [...new Map([...rankingSortOptions('All P'),...rankingSortOptions('UT-only')].map(option=>[option.value,option])).values()];
  const pitcher=['SP','RP','All P'].includes(role);
- const totals=pitcher?[['IP','Innings (IP)'],['IP_per_start','IP/Start estimate'],['K','Strikeouts (K)'],['W','Wins (W)'],['SV','Saves (SV)'],['ERA','ERA'],['WHIP','WHIP']]:hitterOutcomeColumns;
+ const totals=pitcher?[['IP','Innings (IP)'],['IP_per_start','IP/Start estimate'],['K','Strikeouts (K)'],['W','Wins (W)'],['SV','Saves (SV)'],['SVO_share_pct','Team SVO %'],['ERA','ERA'],['WHIP','WHIP']]:hitterOutcomeColumns;
  const splits=pitcher?[]:[{value:'split:R',label:'OPS vs RHP'},{value:'split:L',label:'OPS vs LHP'}];
  const grades=pitcher?[['K','Strikeouts SD'],['ERA','ERA SD'],['WHIP','WHIP SD'],['W','Wins SD'],['SV','Saves SD']]:[['Power','Power SD'],['Speed','Speed SD'],['AVG','AVG SD'],['R','Runs SD'],['RBI','RBI SD']];
  const inputs=pitcher?[['pitching_grade','ACE'],['stuff','Stuff (pitch grade)'],['SwStr','SwStr %']]:[['offense_grade','SLAM'],['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs expected']];

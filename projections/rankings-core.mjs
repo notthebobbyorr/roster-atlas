@@ -1,11 +1,11 @@
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {hitterABPerPA} from './playing-time-preview.mjs?v=rotation-rates-20261104-1';
 import {projectInningsPerStart} from './pitcher-starts.mjs?v=hybrid-full-1';
-import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
+import {projectSaves} from './saves.mjs?v=closing-opportunities-20261109-1';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {playerOrganizations} from './player-organizations.mjs?v=roster-refresh-1';
 import {projectWins} from './pitcher-wins.mjs?v=roster-refresh-1';
-import {completedProjection} from './complete-projection.mjs?v=single-hr-total-20261109-1';
+import {completedProjection} from './complete-projection.mjs?v=closing-opportunities-20261109-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
@@ -128,7 +128,7 @@ export function projection(core,pt,entry,{model='original',method='projected',pa
  const context=core.runs_rbi_context?.players?.[String(p.mlbid)];
  const batting=p.kind==='Hitter'?p.projected_batting?.combined:null;
  if(p.kind==='Hitter')Object.assign(stats,hitterOutcomeStats(core,p,batting));
- else Object.assign(stats,pitcherOutcomeStats(p,stats));
+ else Object.assign(stats,pitcherOutcomeStats(p,stats),{SVO_share_pct:finite(save?.teamOpportunityShare)?100*save.teamOpportunityShare:null});
  const contextPA=finite(previewPA)?previewPA:workloadMethod==='standard'&&p.kind==='Hitter'?600:finite(variant?.PA)?variant.PA:null;
  const contextualTotal=category=>!context||!finite(contextPA)||!finite(context[category])?null:context.PA>0?context[category]*contextPA/context.PA:context.PA===0&&contextPA===0?0:null;
  const runStats=contextMode&&p.kind==='Hitter'?{R:contextualTotal('R'),RBI:contextualTotal('RBI')}:{};

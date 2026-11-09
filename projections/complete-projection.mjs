@@ -1,5 +1,5 @@
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
-import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
+import {projectSaves} from './saves.mjs?v=closing-opportunities-20261109-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
@@ -29,10 +29,12 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  }else Object.assign(stats,pitcherOutcomeStats(p,stats));
  Object.assign(stats,expectedHomeRunStats(core,p,rates,pa,ip));
  let save=null;
+ const useSaveModel=Boolean(saves?.closing_opportunities)||savesRole!=='auto';
  if(kind==='Pitcher'){
-  if(savesRole!=='auto')save=projectSaves(saves,p.mlbid,ip,savesRole,{method:mode,overrides:savesOverrides,workloadOverrides});
+  if(useSaveModel)save=projectSaves(saves,p.mlbid,ip,savesRole,{method:mode,overrides:savesOverrides,workloadOverrides});
   else save={SV:stats.SV,role:line.role==='SP'?'starter':saves?.players?.[String(p.mlbid)]?.auto_role||'other',override:'auto',rate:rates.SV_IP,source:core.model_name||'Complete projections',teamAllocated:false,detailText:'Completed team-context saves forecast, scaled with innings.'};
-  if(savesRole!=='auto')stats.SV=save?.SV??null;
+  if(useSaveModel)stats.SV=save?.SV??null;
+  stats.SVO_share_pct=finite(save?.teamOpportunityShare)?100*save.teamOpportunityShare:null;
  }
  const categories=kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'];
  for(const c of categories){
@@ -46,7 +48,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  }
  for(const c of kind==='Hitter'?['R','RBI']:['W','SV']){
   const refs=kind==='Hitter'?core.runs_rbi_context.standards[view==='quality'?'quality':'contribution']:core.pitcher_outcomes.standards[view==='quality'?'quality':'contribution'][mode]||core.pitcher_outcomes.standards[view==='quality'?'quality':'contribution'].projected;
-  const value=view==='quality'?(kind==='Hitter'?rates[c+'_PA']:c==='W'?rates.W_IP:savesRole==='auto'?rates.SV_IP:ip>0?stats.SV/ip:null):stats[c],ref=refs[c];
+  const value=view==='quality'?(kind==='Hitter'?rates[c+'_PA']:c==='W'?rates.W_IP:useSaveModel?(ip>0?stats.SV/ip:null):rates.SV_IP):stats[c],ref=refs[c];
   grades[c]=finite(value)&&ref?.sd>0?(value-ref.mean)/ref.sd:null;
  }
  const sum=keys=>keys.every(c=>finite(grades[c]))?keys.reduce((s,c)=>s+grades[c],0):null,base=sum(categories),all=sum([...categories,...(kind==='Hitter'?['R','RBI']:['W','SV'])]);
