@@ -1,4 +1,4 @@
-import {rankingSortOptions,rankingNumericValue} from './rankings-sort.mjs?v=babip-both-20261108-1';
+import {rankingSortOptions,rankingNumericValue} from './rankings-sort.mjs?v=xhr-20261108-1';
 
 export const filterCategories=rankingSortOptions('All Players').filter(o=>!['rank','fa'].includes(o.value)).map(o=>({...o,label:o.value==='grade:K'?'K SD':o.value==='stat:IP'?'IP (decimal innings)':o.label}));
 const fields=new Set(filterCategories.map(o=>o.value));

@@ -1,4 +1,4 @@
-import {teamTotals} from './roster-builder-core.mjs?v=babip-both-20261108-1';
+import {teamTotals} from './roster-builder-core.mjs?v=xhr-20261108-1';
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export const dcLevels=[50,80,90];
 // User-supplied category percentiles. Totals and rates are independent targets.

@@ -1,7 +1,8 @@
+import {expectedHomeRunColumns} from './expected-home-runs.mjs?v=xhr-20261108-1';
 const finite=Number.isFinite;
 
 // Keep one column definition for Rankings, the roster pool and drafted hitters.
-export const hitterOutcomeColumns=[['PA','PA',0],['AB','AB',0],['R','R',0],['RBI','RBI',0],['HR','HR',0],['SB','SB',0],['AVG','AVG',3],['OBP','OBP',3],['SLG','SLG',3],['OPS','OPS',3],['BABIP','BABIP',3],['K_pct','K%',1],['BB_pct','BB%',1],['SwStr_pct','SwStr%',1]];
+export const hitterOutcomeColumns=[['PA','PA',0],['AB','AB',0],['R','R',0],['RBI','RBI',0],['HR','HR',0],...expectedHomeRunColumns,['SB','SB',0],['AVG','AVG',3],['OBP','OBP',3],['SLG','SLG',3],['OPS','OPS',3],['BABIP','BABIP',3],['K_pct','K%',1],['BB_pct','BB%',1],['SwStr_pct','SwStr%',1]];
 
 export function attachHitterOutcomes(core,payload){
  if(payload?.kind!=='atlas-hitter-outcomes'||payload.schema_version!==1||payload.season!==Number(core.projection_season??core.season)||payload.training_through>=payload.season||payload.unit!=='percentage_points'||!payload.players||Array.isArray(payload.players))throw Error('The hitter outcome supplement is not compatible with this projection.');

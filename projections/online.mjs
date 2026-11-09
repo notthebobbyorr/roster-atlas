@@ -4,7 +4,9 @@ import {playingTimePreviewStore} from './playing-time-preview.mjs?v=saved-worklo
 import {redirectRecovery} from '../auth-recovery.mjs?v=auth-recovery-1';
 import {config} from '../config.mjs';
 import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcomes-20261105-2';
-import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
+import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=xhr-20261108-1';
+import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
+import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=xhr-20261108-1';
 import * as skillRegistry from './skill-models.mjs?v=survivorship-20261108-2';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=dc-pace-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
@@ -45,9 +47,18 @@ async function runtimeLoad(){
   const data=compressed?await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).json():await response.json();
   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
   if(data.kind!=='roster-atlas-runtime'||data.schema_version!==1||!Array.isArray(data.core?.players)||!data.workloads?.players||!data.saves?.players||!data.contracts?.players)throw Error('The Atlas data format is not supported.');
-  const outcomes=await hitterOutcomesLoad(epoch,cache);
+  const outcomes=await supplementLoad(hitterOutcomeSource,'atlas-hitter-outcomes',epoch,cache);
   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
   data.core=attachHitterOutcomes(data.core,outcomes);
+  if(data.core.projection_model==='complete_20261104' && Number(data.core.projection_season??data.core.season)===expectedHomeRunsSource.season){
+   try{
+    const expected=await supplementLoad(expectedHomeRunsSource,'atlas-expected-home-runs',epoch,cache);
+    data.core=attachExpectedHomeRuns(data.core,expected);
+   }catch(error){
+    if(!authenticated||epoch!==sessionEpoch)throw error;
+    console.warn('Expected home run estimates unavailable.',error);
+   }
+  }
   data.core.runs_rbi_default=selectedModel.runs_rbi_default===true;
   for(const p of data.core.players)p.parks=data.core.park_sets[p.park_index];
   delete data.core.park_sets;
@@ -59,11 +70,11 @@ async function runtimeLoad(){
  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
  return result;
 }
-async function hitterOutcomesLoad(epoch,cache){
- const version=hitterOutcomeSource.snapshot,key='hitter-outcomes:'+version;
+async function supplementLoad(source,kind,epoch,cache){
+ const version=source.snapshot,key=kind+':'+version;
  if(!cache.has(key))cache.set(key,(async()=>{
   const ready=await(await privateFetch(version,'index.json')).json();
-  if(ready.kind!=='atlas-hitter-outcomes'||ready.version!==version)throw Error('The hitter outcome supplement is not ready.');
+  if(ready.kind!==kind||ready.version!==version)throw Error('The projection supplement is not ready.');
   const payload=await(await privateFetch(version,'runtime.json')).json();
   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
   return payload;
@@ -142,7 +153,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html?v=survivorship-20261108-2':'rankings.html?v=survivorship-20261108-2')+'?v=age-column-20261108-1&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=xhr-20261108-1&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

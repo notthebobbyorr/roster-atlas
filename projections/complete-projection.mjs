@@ -1,9 +1,10 @@
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=playing-time-preview-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
-import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=hitter-outcomes-20261105-2';
-import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=babip-both-20261108-1';
+import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=xhr-20261108-1';
+import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=xhr-20261108-1';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
+import {expectedHomeRunStats} from './expected-home-runs.mjs?v=xhr-20261108-1';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){
@@ -26,6 +27,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  if(kind==='Hitter'){
   Object.assign(stats,hitterOutcomeStats(core,p,rates));
  }else Object.assign(stats,pitcherOutcomeStats(p,stats));
+ Object.assign(stats,expectedHomeRunStats(core,p,rates,pa,ip));
  let save=null;
  if(kind==='Pitcher'){
   if(savesRole!=='auto')save=projectSaves(saves,p.mlbid,ip,savesRole,{method:mode,overrides:savesOverrides,workloadOverrides});
