@@ -10,6 +10,8 @@ import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total
 import * as skillRegistry from './skill-models.mjs?v=role-effects-20261111-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=closing-opportunities-20261109-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=closing-opportunities-20261109-1';
+import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
+import {directPitcherWorkloadSource} from './direct-pitcher-workload-source.mjs?v=direct-workloads-20261111-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
@@ -75,7 +77,10 @@ async function runtimeLoad(){
   delete data.core.park_sets;
   for(const p of Object.values(data.saves.players))p.scenarios=data.saves.scenario_sets[p.scenario_index];
   delete data.saves.scenario_sets;
-  if(Number(data.core.projection_season??data.core.season)===closingOpportunitySource.season){
+  if(version===directPitcherWorkloadSource.base){
+   const workloads=await supplementLoad(directPitcherWorkloadSource,'atlas-direct-pitcher-workloads',epoch,cache);
+   attachDirectPitcherWorkloads(data,workloads,directPitcherWorkloadSource);
+  }else if(Number(data.core.projection_season??data.core.season)===closingOpportunitySource.season){
    const closing=await supplementLoad(closingOpportunitySource,'atlas-closing-opportunities',epoch,cache);
    if(closing.kind!=='atlas-closing-opportunities'||closing.season!==closingOpportunitySource.season||!closing.teams||!closing.players)throw Error('Closing opportunity forecasts have an unsupported format.');
    data.saves.closing_opportunities=closing;
@@ -146,6 +151,13 @@ window.skillGradesDownload=async path=>{
  if(path.startsWith('saves/')){const m=activeModel(),file=path.slice(6);return download(m.saves_source,(m.saves_file_prefix||'')+file);}
  return download(activeModel().snapshot,path);
 };
+function downloadProjections(path){
+ const model=activeModel();
+ if(model.runtime===directPitcherWorkloadSource.base){
+  return download(directPitcherWorkloadSource.snapshot,path+'.gz',{gzip:true,name:path});
+ }
+ return download(model.snapshot,path);
+}
 
 function clear(){
  workloadPreviews.clear();
@@ -189,7 +201,7 @@ $('rosterTab').onclick=()=>{if(selectedView()==='roster')showView();else locatio
 $('retry').onclick=showView;
 if($('downloadForecasts'))$('downloadForecasts').onclick=async()=>{
  if(!authenticated||!activeModel().downloads?.projections_csv)return;
- try{await download(activeModel().snapshot,activeModel().downloads.projections_csv);}
+ try{await downloadProjections(activeModel().downloads.projections_csv);}
  catch(error){$('status').textContent=error.message;}
 };
 if($('downloadRunsRBI'))$('downloadRunsRBI').onclick=async()=>{
@@ -204,7 +216,7 @@ if($('downloadSkills'))$('downloadSkills').onclick=async()=>{
 };
 if($('downloadRotation'))$('downloadRotation').onclick=async()=>{
  if(!authenticated||!activeModel().downloads?.rotation_csv)return;
- try{await download(activeModel().snapshot,activeModel().downloads.rotation_csv);}
+ try{await downloadProjections(activeModel().downloads.rotation_csv);}
  catch(error){$('status').textContent=error.message;}
 };
 $('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;showView();};
