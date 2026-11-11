@@ -53,7 +53,9 @@ function closingSave(data,forecast,mlbid,IP,override,options){
  const alternate=data.players?.[id]?.scenarios?.[role]?.conversion_rate;
  const conversionRate=role!==row.role&&finite(alternate)?alternate:row.conversion;
  const SV=SVO*conversionRate;
- const origin=team?team.team+' · '+(100*share).toFixed(1)+'% of team save opportunities':'Unassigned · share of pooled free-agent opportunities';
+ const origin=team?team.team+' · '+(100*share).toFixed(1)+'% of team save opportunities':
+  finite(row.primary_closer_share)&&role===row.role?'Unassigned · primary-closer signing scenario ('+(100*row.primary_closer_share).toFixed(1)+'% of signing team SVO)':
+  'Unassigned · share of pooled free-agent opportunities';
  return {SV,SVO,teamOpportunityShare:share,conversionRate,role,override,teamAllocated:Boolean(team),
   source:'Closing opportunity model',rate:IP>0?SV/IP:null,
   detailText:origin+' · '+SVO.toFixed(1)+' SVO × '+(100*conversionRate).toFixed(1)+'% conversion'};
@@ -98,7 +100,8 @@ export function savesExplainer(data){
   const forecast=data.closing_opportunities;
   return '<p class="note">Team SVO % is the modeled share of a club’s save opportunities. Projected saves equal the team opportunity budget × the pitcher’s share × the pitcher’s Atlas conversion rate. SV SD uses that saves forecast.</p>'+
    '<p class="note">The model uses full-season closing shares from the '+esc(forecast.roster_date)+' roster snapshot. The team budgets cover official opportunities. The share model learned from relievers starting the ninth with a one- to three-run lead.</p>'+
-   '<p class="note">The outside-roster shares fund the free-agent pool. Eligible unassigned relievers receive a portion based on their Atlas innings and opportunity rate. Their team share is blank until a team is known. Manual role changes adjust the allocation within the relevant pool.</p>';
+   (forecast.calibration?'<p class="note">The rostered shares are calibrated to official save opportunities. The model gives designated unsigned primary closers a share of their potential signing teams’ budgets. Other eligible unassigned relievers divide the remaining outside-roster pool using their Atlas innings and opportunity rates. Team SVO % is blank for unassigned pitchers. Manual role changes adjust the allocation within the relevant pool.</p>':
+   '<p class="note">The outside-roster shares fund the free-agent pool. Eligible unassigned relievers receive a portion based on their Atlas innings and opportunity rate. Their team share is blank until a team is known. Manual role changes adjust the allocation within the relevant pool.</p>');
  }
  const metadata=data.metadata||{},evaluation=metadata.evaluation||metadata.validation||data.validation||{};
  const descriptions=['description','method','selection','personal_record','personal_record_policy','input_policy','regression','recency','role_policy','certainty_policy','component_policy','workload_policy','target_policy','forecast_ip_policy','recency_policy','weighting','mase_definition','validation_scope','limitations'].map(key=>metadata[key]).filter(value=>typeof value==='string');

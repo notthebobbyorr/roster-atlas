@@ -8,10 +8,10 @@ import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-2026
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
 import * as skillRegistry from './skill-models.mjs?v=role-effects-20261111-1';
-import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=closing-opportunities-20261109-1';
-import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=closing-opportunities-20261109-1';
+import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
+import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=calibrated-saves-20261111-1';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
-import {directPitcherWorkloadSource} from './direct-pitcher-workload-source.mjs?v=direct-workloads-20261111-1';
+import {directPitcherWorkloadSource} from './direct-pitcher-workload-source.mjs?v=calibrated-saves-20261111-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
@@ -181,7 +181,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html?v=fa-year-filter-20261109-1':'rankings.html?v=fa-year-filter-20261109-1')+'&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=calibrated-saves-20261111-1':'rankings.html?v=calibrated-saves-20261111-1')+'&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
