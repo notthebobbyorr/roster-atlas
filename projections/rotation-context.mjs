@@ -4,7 +4,12 @@ export function rotationContext(core,pt,entry){
  if(!change)return {core,pt,entry};
  const record=pt.players[entry.key];
  if(!record)return {core,pt,entry};
- const selected=record.selected.replace(/_age$/,''),variant={...record.variants[selected],PA:change.PA,AB:change.AB};
+ const selected=record.selected.replace(/_age$/,'');
+ const lineup=core.hitter_lineup_model?.players[String(p.mlbid)];
+ const PA=lineup?record.variants[record.selected]?.PA:change.PA;
+ const abRate=change.complete_projection?.rates?.AB_PA;
+ const AB=lineup&&Number.isFinite(PA)&&Number.isFinite(abRate)?PA*abRate:lineup?null:change.AB;
+ const variant={...record.variants[selected],PA,AB};
  const profile={...p,rates:change.rates,category_standardized:change.category_standardized,
   projected_batting:{...p.projected_batting,...change.batting_splits,combined:change.batting},
   ...(change.complete_projection?{complete_projection:change.complete_projection}:{}),

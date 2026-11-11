@@ -7,7 +7,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=role-effects-20261111-1';
+import * as skillRegistry from './skill-models.mjs?v=lineup-pa-20261111-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=calibrated-saves-20261111-1';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
@@ -15,11 +15,14 @@ import {directPitcherWorkloadSource} from './direct-pitcher-workload-source.mjs?
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
 import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
+import {applyHitterLineups,lineupSettings,updateLineupOverride} from './hitter-lineup-pa.mjs?v=lineup-pa-20261111-1';
+import {hitterLineupSource} from './hitter-lineup-source.mjs?v=lineup-pa-20261111-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let authenticated=false,requestId=0,sessionEpoch=0;
 const defaultModel=[skillRegistry.defaultSkillModel,'complete_20261104','platoon','hybrid_full','recommended'].find(id=>id&&Object.hasOwn(skillModels,id));
 let modelKey=defaultModel,modelEpoch=0,runtimes=new Map(),savesRoles={};
+let lineupRuntime=null,lineupOverrides={};
 const activeModel=()=>skillModels[modelKey];
 const workloadPreviews=playingTimePreviewStore();
 window.projectionWorkloadPreviews=()=>authenticated?workloadPreviews.get(modelKey):{};
@@ -85,6 +88,24 @@ async function runtimeLoad(){
    if(closing.kind!=='atlas-closing-opportunities'||closing.season!==closingOpportunitySource.season||!closing.teams||!closing.players)throw Error('Closing opportunity forecasts have an unsupported format.');
    data.saves.closing_opportunities=closing;
   }
+  if(version===hitterLineupSource.base){
+   const lineup=await supplementLoad(hitterLineupSource,'atlas-hitter-lineup-pa',epoch,cache);
+   if(lineup.kind!=='atlas-hitter-lineup-pa'||lineup.schema_version!==1||lineup.base_snapshot!==version||
+      lineup.season!==hitterLineupSource.season||!lineup.players||!lineup.teams)throw Error('The hitter lineup forecast has an unsupported format.');
+   const restored={};
+   try{
+    const stored=JSON.parse(localStorage.getItem(lineupStorageKey(window.projectionRankingOwner))||'{}');
+    for(const [id,fields] of Object.entries(stored??{})){
+     for(const [field,value] of Object.entries(fields??{})){
+      try{updateLineupOverride(lineup,restored,id,field,value);}catch{}
+     }
+    }
+   }catch{}
+   lineupOverrides=restored;
+   applyHitterLineups(data,lineup,lineupOverrides);
+   data.core.projection_note+=' Hitter PA starts from Direct and uses the projected lineup role, batting orders, and team PA budget.';
+   lineupRuntime=data;
+  }
   return data;
  })().catch(error=>{if(epoch===sessionEpoch)cache.delete(version);throw error;}));
  const result=await cache.get(version);
@@ -106,6 +127,17 @@ window.skillGradesLoad=async()=>(await runtimeLoad()).core;
 window.skillGradesWorkloadsLoad=async()=>(await runtimeLoad()).workloads;
 window.projectionContractsLoad=async()=>(await runtimeLoad()).contracts;
 window.projectionSavesLoad=async()=>(await runtimeLoad()).saves;
+window.projectionHitterLineup=id=>authenticated&&activeModel().runtime===hitterLineupSource.base
+ ?lineupSettings(lineupRuntime?.core.hitter_lineup_model,String(id),lineupOverrides):null;
+const lineupStorageKey=owner=>'ra-hitter-lineup:v1:'+owner;
+window.projectionSetHitterLineup=(id,field,value)=>{
+ const owner=window.projectionRankingOwner;
+ if(!authenticated||!owner||!lineupRuntime||activeModel().runtime!==hitterLineupSource.base)throw Error('Hitter lineup inputs unavailable.');
+ updateLineupOverride(lineupRuntime.core.hitter_lineup_model,lineupOverrides,String(id),field,value);
+ applyHitterLineups(lineupRuntime,lineupRuntime.core.hitter_lineup_model,lineupOverrides);
+ try{localStorage.setItem(lineupStorageKey(owner),JSON.stringify(lineupOverrides));return true;}
+ catch{return false;}
+};
 window.projectionModelNotes=()=>activeModel().notes;
 window.projectionSavesRoleOptions=saveRoleOptions;
 window.projectionSavesRole=mlbid=>authenticated?savesRoles[String(mlbid)]||'auto':'auto';
@@ -153,6 +185,9 @@ window.skillGradesDownload=async path=>{
 };
 function downloadProjections(path){
  const model=activeModel();
+ if(model.runtime===hitterLineupSource.base){
+  return download(hitterLineupSource.snapshot,path+'.gz',{gzip:true,name:path});
+ }
  if(model.runtime===directPitcherWorkloadSource.base){
   return download(directPitcherWorkloadSource.snapshot,path+'.gz',{gzip:true,name:path});
  }
@@ -161,6 +196,7 @@ function downloadProjections(path){
 
 function clear(){
  workloadPreviews.clear();
+ lineupRuntime=null;lineupOverrides={};
  authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;runtimes=new Map();savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
  $('views').hidden=true;$('retry').hidden=true;$('logout').hidden=true;$('login').hidden=false;
@@ -181,7 +217,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html?v=calibrated-saves-20261111-1':'rankings.html?v=calibrated-saves-20261111-1')+'&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=lineup-pa-20261111-1':'rankings.html?v=lineup-pa-20261111-1')+'&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

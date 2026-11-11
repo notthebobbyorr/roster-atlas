@@ -1,6 +1,6 @@
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=closing-opportunities-20261109-1';
-import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
+import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';

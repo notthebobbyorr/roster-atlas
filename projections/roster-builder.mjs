@@ -2,12 +2,12 @@ import {workloadProfile,universalHitterNote} from './universal-hitter-context.mj
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {withPitcherDifference} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=role-effects-20261111-1';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=lineup-pa-20261111-1';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=single-hr-total-20261109-1';
-import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
+import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
-import {compileLists,projection} from './rankings-core.mjs?v=role-effects-20261111-1';
+import {compileLists,projection} from './rankings-core.mjs?v=lineup-pa-20261111-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
 import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
