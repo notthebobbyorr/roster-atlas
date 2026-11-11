@@ -5,13 +5,14 @@ import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-202611
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
 import {expectedHomeRunStats} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
+import {pitcherRoleProjection} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){
   const next=rotationContext(core,pt,entry);
   return completedProjection(next.core,next.pt,next.entry,{method:'projected',view,saves,savesRole,savesOverrides,workloadOverrides});
  }
- const p=method==='standard'?universalHitterProfile(core,entry.profile):entry.profile,line=p?.complete_projection;
+ const p=method==='standard'?universalHitterProfile(core,entry.profile):entry.profile,line=p?.kind==='Pitcher'?pitcherRoleProjection(core.pitcher_role_effects,p,savesRole):p?.complete_projection;
  if(!line)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,sum_full:null,sum_with_runs_rbi:null};
  const kind=p.kind,record=pt.players[entry.key],mode=method==='fa_context'?'projected':method,
   variant=mode==='standard'?null:roundWorkloadVariant(record?.variants[mode==='projected'?record.selected:mode]),
@@ -26,7 +27,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  stats.K_pct=finite(rates.K_PA)?100*rates.K_PA:null;stats.BB_pct=finite(rates.BB_PA)?100*rates.BB_PA:null;
  if(kind==='Hitter'){
   Object.assign(stats,hitterOutcomeStats(core,p,rates));
- }else Object.assign(stats,pitcherOutcomeStats(p,stats));
+ }else Object.assign(stats,pitcherOutcomeStats({...p,complete_projection:line},stats));
  Object.assign(stats,expectedHomeRunStats(core,p,rates,pa,ip));
  let save=null;
  const useSaveModel=Boolean(saves?.closing_opportunities)||savesRole!=='auto';
@@ -54,5 +55,5 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  const sum=keys=>keys.every(c=>finite(grades[c]))?keys.reduce((s,c)=>s+grades[c],0):null,base=sum(categories),all=sum([...categories,...(kind==='Hitter'?['R','RBI']:['W','SV'])]);
  return {PA:pa,AB:ab,IP:ip,batting,stats,grades,sum:base,sum_with_runs_rbi:kind==='Hitter'?all:base,sum_full:all,
   offense_grade:finite(p.offense_grade)?p.offense_grade:null,pitching_grade:finite(p.pitching_grade)?p.pitching_grade:null,
-  IP_per_start:line.IP_per_start??null,startLength:p.sp_workload??null,saves:save,wins:kind==='Pitcher'?{W:stats.W,source:core.model_name||'Complete projections'}:null};
+  IP_per_start:line.IP_per_start??null,startLength:p.sp_workload??null,roleEffect:line.roleEffect??null,saves:save,wins:kind==='Pitcher'?{W:stats.W,source:core.model_name||'Complete projections'}:null};
 }

@@ -2,7 +2,7 @@ import {workloadProfile,universalHitterNote} from './universal-hitter-context.mj
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherRateColumns,withPitcherDifference} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=closing-opportunities-20261109-1';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=role-effects-20261111-1';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
@@ -11,7 +11,7 @@ import {rosterStatus} from './roster-status.mjs?v=roster-refresh-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=closing-opportunities-20261109-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=closing-opportunities-20261109-1';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=role-effects-20261111-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=fa-year-filter-20261109-1';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
@@ -172,7 +172,7 @@ function contractCell(p){
 }
 function savesRoleCell(p){
  const selected=parent.projectionSavesRole?.(p.mlbid)||'auto',record=saves?.players?.[String(p.mlbid)],auto=record?.auto_role||(record?.fallback_role?record.fallback_role+' · prior/projected role':'unassigned');
- return '<td><select data-save-role="'+esc(p.mlbid)+'" aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' · '+auto:''))+'</option>').join('')+'</select></td>';
+ return '<td><select data-save-role="'+esc(p.mlbid)+'" title="Starter and relief overrides also update pitcher rates in Complete Projections." aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' · '+auto:''))+'</option>').join('')+'</select></td>';
 }
 function processValue(p,field){if(field==='pitching_grade')return p.kind==='Pitcher'?p.profile?.pitching_grade:null;if(field==='offense_grade')return p.kind==='Hitter'?p.profile?.offense_grade:null;return (['stuff','SwStr'].includes(field)?p.kind==='Pitcher':p.kind==='Hitter')?p.profile?.input_skills?.[field]:null;}
 function statCell(f,c,d,entry){

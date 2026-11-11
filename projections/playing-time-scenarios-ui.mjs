@@ -1,5 +1,5 @@
 import {freezePlayingTime,scenarioPlayingTime,defaultScenarioPosition,scenarioPositions,isSavedWorkload,validateWorkloadScenario,workloadScenarioLibrary} from './playing-time-scenarios.mjs?v=frozen-workloads-1';
-import {projection} from './rankings-core.mjs?v=closing-opportunities-20261109-1';
+import {projection} from './rankings-core.mjs?v=role-effects-20261111-1';
 import {hitterABPerPA} from './playing-time-preview.mjs?v=saved-workloads-1';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const amount=(n,kind)=>kind==='Pitcher'?n.toFixed(2):String(Math.round(n));

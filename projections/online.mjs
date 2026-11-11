@@ -7,11 +7,12 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=afl-tracking-b88c65e3c503';
+import * as skillRegistry from './skill-models.mjs?v=role-effects-20261111-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=closing-opportunities-20261109-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=closing-opportunities-20261109-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
+import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let authenticated=false,requestId=0,sessionEpoch=0;
@@ -58,6 +59,15 @@ async function runtimeLoad(){
    }catch(error){
     if(!authenticated||epoch!==sessionEpoch)throw error;
     console.warn('Expected home run estimates unavailable.',error);
+   }
+  }
+  if(data.core.projection_model==='complete_20261104' && Number(data.core.projection_season??data.core.season)===pitcherRoleSource.season){
+   try{
+    const effects=await supplementLoad(pitcherRoleSource,'atlas-pitcher-role-effects',epoch,cache);
+    data.core=attachPitcherRoleEffects(data.core,effects);
+   }catch(error){
+    if(!authenticated||epoch!==sessionEpoch)throw error;
+    console.warn('Pitcher role adjustments unavailable.',error);
    }
   }
   data.core.runs_rbi_default=selectedModel.runs_rbi_default===true;
