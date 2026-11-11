@@ -7,7 +7,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=lineup-pa-20261111-1';
+import * as skillRegistry from './skill-models.mjs?v=pitcher-role-ip-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=calibrated-saves-20261111-1';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
@@ -17,12 +17,17 @@ import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExpl
 import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
 import {applyHitterLineups,lineupSettings,updateLineupOverride} from './hitter-lineup-pa.mjs?v=lineup-pa-20261111-1';
 import {hitterLineupSource} from './hitter-lineup-source.mjs?v=lineup-pa-20261111-1';
+import {starterRoles} from './starter-roles.mjs?v=roster-refresh-1';
+import {applyPitcherRoleWorkloads} from './pitcher-role-workload.mjs?v=pitcher-role-ip-1';
+import {withRoleInningsCSV} from './pitcher-role-workload-export.mjs?v=pitcher-role-ip-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let authenticated=false,requestId=0,sessionEpoch=0;
 const defaultModel=[skillRegistry.defaultSkillModel,'complete_20261104','platoon','hybrid_full','recommended'].find(id=>id&&Object.hasOwn(skillModels,id));
 let modelKey=defaultModel,modelEpoch=0,runtimes=new Map(),savesRoles={};
 let lineupRuntime=null,lineupOverrides={};
+let pitcherWorkloadRuntime=null;
+const pitcherRosterRoles=new Map(starterRoles.players.filter(p=>p.kind==='Pitcher').map(p=>[p.key,p.role]));
 const activeModel=()=>skillModels[modelKey];
 const workloadPreviews=playingTimePreviewStore();
 window.projectionWorkloadPreviews=()=>authenticated?workloadPreviews.get(modelKey):{};
@@ -83,6 +88,9 @@ async function runtimeLoad(){
   if(version===directPitcherWorkloadSource.base){
    const workloads=await supplementLoad(directPitcherWorkloadSource,'atlas-direct-pitcher-workloads',epoch,cache);
    attachDirectPitcherWorkloads(data,workloads,directPitcherWorkloadSource);
+   applyPitcherRoleWorkloads(data,pitcherRosterRoles,savesRoles);
+   data.core.projection_note+=' Pitcher innings reflect RosterResource roles and starter/relief overrides.';
+   pitcherWorkloadRuntime=data;
   }else if(Number(data.core.projection_season??data.core.season)===closingOpportunitySource.season){
    const closing=await supplementLoad(closingOpportunitySource,'atlas-closing-opportunities',epoch,cache);
    if(closing.kind!=='atlas-closing-opportunities'||closing.season!==closingOpportunitySource.season||!closing.teams||!closing.players)throw Error('Closing opportunity forecasts have an unsupported format.');
@@ -149,6 +157,9 @@ window.projectionSetSavesRole=(mlbid,role)=>{
  const id=String(mlbid);
  if(!/^-?[1-9]\d*$/.test(id)||!saveRoleOptions.some(([code])=>code===role))throw Error('Invalid saves role.');
  if(role==='auto')delete savesRoles[id];else savesRoles[id]=role;
+ if(pitcherWorkloadRuntime&&activeModel().runtime===directPitcherWorkloadSource.base){
+  applyPitcherRoleWorkloads(pitcherWorkloadRuntime,pitcherRosterRoles,savesRoles);
+ }
  try{localStorage.setItem('ra-save-role-overrides:v1:'+window.projectionRankingOwner,JSON.stringify(savesRoles));return true;}
  catch{$('status').textContent='Saves role changed for this session; device storage is unavailable.';return false;}
 };
@@ -172,10 +183,12 @@ async function privateFetch(version,path){
  }
  return response;
 }
-async function download(version,path,{gzip=false,name=null}={}){
+async function download(version,path,{gzip=false,name=null,transform=null}={}){
  const epoch=sessionEpoch,response=await privateFetch(version,path);
  const unpack=gzip&&typeof DecompressionStream==='function';
- const blob=unpack?await new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).blob():await response.blob();
+ if(transform&&!unpack)throw Error('Use a browser that supports gzip decompression to download this projection CSV.');
+ const body=unpack?new Response(response.body.pipeThrough(new DecompressionStream('gzip'))):response;
+ const blob=transform&&unpack?new Blob([transform(await body.text())],{type:'text/csv;charset=utf-8'}):await body.blob();
  if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed. Sign in again.');
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=unpack&&name?name:path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
@@ -183,10 +196,11 @@ window.skillGradesDownload=async path=>{
  if(path.startsWith('saves/')){const m=activeModel(),file=path.slice(6);return download(m.saves_source,(m.saves_file_prefix||'')+file);}
  return download(activeModel().snapshot,path);
 };
-function downloadProjections(path){
+async function downloadProjections(path){
  const model=activeModel();
  if(model.runtime===hitterLineupSource.base){
-  return download(hitterLineupSource.snapshot,path+'.gz',{gzip:true,name:path});
+  const {core}=await runtimeLoad();
+  return download(hitterLineupSource.snapshot,path+'.gz',{gzip:true,name:path,transform:csv=>withRoleInningsCSV(csv,core,pitcherRosterRoles)});
  }
  if(model.runtime===directPitcherWorkloadSource.base){
   return download(directPitcherWorkloadSource.snapshot,path+'.gz',{gzip:true,name:path});
@@ -196,6 +210,7 @@ function downloadProjections(path){
 
 function clear(){
  workloadPreviews.clear();
+ pitcherWorkloadRuntime=null;
  lineupRuntime=null;lineupOverrides={};
  authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;runtimes=new Map();savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
  $('dashboard').hidden=true;$('dashboard').removeAttribute('src');
@@ -217,7 +232,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html?v=lineup-pa-20261111-1':'rankings.html?v=lineup-pa-20261111-1')+'&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=lineup-pa-20261111-1':'rankings.html?v=pitcher-role-ip-1')+'&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

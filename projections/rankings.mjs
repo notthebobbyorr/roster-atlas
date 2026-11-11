@@ -190,7 +190,7 @@ function editHitterLineup(id,field,value){
 }
 function savesRoleCell(p){
  const selected=parent.projectionSavesRole?.(p.mlbid)||'auto',record=saves?.players?.[String(p.mlbid)],auto=record?.auto_role||(record?.fallback_role?record.fallback_role+' · prior/projected role':'unassigned');
- return '<td><select data-save-role="'+esc(p.mlbid)+'" title="Starter and relief overrides also update pitcher rates in Complete Projections." aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' · '+auto:''))+'</option>').join('')+'</select></td>';
+ return '<td><select data-save-role="'+esc(p.mlbid)+'" title="Starter and relief overrides update projected innings and pitcher rates in Complete Projections." aria-label="Saves role for '+esc(p.name)+'"'+(!parent.projectionSetSavesRole?' disabled':'')+'>'+saveRoleOptions.map(([code,label])=>'<option value="'+code+'"'+(selected===code?' selected':'')+'>'+esc(label+(code==='auto'?' · '+auto:''))+'</option>').join('')+'</select></td>';
 }
 function processValue(p,field){if(field==='pitching_grade')return p.kind==='Pitcher'?p.profile?.pitching_grade:null;if(field==='offense_grade')return p.kind==='Hitter'?p.profile?.offense_grade:null;return (['stuff','SwStr'].includes(field)?p.kind==='Pitcher':p.kind==='Hitter')?p.profile?.input_skills?.[field]:null;}
 function statCell(f,c,d,entry){
