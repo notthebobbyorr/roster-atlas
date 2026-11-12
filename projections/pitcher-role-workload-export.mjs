@@ -1,4 +1,4 @@
-import {normalizedRoleDirect,pitcherRoleInnings} from './pitcher-role-workload.mjs?v=availability-ip-1';
+import {normalizedRoleDirect,pitcherRoleInnings} from './pitcher-role-workload.mjs?v=role-stints-ip-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=calibrated-saves-20261111-1';
 
