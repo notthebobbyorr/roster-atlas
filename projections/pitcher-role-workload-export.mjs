@@ -1,4 +1,4 @@
-import {normalizedRoleDirect,pitcherRoleInnings} from './pitcher-role-workload.mjs?v=role-normalized-ip-1';
+import {normalizedRoleDirect,pitcherRoleInnings} from './pitcher-role-workload.mjs?v=availability-ip-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=calibrated-saves-20261111-1';
 
@@ -30,9 +30,10 @@ export function withRoleInningsCSV(csv, core, roster, saves = null) {
     })) set(name,value);
     if (p.role_normalized_workload?.history) {
       const role = roster.get(id+':Pitcher') ?? p.direct_workload.role;
-      set('base_workload',normalizedRoleDirect(p.role_normalized_workload.history,role));
-      set('workload_source','MLB-equivalent Direct history normalized by seasonal role');
-      set('workload_policy','role_normalized_direct_ip');
+      const availability = p.role_normalized_workload.availabilityModel;
+      set('base_workload',normalizedRoleDirect(p.role_normalized_workload.history,role,availability));
+      set('workload_source',availability?'Role workload pace and seasonal availability':'MLB-equivalent Direct history normalized by seasonal role');
+      set('workload_policy',availability?'availability_normalized_direct_ip':'role_normalized_direct_ip');
     }
     for (const name of counts) if (old > 0 && get(name) !== '') set(name,Number(get(name))*ip/old);
     const contributions = {K:rates.K_IP*displayed, ERA:(standards.ERA.reference_rate-ERA)*displayed/9,

@@ -6,8 +6,10 @@ const selectedRole = (base, roster, override) => override === 'starter' ? 'SP' :
 
 export const roleWorkloadBenchmarks = Object.freeze({SP:160,Swingman:100,RP:60});
 
-export function normalizedRoleDirect(history, role) {
-  if (!history || !Object.hasOwn(roleWorkloadBenchmarks, role)) return null;
+export function normalizedRoleDirect(history, role, availabilityModel = null) {
+  if (!Object.hasOwn(roleWorkloadBenchmarks, role)) return null;
+  if (availabilityModel) return availabilityModel.pace * availabilityModel.availability * roleWorkloadBenchmarks[role];
+  if (!history) return null;
   const fraction = history.reduce((sum, season) => sum + (season.ip > 0 ?
     season.weight * season.ip / roleWorkloadBenchmarks[season.role] : 0), 0);
   return fraction * roleWorkloadBenchmarks[role];
@@ -16,7 +18,7 @@ export function normalizedRoleDirect(history, role) {
 export function attachRoleNormalizedWorkloads(data, forecast, source) {
   const unit = value => Number.isFinite(value) && value >= 0;
   const roles = Object.keys(roleWorkloadBenchmarks);
-  if (forecast?.kind !== 'atlas-role-normalized-innings' || forecast.schema_version !== 1 ||
+  if (!['atlas-role-normalized-innings','atlas-availability-normalized-innings'].includes(forecast?.kind) || forecast.schema_version !== 1 ||
       forecast.base_snapshot !== source.base || forecast.season !== source.season ||
       !forecast.players || !roles.every(role => forecast.benchmarks?.[role] === roleWorkloadBenchmarks[role])) {
     throw Error('Invalid role-normalized workload snapshot.');
@@ -25,7 +27,9 @@ export function attachRoleNormalizedWorkloads(data, forecast, source) {
   if (pitchers.length !== Object.keys(forecast.players).length) throw Error('Pitcher workload population differs.');
   for (const profile of pitchers) {
     const p = forecast.players[profile.mlbid];
+    const model = p?.availabilityModel;
     if (!p || typeof p.lockedZero !== 'boolean' || (p.capacity !== null && !unit(p.capacity)) ||
+        (model && (!unit(model.pace) || !unit(model.availability) || model.availability > 1 + 1e-8)) ||
         !['SP','Other'].every(group => p.agePerformance?.[group]?.length === 2 && p.agePerformance[group].every(unit)) ||
         (p.history !== null && (!Array.isArray(p.history) || p.history.length !== 3 ||
           !p.history.every(s => unit(s.ip) && unit(s.weight) && (s.ip === 0 || roles.includes(s.role))) ||
@@ -47,7 +51,7 @@ export function pitcherRoleInnings(profile, rosterRole, override = 'auto') {
   const normalized = profile.role_normalized_workload;
   if (normalized?.lockedZero) return 0;
   if (normalized) {
-    const direct = normalizedRoleDirect(normalized.history, target);
+    const direct = normalizedRoleDirect(normalized.history, target, normalized.availabilityModel);
     if (direct === null) return base.projected_ip;
     const [age, performance] = normalized.agePerformance[target === 'SP' ? 'SP' : 'Other'];
     const adjusted = direct * age * performance;
@@ -78,7 +82,7 @@ export function applyPitcherRoleWorkloads(data, roster, overrides = {}) {
     profile.complete_projection.IP = ip;
     if (profile.role_normalized_workload?.history && record.variants.direct) {
       const role = selectedRole(profile.direct_workload.role,rr,override);
-      record.variants.direct.IP = normalizedRoleDirect(profile.role_normalized_workload.history,role);
+      record.variants.direct.IP = normalizedRoleDirect(profile.role_normalized_workload.history,role,profile.role_normalized_workload.availabilityModel);
     }
   }
 }
