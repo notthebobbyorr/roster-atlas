@@ -1,7 +1,8 @@
 import {pitcherRoleInnings} from './pitcher-role-workload.mjs?v=pitcher-role-ip-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
+import {projectSaves} from './saves.mjs?v=calibrated-saves-20261111-1';
 
-export function withRoleInningsCSV(csv, core, roster) {
+export function withRoleInningsCSV(csv, core, roster, saves = null) {
   const profiles = new Map(core.players.filter(p => p.direct_workload).map(p => [String(p.mlbid), p]));
   const records = csv.match(/(?:[^"\r\n]+|"(?:[^"]|"")*")+/g) ?? [];
   const columns = row => (row.match(/(?<=^|,)(?:"(?:[^"]|"")*"|[^,]*)/g) ?? [])
@@ -20,7 +21,7 @@ export function withRoleInningsCSV(csv, core, roster) {
     const p = profiles.get(id);
     if (!p) return record;
     const old = Number(get('IP')), ip = pitcherRoleInnings(p, roster.get(id+':Pitcher'));
-    if (ip === null || ip === old) return record;
+    if (ip === null || (ip === old && !saves)) return record;
     const displayed = roundInnings(ip), {rates,ERA,WHIP} = p.complete_projection;
     for (const [name,value] of Object.entries({
       IP:ip, display_IP:displayed, selected_workload:ip, W:rates.W_IP*ip, display_W:rates.W_IP*displayed,
@@ -34,9 +35,20 @@ export function withRoleInningsCSV(csv, core, roster) {
       const ref = standards[name];
       set(name+'_SD',(value-ref.contribution_mean)/ref.contribution_sd);
     }
-    const win = outcome.contribution.projected.W, saves = outcome.quality.projected.SV;
+    const win = outcome.contribution.projected.W, saveQuality = outcome.quality.projected.SV;
     set('W_SD',(rates.W_IP*displayed-win.mean)/win.sd);
-    set('SV_SD_quality',displayed>0?(Number(get('SV'))/displayed-saves.mean)/saves.sd:'');
+    if (saves) {
+      const forecast = projectSaves(saves,p.mlbid,displayed);
+      const ref = outcome.contribution.projected.SV;
+      set('SV',forecast.SV);
+      set('SV_SD',(forecast.SV-ref.mean)/ref.sd);
+      set('team_SVO_pct',forecast.teamOpportunityShare===null?null:100*forecast.teamOpportunityShare);
+      if (id === '641941') {
+        set('team','Detroit Tigers');
+        set('team_id',116);
+      }
+    }
+    set('SV_SD_quality',displayed>0?(Number(get('SV'))/displayed-saveQuality.mean)/saveQuality.sd:'');
     set('sum_full',['K','ERA','WHIP','W','SV'].reduce((sum,name)=>sum+Number(get(name+'_SD')),0));
     return row.map(value=>/[",\r\n]/.test(String(value))?'"'+String(value).replaceAll('"','""')+'"':value).join(',');
   }).join('\r\n')+'\r\n';
