@@ -7,7 +7,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=role-ip-20261112-2';
+import * as skillRegistry from './skill-models.mjs?v=role-normalized-ip-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=calibrated-saves-20261111-1';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
@@ -18,8 +18,9 @@ import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects
 import {applyHitterLineups,lineupSettings,updateLineupOverride} from './hitter-lineup-pa.mjs?v=lineup-pa-20261111-1';
 import {hitterLineupSource} from './hitter-lineup-source.mjs?v=lineup-pa-20261111-1';
 import {starterRoles} from './starter-roles.mjs?v=rr-20261112-1';
-import {applyPitcherRoleWorkloads} from './pitcher-role-workload.mjs?v=role-ip-20261112-2';
-import {withRoleInningsCSV} from './pitcher-role-workload-export.mjs?v=role-ip-20261112-2';
+import {applyPitcherRoleWorkloads,attachRoleNormalizedWorkloads} from './pitcher-role-workload.mjs?v=role-normalized-ip-1';
+import {roleNormalizedWorkloadSource} from './role-normalized-workload-source.mjs?v=role-normalized-ip-1';
+import {withRoleInningsCSV} from './pitcher-role-workload-export.mjs?v=role-normalized-ip-1';
 import {detroitClosingSource} from './detroit-closing-source.mjs?v=rr-20261112-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
@@ -89,6 +90,8 @@ async function runtimeLoad(){
   if(version===directPitcherWorkloadSource.base){
    const workloads=await supplementLoad(directPitcherWorkloadSource,'atlas-direct-pitcher-workloads',epoch,cache);
    attachDirectPitcherWorkloads(data,workloads,directPitcherWorkloadSource);
+   const normalized=await supplementLoad(roleNormalizedWorkloadSource,'atlas-role-normalized-innings',epoch,cache);
+   attachRoleNormalizedWorkloads(data,normalized,roleNormalizedWorkloadSource);
    const closing=await supplementLoad(detroitClosingSource,'atlas-closing-opportunities',epoch,cache);
    if(closing.kind!=='atlas-closing-opportunities'||closing.season!==detroitClosingSource.season||!closing.teams||!closing.players)throw Error('Refreshed closing opportunities have an unsupported format.');
    data.saves.closing_opportunities=closing;
@@ -153,7 +156,8 @@ window.projectionSetHitterLineup=(id,field,value)=>{
  catch{return false;}
 };
 window.projectionModelNotes=()=>activeModel().notes;
-window.projectionSavesRoleOptions=saveRoleOptions;
+const workloadRoleOptions=[...saveRoleOptions,['swingman','Swingman (IP only)']];
+window.projectionSavesRoleOptions=()=>activeModel().runtime===roleNormalizedWorkloadSource.base?workloadRoleOptions:saveRoleOptions;
 window.projectionSavesRole=mlbid=>authenticated?savesRoles[String(mlbid)]||'auto':'auto';
 window.projectionSavesRoleOverrides=()=>authenticated?{...savesRoles}:{};
 window.projectionSaveForecast=(data,mlbid,IP,method='projected')=>projectSaves(data,mlbid,IP,window.projectionSavesRole(mlbid),{method,overrides:window.projectionSavesRoleOverrides()});
@@ -161,7 +165,7 @@ window.projectionSavesExplainer=savesExplainer;
 window.projectionSetSavesRole=(mlbid,role)=>{
  if(!authenticated||!window.projectionRankingOwner)throw Error('Sign in to change saves scenarios.');
  const id=String(mlbid);
- if(!/^-?[1-9]\d*$/.test(id)||!saveRoleOptions.some(([code])=>code===role))throw Error('Invalid saves role.');
+ if(!/^-?[1-9]\d*$/.test(id)||!window.projectionSavesRoleOptions().some(([code])=>code===role))throw Error('Invalid saves role.');
  if(role==='auto')delete savesRoles[id];else savesRoles[id]=role;
  if(pitcherWorkloadRuntime&&activeModel().runtime===directPitcherWorkloadSource.base){
   applyPitcherRoleWorkloads(pitcherWorkloadRuntime,pitcherRosterRoles,savesRoles);
@@ -172,7 +176,7 @@ window.projectionSetSavesRole=(mlbid,role)=>{
 function restoreSavesRoles(owner){
  savesRoles={};
  try{const stored=JSON.parse(localStorage.getItem('ra-save-role-overrides:v1:'+owner)||'{}');
-  if(stored&&typeof stored==='object'&&!Array.isArray(stored))for(const [id,role] of Object.entries(stored))if(/^-?[1-9]\d*$/.test(id)&&role!=='auto'&&saveRoleOptions.some(([code])=>code===role))savesRoles[id]=role;
+  if(stored&&typeof stored==='object'&&!Array.isArray(stored))for(const [id,role] of Object.entries(stored))if(/^-?[1-9]\d*$/.test(id)&&role!=='auto'&&workloadRoleOptions.some(([code])=>code===role))savesRoles[id]=role;
  }catch{}
 }
 const selectedView=()=>location.hash==='#roster'?'roster':'rankings';
@@ -238,7 +242,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html?v=rr-20261112-1':'rankings.html?v=rr-20261112-1')+'&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=rr-20261112-1':'rankings.html?v=role-normalized-ip-1')+'&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

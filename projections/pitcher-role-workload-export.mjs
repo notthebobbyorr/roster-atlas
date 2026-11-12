@@ -1,4 +1,4 @@
-import {pitcherRoleInnings} from './pitcher-role-workload.mjs?v=role-ip-20261112-2';
+import {normalizedRoleDirect,pitcherRoleInnings} from './pitcher-role-workload.mjs?v=role-normalized-ip-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=calibrated-saves-20261111-1';
 
@@ -28,6 +28,12 @@ export function withRoleInningsCSV(csv, core, roster, saves = null) {
       TBF:rates.TBF_IP*ip, ER:ERA*ip/9, K:rates.K_IP*ip, H:rates.H_IP*ip, BB:rates.BB_IP*ip, HR:rates.HR_IP*ip,
       workload_source:'Direct IP with a RosterResource role adjustment', workload_policy:'direct_pitcher_role'
     })) set(name,value);
+    if (p.role_normalized_workload?.history) {
+      const role = roster.get(id+':Pitcher') ?? p.direct_workload.role;
+      set('base_workload',normalizedRoleDirect(p.role_normalized_workload.history,role));
+      set('workload_source','MLB-equivalent Direct history normalized by seasonal role');
+      set('workload_policy','role_normalized_direct_ip');
+    }
     for (const name of counts) if (old > 0 && get(name) !== '') set(name,Number(get(name))*ip/old);
     const contributions = {K:rates.K_IP*displayed, ERA:(standards.ERA.reference_rate-ERA)*displayed/9,
       WHIP:(standards.WHIP.reference_rate-WHIP)*displayed};
