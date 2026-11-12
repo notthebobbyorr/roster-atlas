@@ -15,12 +15,10 @@ export function pitcherRoleInnings(profile, rosterRole, override = 'auto') {
   const {direct_ip:direct, role:source, projected_ip:current, age_ip:ageIP, performance_ip:performance} = base;
   if (direct <= 0 || !Object.hasOwn(coefficients, source)) return current;
   if (target === source && target !== 'SP') return current;
-  const sourceEstimate = roleEstimate(source, direct, profile.projection_age);
   const targetEstimate = roleEstimate(target, direct, profile.projection_age);
-  // Rotation assignments can lift a low historical workload or translate a relief workload.
-  // Carry through established starter innings when the role estimate would reduce them.
-  const starterAdjustment = Math.max(0, targetEstimate - sourceEstimate - Math.max(0, direct - targetEstimate));
-  const translated = target === 'SP' ? Math.max(targetEstimate, direct + starterAdjustment) : targetEstimate;
+  // Use one workload for the assigned role. Direct IP already includes starts
+  // and relief innings, so adding a role difference can count the same capacity twice.
+  const translated = target === 'SP' ? Math.max(targetEstimate, direct) : targetEstimate;
   const adjusted = translated * (ageIP + performance) / direct;
   // The release only applies this reduction for an explicit arrival capacity.
   return current < ageIP + performance - 1e-8 ? Math.min(current, adjusted) : adjusted;

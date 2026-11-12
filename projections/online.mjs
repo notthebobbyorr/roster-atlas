@@ -7,7 +7,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=rr-20261112-1';
+import * as skillRegistry from './skill-models.mjs?v=role-ip-20261112-2';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=calibrated-saves-20261111-1';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
@@ -18,8 +18,8 @@ import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects
 import {applyHitterLineups,lineupSettings,updateLineupOverride} from './hitter-lineup-pa.mjs?v=lineup-pa-20261111-1';
 import {hitterLineupSource} from './hitter-lineup-source.mjs?v=lineup-pa-20261111-1';
 import {starterRoles} from './starter-roles.mjs?v=rr-20261112-1';
-import {applyPitcherRoleWorkloads} from './pitcher-role-workload.mjs?v=pitcher-role-ip-1';
-import {withRoleInningsCSV} from './pitcher-role-workload-export.mjs?v=rr-20261112-1';
+import {applyPitcherRoleWorkloads} from './pitcher-role-workload.mjs?v=role-ip-20261112-2';
+import {withRoleInningsCSV} from './pitcher-role-workload-export.mjs?v=role-ip-20261112-2';
 import {detroitClosingSource} from './detroit-closing-source.mjs?v=rr-20261112-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
