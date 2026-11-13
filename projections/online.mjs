@@ -7,7 +7,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=role-stints-ip-1';
+import * as skillRegistry from './skill-models.mjs?v=rr-20261113-1';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=calibrated-saves-20261111-1';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
@@ -17,11 +17,11 @@ import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExpl
 import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
 import {applyHitterLineups,lineupSettings,updateLineupOverride} from './hitter-lineup-pa.mjs?v=lineup-pa-20261111-1';
 import {hitterLineupSource} from './hitter-lineup-source.mjs?v=lineup-pa-20261111-1';
-import {starterRoles} from './starter-roles.mjs?v=rr-20261112-1';
-import {applyPitcherRoleWorkloads,attachRoleNormalizedWorkloads} from './pitcher-role-workload.mjs?v=role-stints-ip-1';
-import {roleNormalizedWorkloadSource} from './role-normalized-workload-source.mjs?v=role-stints-ip-1';
-import {withRoleInningsCSV} from './pitcher-role-workload-export.mjs?v=role-stints-ip-1';
-import {detroitClosingSource} from './detroit-closing-source.mjs?v=rr-20261112-1';
+import {starterRoles} from './starter-roles.mjs?v=rr-20261113-1';
+import {applyPitcherRoleWorkloads,attachRoleNormalizedWorkloads} from './pitcher-role-workload.mjs?v=rr-20261113-1';
+import {roleNormalizedWorkloadSource} from './role-normalized-workload-source.mjs?v=rr-20261113-1';
+import {withRoleInningsCSV} from './pitcher-role-workload-export.mjs?v=rr-20261113-1';
+import {detroitClosingSource} from './detroit-closing-source.mjs?v=rr-20261113-1';
 const {skillModels,skillWorkloads}=skillRegistry;
 const cloud=new Cloud(config),$=id=>document.getElementById(id);
 let authenticated=false,requestId=0,sessionEpoch=0;
@@ -242,7 +242,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html?v=rr-20261112-1':'rankings.html?v=role-stints-ip-1')+'&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html?v=rr-20261113-1':'rankings.html?v=rr-20261113-1')+'&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

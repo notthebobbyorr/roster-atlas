@@ -1,4 +1,4 @@
-import {normalizedRoleDirect,pitcherRoleInnings} from './pitcher-role-workload.mjs?v=role-stints-ip-1';
+import {normalizedRoleDirect,pitcherRoleInnings} from './pitcher-role-workload.mjs?v=rr-20261113-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 import {projectSaves} from './saves.mjs?v=calibrated-saves-20261111-1';
 
@@ -50,6 +50,10 @@ export function withRoleInningsCSV(csv, core, roster, saves = null) {
       set('SV',forecast.SV);
       set('SV_SD',(forecast.SV-ref.mean)/ref.sd);
       set('team_SVO_pct',forecast.teamOpportunityShare===null?null:100*forecast.teamOpportunityShare);
+      if (id === '623465') {
+        set('team','Atlanta Braves');
+        set('team_id',144);
+      }
       if (id === '641941') {
         set('team','Detroit Tigers');
         set('team_id',116);
