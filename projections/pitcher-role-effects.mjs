@@ -31,8 +31,12 @@ export function pitcherRoleProjection(data,profile,override){
   rates[event+'_PA']=adjusted[i];
   if(event!=='OUT')rates[event+'_IP']=3*adjusted[i]/out;
  });
+ if(finite(raw.AB_PA)){
+  if(h+k+bb>1)return line;
+  rates.AB_PA=Math.min(1-bb,Math.max(h+k,raw.AB_PA+base[1]-bb));
+ }
  if(finite(raw.BIP_PA)){
-  const bip=raw.BIP_PA+(base[0]-k)+(base[1]-bb)+(base[3]-hr);
+  const bip=raw.BIP_PA+(base[0]-k)+(finite(raw.AB_PA)?rates.AB_PA-raw.AB_PA:base[1]-bb)+(base[3]-hr);
   if(bip>0&&bip<=1&&h-hr<=bip)rates.BIP_PA=bip;
  }
  const logRunChange=fit.earned_runs.reduce((sum,slope,i)=>sum+slope*(adjusted[i]-base[i]),0);

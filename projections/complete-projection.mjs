@@ -2,10 +2,10 @@ import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workl
 import {projectSaves} from './saves.mjs?v=closing-opportunities-20261109-1';
 import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
-import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
+import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=sstats-rates-20261115';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
 import {expectedHomeRunStats} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import {pitcherRoleProjection} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
+import {pitcherRoleProjection} from './pitcher-role-effects.mjs?v=sstats-rates-20261115';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){
@@ -29,11 +29,6 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
   Object.assign(stats,hitterOutcomeStats(core,p,rates));
  }else Object.assign(stats,pitcherOutcomeStats({...p,complete_projection:line},stats));
  Object.assign(stats,expectedHomeRunStats(core,p,rates,pa,ip));
- if(kind==='Pitcher'&&p.sstats){
-  const [era,whip,baseERA,baseWHIP]=p.sstats;
-  stats.ERA=Math.max(0,era+stats.ERA-baseERA);
-  stats.WHIP=Math.max(0,whip+stats.WHIP-baseWHIP);
- }
  let save=null;
  const useSaveModel=Boolean(saves?.closing_opportunities)||savesRole!=='auto';
  if(kind==='Pitcher'){

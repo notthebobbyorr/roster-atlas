@@ -1,20 +1,20 @@
 import {workloadProfile,universalHitterNote} from './universal-hitter-context.mjs?v=universal-600pa-1';
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
-import {withPitcherDifference} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=sstats-20261115';
+import {withPitcherDifference} from './pitcher-outcomes.mjs?v=sstats-rates-20261115';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=sstats-rates-20261115';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
-import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=single-hr-total-20261109-1';
+import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=sstats-rates-20261115';
 import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
-import {compileLists,projection} from './rankings-core.mjs?v=sstats-20261115';
+import {compileLists,projection} from './rankings-core.mjs?v=sstats-rates-20261115';
 import {starterRoles} from './starter-roles.mjs?v=rr-20261113-1';
 import {rosterStatus} from './roster-status.mjs?v=rr-20261113-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=closing-opportunities-20261109-1';
+import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=sstats-rates-20261115';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=fa-year-filter-20261109-1';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=sstats-rates-20261115';
 import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 
 mountDownsideTooltips();

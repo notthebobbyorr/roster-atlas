@@ -1,7 +1,7 @@
 import {compareFreeAgentYears} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
-import {pitcherRateColumns} from './pitcher-outcomes.mjs?v=single-hr-total-20261109-1';
-import {projectionAge} from './roster-builder-core.mjs?v=closing-opportunities-20261109-1';
+import {pitcherRateColumns} from './pitcher-outcomes.mjs?v=sstats-rates-20261115';
+import {projectionAge} from './roster-builder-core.mjs?v=sstats-rates-20261115';
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 export function rankingSortOptions(role){

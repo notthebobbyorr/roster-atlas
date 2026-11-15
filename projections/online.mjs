@@ -1,3 +1,4 @@
+import {attachSStats} from './sstats.mjs?v=sstats-rates-20261115';
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
 import {playingTimePreviewStore} from './playing-time-preview.mjs?v=saved-workloads-1';
@@ -7,14 +8,14 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=sstats-20261115';
+import * as skillRegistry from './skill-models.mjs?v=sstats-rates-20261115';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=calibrated-saves-20261111-1';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
 import {directPitcherWorkloadSource} from './direct-pitcher-workload-source.mjs?v=calibrated-saves-20261111-1';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {roundInnings,roundPA,formatInnings,roundWorkloadVariant,roundOutcomeExplanation} from './workload-rounding.mjs?v=workload-rounding-1';
-import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects.mjs?v=role-effects-20261111-1';
+import {attachPitcherRoleEffects,pitcherRoleSource} from './pitcher-role-effects.mjs?v=sstats-rates-20261115';
 import {applyHitterLineups,lineupSettings,updateLineupOverride} from './hitter-lineup-pa.mjs?v=lineup-pa-20261111-1';
 import {hitterLineupSource} from './hitter-lineup-source.mjs?v=lineup-pa-20261111-1';
 import {starterRoles} from './starter-roles.mjs?v=rr-20261113-1';
@@ -128,19 +129,9 @@ async function runtimeLoad(){
  const result=await cache.get(version);
  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
  if(selectedModel.sstats){
-  const payload=await supplementLoad({snapshot:selectedModel.sstats},'atlas-sstats',epoch,cache);
+  const payload=await supplementLoad({snapshot:selectedModel.sstats},'atlas-sstats-components',epoch,cache);
   if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
-  if(payload.kind!=='atlas-sstats'||payload.base!==version||payload.season!==2027||!payload.players)throw Error('Invalid sStats supplement.');
-  let applied=0;
-  const players=result.core.players.map(player=>{
-   const rates=player.kind==='Pitcher'?payload.players[String(player.mlbid)]:null;
-   if(!rates)return player;
-   if(!Array.isArray(rates)||rates.length!==4||!rates.every(value=>Number.isFinite(value)&&value>0))throw Error('Invalid sStats rates.');
-   applied++;
-   return {...player,sstats:rates};
-  });
-  if(applied!==Object.keys(payload.players).length)throw Error('sStats pitcher roster mismatch.');
-  return {...result,core:{...result.core,players,projection_note:result.core.projection_note+' sStats is an alternative pitcher ERA and WHIP forecast with Atlas fallback.'}};
+  return {...result,core:attachSStats(result.core,payload,version)};
  }
  return result;
 }
