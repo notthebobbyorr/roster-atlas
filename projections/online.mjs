@@ -7,7 +7,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=rr-20261113-1';
+import * as skillRegistry from './skill-models.mjs?v=sstats-20261115';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=calibrated-saves-20261111-1';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
@@ -127,6 +127,21 @@ async function runtimeLoad(){
  })().catch(error=>{if(epoch===sessionEpoch)cache.delete(version);throw error;}));
  const result=await cache.get(version);
  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
+ if(selectedModel.sstats){
+  const payload=await supplementLoad({snapshot:selectedModel.sstats},'atlas-sstats',epoch,cache);
+  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
+  if(payload.kind!=='atlas-sstats'||payload.base!==version||payload.season!==2027||!payload.players)throw Error('Invalid sStats supplement.');
+  let applied=0;
+  const players=result.core.players.map(player=>{
+   const rates=player.kind==='Pitcher'?payload.players[String(player.mlbid)]:null;
+   if(!rates)return player;
+   if(!Array.isArray(rates)||rates.length!==4||!rates.every(value=>Number.isFinite(value)&&value>0))throw Error('Invalid sStats rates.');
+   applied++;
+   return {...player,sstats:rates};
+  });
+  if(applied!==Object.keys(payload.players).length)throw Error('sStats pitcher roster mismatch.');
+  return {...result,core:{...result.core,players,projection_note:result.core.projection_note+' sStats is an alternative pitcher ERA and WHIP forecast with Atlas fallback.'}};
+ }
  return result;
 }
 async function supplementLoad(source,kind,epoch,cache){

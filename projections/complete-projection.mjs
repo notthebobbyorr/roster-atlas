@@ -29,6 +29,11 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
   Object.assign(stats,hitterOutcomeStats(core,p,rates));
  }else Object.assign(stats,pitcherOutcomeStats({...p,complete_projection:line},stats));
  Object.assign(stats,expectedHomeRunStats(core,p,rates,pa,ip));
+ if(kind==='Pitcher'&&p.sstats){
+  const [era,whip,baseERA,baseWHIP]=p.sstats;
+  stats.ERA=Math.max(0,era+stats.ERA-baseERA);
+  stats.WHIP=Math.max(0,whip+stats.WHIP-baseWHIP);
+ }
  let save=null;
  const useSaveModel=Boolean(saves?.closing_opportunities)||savesRole!=='auto';
  if(kind==='Pitcher'){
