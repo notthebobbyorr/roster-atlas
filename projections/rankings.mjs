@@ -3,18 +3,18 @@ import {workloadProfile,universalHitterNote} from './universal-hitter-context.mj
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherRateColumns,withPitcherDifference} from './pitcher-outcomes.mjs?v=sstats-rates-20261115';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=sstats-rates-20261115';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=closer-probability-20261115';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
 import {playerOrganizations} from './player-organizations.mjs?v=rr-20261113-1';
 import {rosterStatus} from './roster-status.mjs?v=rr-20261113-1';
-import {saveRoleOptions,savesExplainer} from './saves.mjs?v=calibrated-saves-20261111-1';
+import {saveRoleOptions,savesExplainer} from './saves.mjs?v=closer-probability-20261115';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {starterRoles} from './starter-roles.mjs?v=rr-20261113-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=sstats-rates-20261115';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=closer-probability-20261115';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=sstats-rates-20261115';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=closer-probability-20261115';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=sstats-rates-20261115';
@@ -198,7 +198,7 @@ function statCell(f,c,d,entry){
   const input=playingTimeInput(entry,f,workloadPreviews(),pt.players[entry.key]);if(input)return '<td class="number">'+input+'</td>';
  }
  const value=c==='IP'?formatInnings(f.IP):fmt(f[c]??f.stats[c],d);
- const title=c==='IP_per_start'&&f.startLength?.model?' title="Projected SP length from BF/start and the retained out rate; expected starts '+esc(fmt(f.startLength.expected_starts))+'."':c==='IP_per_start'?' title="Three-year MLB starter-only innings/start estimate; '+(f.startLength?.observed_starts??0)+' observed starts. Selected playing-time recency weights; no extra age/park adjustment."':c==='SV'&&f.saves?.detailText?' title="'+esc(f.saves.detailText)+'"':'';
+ const title=c==='IP_per_start'&&f.startLength?.model?' title="Projected SP length from BF/start and the retained out rate; expected starts '+esc(fmt(f.startLength.expected_starts))+'."':c==='IP_per_start'?' title="Three-year MLB starter-only innings/start estimate; '+(f.startLength?.observed_starts??0)+' observed starts. Selected playing-time recency weights; no extra age/park adjustment."':c==='SV'&&f.saves?.detailText?' title="'+esc(f.saves.detailText)+'"':c==='closer_probability_pct'?' title="Preseason chance of leading this club in full-season closing assignments."':'';
  return '<td class="number"'+title+'>'+value+'</td>';
 }
 function renderSortOptions(value=$('sort').value,direction=$('sort-direction').value){
@@ -232,7 +232,7 @@ function render(){
  if(!hitter)processColumns.unshift(['pitching_grade','ACE']);
  if(hitter||mixed)processColumns.unshift(['offense_grade','SLAM']);
  categoryColumns=cats;
- const pitcherColumns=[['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['W','W',1],['SV','SV',0],['SVO_share_pct','Team SVO %',1],['ERA','ERA',2],['WHIP','WHIP',3]];
+ const pitcherColumns=[['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['W','W',1],['SV','SV',0],['SVO_share_pct','Team SVO %',1],['closer_probability_pct','Closer %',1],['ERA','ERA',2],['WHIP','WHIP',3]];
  columns=mixed?[...withPitcherDifference(hitterOutcomeColumns),...pitcherColumns]:hitter?[...hitterOutcomeColumns]:[...pitcherColumns,...pitcherRateColumns];
  $('head').innerHTML='<tr><th><label class="select-all-control" title="Select or deselect all players matching the current filters across every page"><input id="select-all-displayed" class="select-player" type="checkbox" data-select-all aria-label="Select all matching players"><span>Select all matches</span></label></th><th class="player">Player</th>'+sortableHeader('Age (July 1)','age')+sortableHeader('Rank / reorder','rank')+(mixed?'<th>Player type</th>':'')+'<th>MLB org</th><th>RR role</th>'+sortableHeader('FA year','fa')+'<th>40-man</th><th>Options remaining</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([key,name])=>sortableHeader(name,'stat:'+key)).join('')+cats.map(c=>sortableHeader(c+' SD','grade:'+c)).join('')+sortableHeader('Sum SD (base 3)','sum')+sortableHeader('Sum SD (with R/RBI)','sum_with_runs_rbi')+sortableHeader('Sum SD (all 5)','sum_full')+processColumns.map(([key,label])=>sortableHeader(label,'input:'+key)).join('')+'</tr>';
  const pages=Math.max(1,Math.ceil(displayed.length/pageSize));page=Math.min(page,pages-1);

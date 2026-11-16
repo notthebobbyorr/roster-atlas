@@ -1,6 +1,6 @@
 import {normalizedRoleDirect,pitcherRoleInnings} from './pitcher-role-workload.mjs?v=rr-20261113-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {projectSaves} from './saves.mjs?v=calibrated-saves-20261111-1';
+import {projectSaves} from './saves.mjs?v=closer-probability-20261115';
 
 export function withRoleInningsCSV(csv, core, roster, saves = null) {
   const profiles = new Map(core.players.filter(p => p.direct_workload).map(p => [String(p.mlbid), p]));

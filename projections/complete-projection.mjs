@@ -1,5 +1,5 @@
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
-import {projectSaves} from './saves.mjs?v=closing-opportunities-20261109-1';
+import {projectSaves} from './saves.mjs?v=closer-probability-20261115';
 import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=sstats-rates-20261115';
@@ -36,6 +36,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
   else save={SV:stats.SV,role:line.role==='SP'?'starter':saves?.players?.[String(p.mlbid)]?.auto_role||'other',override:'auto',rate:rates.SV_IP,source:core.model_name||'Complete projections',teamAllocated:false,detailText:'Completed team-context saves forecast, scaled with innings.'};
   if(useSaveModel)stats.SV=save?.SV??null;
   stats.SVO_share_pct=finite(save?.teamOpportunityShare)?100*save.teamOpportunityShare:null;
+  stats.closer_probability_pct=finite(save?.closerProbability)?100*save.closerProbability:null;
  }
  const categories=kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'];
  for(const c of categories){
