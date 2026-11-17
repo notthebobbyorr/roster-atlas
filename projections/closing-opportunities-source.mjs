@@ -1,1 +1,1 @@
-export const closingOpportunitySource = {snapshot:'closing-2027-7198fd39cdc1',season:2027};
+export const closingOpportunitySource = {snapshot:'closing-2027-08f55e5f5653',season:2027};

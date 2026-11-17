@@ -1,4 +1,4 @@
 export const detroitClosingSource = {
-  snapshot: 'closing-2027-9b3df5158428',
+  snapshot: 'closing-2027-6f62ae7c5394',
   season: 2027,
 };
