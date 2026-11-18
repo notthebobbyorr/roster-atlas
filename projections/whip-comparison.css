@@ -1,0 +1,37 @@
+.whip-compare {
+ display: block;
+ margin: .3rem 0;
+ font-size: .75rem;
+ color: #a9e2d2;
+}
+.whip-comparison {
+ width: min(34rem, calc(100% - 1.25rem));
+ max-height: 85dvh;
+ padding: 1rem;
+ border: 1px solid #496272;
+ border-radius: .6rem;
+ background: #16242e;
+ color: #f2f5f7;
+}
+.whip-comparison::backdrop { background: rgb(6 12 17 / .75); }
+.whip-comparison form {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: .75rem;
+}
+.whip-comparison h2 { margin: 0; font-size: 1.2rem; }
+.whip-comparison [role=status]:empty { display: none; }
+.whip-comparison-table { overflow-x: auto; margin-top: .75rem; }
+.whip-comparison caption {
+ margin-bottom: .5rem;
+ text-align: left;
+ color: #afc5d0;
+}
+.whip-comparison th, .whip-comparison td { position: static; padding: .45rem .4rem; }
+.whip-comparison th[scope=row] { background: transparent; white-space: normal; }
+.whip-comparison th:not(:first-child), .whip-comparison td {
+ text-align: right;
+ font-variant-numeric: tabular-nums;
+}
+.whip-comparison small { display: block; color: #afc5d0; font-weight: normal; }

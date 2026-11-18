@@ -40,6 +40,6 @@ export function pitcherRoleProjection(data,profile,override){
   if(bip>0&&bip<=1&&h-hr<=bip)rates.BIP_PA=bip;
  }
  const logRunChange=fit.earned_runs.reduce((sum,slope,i)=>sum+slope*(adjusted[i]-base[i]),0);
- return {...line,rates,ERA:line.ERA*Math.exp(logRunChange)*base[4]/out,WHIP:3*(h+bb)/out,
+ return {...line,rates,ERA:line.ERA*Math.exp(logRunChange)*base[4]/out,WHIP:line.whip_research?line.WHIP:3*(h+bb)/out,
   roleEffect:{source,target,minimumIP:data.minimum_ip,velocityDelta:shift[5],stuffDelta:shift[6],measured}};
 }
