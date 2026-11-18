@@ -5,7 +5,7 @@ import {projectSaves} from './saves.mjs?v=closer-probability-20261115';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {playerOrganizations} from './player-organizations.mjs?v=rr-20261113-1';
 import {projectWins} from './pitcher-wins.mjs?v=rr-20261113-1';
-import {completedProjection} from './complete-projection.mjs?v=pitcher-research-20261118';
+import {completedProjection} from './complete-projection.mjs?v=pitcher-teams-20261118';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
@@ -80,8 +80,8 @@ export function readExclusions(data,available){
  }
  return result;
 }
-export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
- if(core.projection_model==='complete_20261104')return completedProjection(core,pt,entry,{method,view,saves,savesRole,savesOverrides,workloadOverrides});
+export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={},pitcherDestination,pitcherTeamContext}={}){
+ if(core.projection_model==='complete_20261104')return completedProjection(core,pt,entry,{model,method,view,saves,savesRole,savesOverrides,workloadOverrides,pitcherDestination,pitcherTeamContext});
  if(method==='rotation_context'){
   const next=rotationContext(core,pt,entry);
   return projection(next.core,next.pt,next.entry,{model,method:'projected',park,view,saves,savesRole,savesOverrides,workloadOverrides});

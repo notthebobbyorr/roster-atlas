@@ -1,5 +1,6 @@
 import {attachSStats} from './sstats.mjs?v=sstats-rates-20261115';
-import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=component-blend-20261118';
+import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=pitcher-teams-20261118';
+import {pitcherTeamKind,pitcherTeamSource,previewPitcherTeam,validatePitcherTeamContext} from './pitcher-team-preview.mjs?v=pitcher-teams-20261118';
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
 import {playingTimePreviewStore} from './playing-time-preview.mjs?v=saved-workloads-1';
@@ -31,6 +32,8 @@ const defaultModel=[skillRegistry.defaultSkillModel,'complete_20261104','platoon
 let modelKey=defaultModel,modelEpoch=0,runtimes=new Map(),savesRoles={};
 let lineupRuntime=null,lineupOverrides={};
 let pitcherWorkloadRuntime=null;
+let pitcherDestinations={};
+const pitcherTeamStorage=owner=>'ra-pitcher-team-previews:v1:'+owner;
 const pitcherRosterRoles=new Map(starterRoles.players.filter(p=>p.kind==='Pitcher').map(p=>[p.key,p.role]));
 const activeModel=()=>skillModels[modelKey];
 const workloadPreviews=playingTimePreviewStore();
@@ -156,14 +159,46 @@ async function supplementLoad(source,kind,epoch,cache,validate){
 function loadWHIPResearch(epoch,cache,version){
  return supplementLoad(whipResearchSource,'atlas-whip-research',epoch,cache,payload=>validateWHIPResearch(payload,version));
 }
-window.projectionWHIPComparison=async mlbid=>{
+window.projectionPitcherTeamContext=async()=>{
+ const epoch=sessionEpoch,cache=runtimes,version=activeModel().runtime;
+ if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Complete Projections to preview pitcher teams.');
+ return supplementLoad(pitcherTeamSource,pitcherTeamKind,epoch,cache,payload=>validatePitcherTeamContext(payload,version,whipResearchSource.snapshot));
+};
+window.projectionPitcherDestination=id=>authenticated?pitcherDestinations[String(id)]??'':'';
+window.projectionHasPitcherDestinations=()=>authenticated&&Object.keys(pitcherDestinations).length>0;
+window.projectionSetPitcherDestination=(id,team,context)=>{
+ const owner=window.projectionRankingOwner;
+ if(!authenticated||!owner||!Number.isSafeInteger(id)||typeof team!=='string'||(team&&!context?.indices.has(team))){
+  throw Error('Choose a valid pitcher destination.');
+ }
+ if(team)pitcherDestinations[id]=team;
+ else delete pitcherDestinations[id];
+ try{localStorage.setItem(pitcherTeamStorage(owner),JSON.stringify(pitcherDestinations));return true;}
+ catch{return false;}
+};
+window.projectionWHIPComparison=async (mlbid,team='')=>{
  const epoch=sessionEpoch,generation=modelEpoch,cache=runtimes,version=activeModel().runtime;
  if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Complete Projections to compare pitcher models.');
- const [{core},payload]=await Promise.all([runtimeLoad({baseOnly:true}),loadWHIPResearch(epoch,cache,version)]);
+ const [{core},payload,context]=await Promise.all([
+  runtimeLoad({baseOnly:true}),loadWHIPResearch(epoch,cache,version),team?window.projectionPitcherTeamContext():null
+ ]);
  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
  const profile=core.players.find(p=>p.kind==='Pitcher'&&p.mlbid===mlbid&&p.complete_projection);
  if(!profile)throw Error('No 2027 projection is available for this pitcher.');
- return whipComparisonRows(profile,payload);
+ const rows=whipComparisonRows(profile,payload);
+ let sstats;
+ if(activeModel().sstats){
+  const selected=await runtimeLoad();
+  sstats=selected.core.players.find(p=>p.kind==='Pitcher'&&p.mlbid===mlbid)?.complete_projection;
+  if(sstats)rows.push({model:'sstats_2027',label:'sStats',era:sstats.ERA,whip:sstats.WHIP,rates:sstats.rates});
+ }
+ return team?rows.map(row=>{
+  const atlas=profile.complete_projection;
+  const line=row.model==='sstats_2027'?sstats:row.model==='complete_20261104'||row.fallback?atlas:
+   {...atlas,ERA:row.era,WHIP:row.whip,atlas_era:atlas.ERA,pitching_research:row.rates};
+  const preview=previewPitcherTeam({...profile,complete_projection:line},line,row.model,team,context);
+  return {...row,era:preview.ERA,whip:preview.WHIP,rates:preview.team_preview??row.rates};
+ }):rows;
 };
 window.skillGradesLoad=async()=>(await runtimeLoad()).core;
 window.skillGradesWorkloadsLoad=async()=>(await runtimeLoad()).workloads;
@@ -245,6 +280,7 @@ async function downloadProjections(path){
 
 function clear(){
  workloadPreviews.clear();
+ pitcherDestinations={};
  pitcherWorkloadRuntime=null;
  lineupRuntime=null;lineupOverrides={};
  authenticated=false;window.projectionRankingOwner=null;sessionEpoch++;requestId++;modelEpoch++;runtimes=new Map();savesRoles={};window.skillGradesState=null;modelKey=defaultModel;$('model').value=defaultModel;$('modelControls').hidden=true;
@@ -267,7 +303,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=pitcher-research-20261118&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=pitcher-teams-20261118&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -276,6 +312,13 @@ async function open(){
  $('status').textContent='Checking sign-in…';
  try{
   const user=await cloud.user();if(epoch!==sessionEpoch)return;window.projectionRankingOwner=user.id;
+  pitcherDestinations={};
+  try{
+   const saved=JSON.parse(localStorage.getItem(pitcherTeamStorage(user.id))||'{}');
+   for(const [id,team] of Object.entries(saved??{}))if(/^-?\d+$/.test(id)&&typeof team==='string'&&/^(neutral|\d{3})$/.test(team)){
+    pitcherDestinations[id]=team;
+   }
+  }catch{}
   authenticated=true;restoreSavesRoles(user.id);$('login').hidden=true;$('logout').hidden=false;$('views').hidden=false;
   await showView();
  }catch(error){if(epoch===sessionEpoch){clear();$('status').textContent=error.message;}}

@@ -2,17 +2,19 @@ import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workl
 import {projectSaves} from './saves.mjs?v=closer-probability-20261115';
 import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
-import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
+import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=pitcher-teams-20261118';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
 import {expectedHomeRunStats} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
 import {pitcherRoleProjection} from './pitcher-role-effects.mjs?v=pitcher-research-20261118';
+import {previewPitcherTeam} from './pitcher-team-preview.mjs?v=pitcher-teams-20261118';
 const finite=Number.isFinite;
-export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
+export function completedProjection(core,pt,entry,{model,method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={},pitcherDestination,pitcherTeamContext}={}){
  if(method==='rotation_context'){
   const next=rotationContext(core,pt,entry);
-  return completedProjection(next.core,next.pt,next.entry,{method:'projected',view,saves,savesRole,savesOverrides,workloadOverrides});
+  return completedProjection(next.core,next.pt,next.entry,{model,method:'projected',view,saves,savesRole,savesOverrides,workloadOverrides,pitcherDestination,pitcherTeamContext});
  }
- const p=method==='standard'?universalHitterProfile(core,entry.profile):entry.profile,line=p?.kind==='Pitcher'?pitcherRoleProjection(core.pitcher_role_effects,p,savesRole):p?.complete_projection;
+ const p=method==='standard'?universalHitterProfile(core,entry.profile):entry.profile;
+ const line=p?.kind==='Pitcher'?previewPitcherTeam(p,pitcherRoleProjection(core.pitcher_role_effects,p,savesRole),model,pitcherDestination,pitcherTeamContext):p?.complete_projection;
  if(!line)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,sum_full:null,sum_with_runs_rbi:null};
  const kind=p.kind,record=pt.players[entry.key],mode=method==='fa_context'?'projected':method,
   variant=mode==='standard'?null:roundWorkloadVariant(record?.variants[mode==='projected'?record.selected:mode]),
@@ -20,8 +22,8 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
   pa=kind==='Hitter'?(manual?Math.round(preview):mode==='standard'?600:variant?.PA??null):null,
   ip=kind==='Pitcher'?roundInnings(manual?preview:mode==='standard'?(entry.role==='SP'?175:entry.role==='Swingman'?100:60):variant?.IP):null,
   load=kind==='Hitter'?pa:ip,ab=kind==='Hitter'&&finite(pa)?pa*line.rates.AB_PA:null,
-  rates=line.rates,components=line.pitching_research??rates,
-  strikeoutsPerIP=line.pitching_research?3*components.K_PA/components.OUT_PA:rates.K_IP,
+  rates=line.rates,components=line.team_preview??line.pitching_research??rates,
+  strikeoutsPerIP=components!==rates?3*components.K_PA/components.OUT_PA:rates.K_IP,
   stats={},grades={},batting=kind==='Hitter'&&finite(pa)?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,pa*rates[c+'_PA']])):null;
  if(kind==='Hitter')Object.assign(stats,{Power:rates.HR_PA/rates.AB_PA,Speed:rates.SB_PA/rates.AB_PA,AVG:rates.H_PA/rates.AB_PA,OPS:line.OPS,
   HR:finite(pa)?rates.HR_PA*pa:null,SB:finite(pa)?rates.SB_PA*pa:null,R:pa===0?0:finite(pa)&&finite(rates.R_PA)?rates.R_PA*pa:null,RBI:pa===0?0:finite(pa)&&finite(rates.RBI_PA)?rates.RBI_PA*pa:null});

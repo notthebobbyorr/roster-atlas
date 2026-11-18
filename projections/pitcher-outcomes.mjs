@@ -18,8 +18,9 @@ export function pitcherOutcomeStats(profile,stats){
  const line=profile?.complete_projection,r=line?.rates;
  const computed=finite(r?.H_PA)&&finite(r?.HR_PA)&&r?.BIP_PA>0?(r.H_PA-r.HR_PA)/r.BIP_PA:null;
  const babip=finite(computed)?computed:line?.BABIP_against;
- return {AVG_against:!line?.pitching_research&&finite(r?.H_PA)&&r.AB_PA>0?Math.min(1,r.H_PA/r.AB_PA):null,
-  BABIP_against:!line?.pitching_research&&finite(babip)&&babip>=0&&babip<=1?babip:null,
+ const hasContactDenominators=!line?.pitching_research&&!line?.team_preview;
+ return {AVG_against:hasContactDenominators&&finite(r?.H_PA)&&r.AB_PA>0?Math.min(1,r.H_PA/r.AB_PA):null,
+  BABIP_against:hasContactDenominators&&finite(babip)&&babip>=0&&babip<=1?babip:null,
   K_minus_BB_pct:finite(stats?.K_pct)&&finite(stats?.BB_pct)?stats.K_pct-stats.BB_pct:null,
   SwStr_pct:swstr};
 }

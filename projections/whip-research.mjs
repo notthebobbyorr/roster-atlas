@@ -48,7 +48,8 @@ export function attachWHIPResearch(core, payload, key) {
   if (profile.kind !== 'Pitcher' || !line || !row) return profile;
   const research = components(row);
   applied++;
-  return {...profile, complete_projection: {...line, ERA: era(research), WHIP: whip(research), pitching_research: research}};
+  return {...profile, complete_projection: {...line, atlas_era:line.ERA, ERA: era(research), WHIP: whip(research),
+   pitching_research: research}};
  });
  if (applied !== Object.keys(model).length) throw Error('Pitcher research roster mismatch.');
  const model_name = '2027 Pitching · ' + whipResearchModels[key];
@@ -61,11 +62,11 @@ export function whipComparisonRows(profile, payload) {
  if (payload.excluded_pitchers.includes(profile.mlbid)) throw Error('No 2027 pitcher projection is available for this player.');
  const atlas = profile.complete_projection;
  const rates = atlas.rates;
- const original = {label: 'Full Atlas', era: atlas.ERA, whip: atlas.WHIP, rates};
+ const original = {model:'complete_20261104', label: 'Full Atlas', era: atlas.ERA, whip: atlas.WHIP, rates};
  return [original, ...Object.entries(whipResearchModels).map(([key, label]) => {
   const row = payload.models[key][String(profile.mlbid)];
-  if (!row) return {...original, label, fallback: true};
+  if (!row) return {...original, model:key, label, fallback: true};
   const rates = components(row);
-  return {label, era: era(rates), whip: whip(rates), rates};
+  return {model:key, label, era: era(rates), whip: whip(rates), rates};
  })];
 }

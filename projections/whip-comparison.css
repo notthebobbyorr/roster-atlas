@@ -36,3 +36,14 @@
  font-variant-numeric: tabular-nums;
 }
 .whip-comparison small { display: block; color: #afc5d0; font-weight: normal; }
+.pitcher-team-controls {
+ display: flex;
+ align-items: end;
+ flex-wrap: wrap;
+ gap: .45rem;
+ margin-top: .75rem;
+}
+.pitcher-team-controls[hidden] { display: none; }
+.pitcher-team-controls label { flex: 1 1 12rem; }
+.pitcher-team-controls select { width: 100%; }
+.pitcher-team-controls p { flex-basis: 100%; margin: .25rem 0; }
