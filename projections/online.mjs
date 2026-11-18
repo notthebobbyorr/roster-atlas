@@ -1,5 +1,5 @@
 import {attachSStats} from './sstats.mjs?v=sstats-rates-20261115';
-import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=pitcher-research-20261118';
+import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=component-blend-20261118';
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
 import {playingTimePreviewStore} from './playing-time-preview.mjs?v=saved-workloads-1';
@@ -9,7 +9,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=pitcher-research-20261118';
+import * as skillRegistry from './skill-models.mjs?v=component-blend-20261118';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=closer-availability-20261116';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=closer-availability-20261116';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';

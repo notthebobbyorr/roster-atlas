@@ -1,8 +1,9 @@
-export const whipResearchSource = {snapshot: 'skills-2027-c34252b4f137'};
+export const whipResearchSource = {snapshot: 'skills-2027-6f64cb4e3b67'};
 export const whipResearchModels = {
  whip_league_tree: 'League tree',
  whip_trait_tree: 'Trait tree',
  whip_poisson: 'Component Poisson',
+ pitcher_composite: 'Component Blend',
 };
 
 const finite = Number.isFinite;

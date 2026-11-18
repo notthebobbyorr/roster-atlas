@@ -7,5 +7,6 @@
 <p>The league tree uses league hit rates within launch-angle buckets. The trait tree also models how the pitcher's contact traits change those hit rates. Component Poisson fits each baserunner and outs rate separately.</p>
 <p>All three use the full-trust forecasts, with same- and opposite-handed MLB skill histories through 2026 and 2027 park and division context. Pitchers without usable MLB skill history use Full Atlas.</p>
 <p>The trees predict strikeouts as a plate-appearance outcome and convert their event rates into a forecast of earned runs. Component Poisson fits strikeouts and earned runs directly from the skills.</p>
-<p>Compare Models shows ERA, WHIP, and strikeouts, hits, walks, and outs per 100 batters faced for Full Atlas and all three research models.</p>
+<p>Component Blend combines Full Atlas, League Tree, Trait Tree, and Component Poisson with fitted weights for each component. ERA and WHIP use the combined outs rate. Pitcher rates with sparse measured history and all hitter projections use Full Atlas.</p>
+<p>Compare Models shows ERA, WHIP, and strikeouts, hits, walks, and outs per 100 batters faced for Full Atlas, the three research models, and Component Blend.</p>
 </html>
