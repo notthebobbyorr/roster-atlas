@@ -2,10 +2,10 @@ import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workl
 import {projectSaves} from './saves.mjs?v=closer-probability-20261115';
 import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
-import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=sstats-rates-20261115';
+import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
 import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
 import {expectedHomeRunStats} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import {pitcherRoleProjection} from './pitcher-role-effects.mjs?v=whip-research-20261118';
+import {pitcherRoleProjection} from './pitcher-role-effects.mjs?v=pitcher-research-20261118';
 const finite=Number.isFinite;
 export function completedProjection(core,pt,entry,{method='projected',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={}}={}){
  if(method==='rotation_context'){
@@ -20,12 +20,14 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
   pa=kind==='Hitter'?(manual?Math.round(preview):mode==='standard'?600:variant?.PA??null):null,
   ip=kind==='Pitcher'?roundInnings(manual?preview:mode==='standard'?(entry.role==='SP'?175:entry.role==='Swingman'?100:60):variant?.IP):null,
   load=kind==='Hitter'?pa:ip,ab=kind==='Hitter'&&finite(pa)?pa*line.rates.AB_PA:null,
-  rates=line.rates,stats={},grades={},batting=kind==='Hitter'&&finite(pa)?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,pa*rates[c+'_PA']])):null;
+  rates=line.rates,components=line.pitching_research??rates,
+  strikeoutsPerIP=line.pitching_research?3*components.K_PA/components.OUT_PA:rates.K_IP,
+  stats={},grades={},batting=kind==='Hitter'&&finite(pa)?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,pa*rates[c+'_PA']])):null;
  if(kind==='Hitter')Object.assign(stats,{Power:rates.HR_PA/rates.AB_PA,Speed:rates.SB_PA/rates.AB_PA,AVG:rates.H_PA/rates.AB_PA,OPS:line.OPS,
   HR:finite(pa)?rates.HR_PA*pa:null,SB:finite(pa)?rates.SB_PA*pa:null,R:pa===0?0:finite(pa)&&finite(rates.R_PA)?rates.R_PA*pa:null,RBI:pa===0?0:finite(pa)&&finite(rates.RBI_PA)?rates.RBI_PA*pa:null});
- else Object.assign(stats,{K:finite(ip)?rates.K_IP*ip:null,HR_allowed:finite(ip)&&finite(rates.HR_IP)?rates.HR_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)?rates.W_IP*ip:null,SV:finite(ip)?rates.SV_IP*ip:null});
- const walkRate=line.whip_research?.BB_PA??rates.BB_PA;
- stats.K_pct=finite(rates.K_PA)?100*rates.K_PA:null;stats.BB_pct=finite(walkRate)?100*walkRate:null;
+ else Object.assign(stats,{K:finite(ip)?strikeoutsPerIP*ip:null,HR_allowed:finite(ip)&&finite(rates.HR_IP)?rates.HR_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)?rates.W_IP*ip:null,SV:finite(ip)?rates.SV_IP*ip:null,
+  H_per_100:finite(components.H_PA)?100*components.H_PA:null,OUT_per_100:finite(components.OUT_PA)?100*components.OUT_PA:null});
+ stats.K_pct=finite(components.K_PA)?100*components.K_PA:null;stats.BB_pct=finite(components.BB_PA)?100*components.BB_PA:null;
  if(kind==='Hitter'){
   Object.assign(stats,hitterOutcomeStats(core,p,rates));
  }else Object.assign(stats,pitcherOutcomeStats({...p,complete_projection:line},stats));
@@ -41,7 +43,7 @@ export function completedProjection(core,pt,entry,{method='projected',view='cont
  }
  const categories=kind==='Hitter'?['Power','Speed','AVG']:['K','ERA','WHIP'];
  for(const c of categories){
-  const env=core.standardized_model.environment[c],rate=c==='K'?rates.K_IP:stats[c],sign=['ERA','WHIP'].includes(c)?-1:1;
+  const env=core.standardized_model.environment[c],rate=c==='K'?strikeoutsPerIP:stats[c],sign=['ERA','WHIP'].includes(c)?-1:1;
   if(view==='quality')grades[c]=finite(rate)?sign*(rate-env.mean)/env.sd:null;
   else{
    const st=mode==='standard'?core.standards[c]:core.projected_contribution_standards?.[mode]?.[c]||core.projected_contribution_standards.projected[c],den=kind==='Hitter'?ab:ip;

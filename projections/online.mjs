@@ -1,5 +1,5 @@
 import {attachSStats} from './sstats.mjs?v=sstats-rates-20261115';
-import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=whip-research-20261118';
+import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=pitcher-research-20261118';
 import {eligiblePositions,positionOptions,positionNote} from './positions.mjs?v=positions-1';
 import {Cloud} from '../api.mjs?v=auth-recovery-1';
 import {playingTimePreviewStore} from './playing-time-preview.mjs?v=saved-workloads-1';
@@ -9,7 +9,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=whip-research-20261118';
+import * as skillRegistry from './skill-models.mjs?v=pitcher-research-20261118';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=closer-availability-20261116';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=closer-availability-20261116';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
@@ -158,11 +158,11 @@ function loadWHIPResearch(epoch,cache,version){
 }
 window.projectionWHIPComparison=async mlbid=>{
  const epoch=sessionEpoch,generation=modelEpoch,cache=runtimes,version=activeModel().runtime;
- if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Complete Projections to compare WHIP.');
+ if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Complete Projections to compare pitcher models.');
  const [{core},payload]=await Promise.all([runtimeLoad({baseOnly:true}),loadWHIPResearch(epoch,cache,version)]);
  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
  const profile=core.players.find(p=>p.kind==='Pitcher'&&p.mlbid===mlbid&&p.complete_projection);
- if(!profile)throw Error('No 2027 WHIP projection is available for this pitcher.');
+ if(!profile)throw Error('No 2027 projection is available for this pitcher.');
  return whipComparisonRows(profile,payload);
 };
 window.skillGradesLoad=async()=>(await runtimeLoad()).core;
@@ -267,7 +267,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=whip-research-20261118&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=pitcher-research-20261118&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

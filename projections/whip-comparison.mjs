@@ -3,7 +3,7 @@ const escapeAttribute = value => String(value).replace(/[&"<>]/g, char => ({'&':
 export function whipComparisonButton(entry, enabled) {
  if (!enabled || entry?.kind !== 'Pitcher' || !Number.isFinite(entry.profile?.complete_projection?.WHIP)) return '';
  return '<button class="whip-compare" type="button" data-whip-compare="' + escapeAttribute(entry.key) +
-  '" aria-label="Compare WHIP for ' + escapeAttribute(entry.name) + '">Compare WHIP</button>';
+  '" aria-label="Compare Models for ' + escapeAttribute(entry.name) + '">Compare Models</button>';
 }
 
 export function mountWHIPComparison(document, getForecasts, entryForKey) {
@@ -15,9 +15,10 @@ export function mountWHIPComparison(document, getForecasts, entryForKey) {
  dialog.innerHTML = '<form method="dialog"><h2 id="whip-comparison-title"></h2>' +
   '<button type="submit" autofocus>Close</button></form>' +
   '<p role="status" aria-live="polite"></p>' +
-  '<div class="whip-comparison-table" hidden><table><caption>2027 WHIP and components per 100 batters faced</caption>' +
-  '<thead><tr><th scope="col">Model</th><th scope="col">WHIP</th><th scope="col">Hits</th>' +
-  '<th scope="col">Walks</th><th scope="col">Outs</th></tr></thead><tbody></tbody></table></div>';
+  '<div class="whip-comparison-table" tabindex="0" role="region" aria-label="2027 model forecasts" hidden><table>' +
+  '<caption>2027 projections · component rates per 100 batters faced</caption>' +
+  '<thead><tr><th scope="col">Model</th><th scope="col">ERA</th><th scope="col">WHIP</th>' +
+  '<th scope="col">K/100</th><th scope="col">H/100</th><th scope="col">BB/100</th><th scope="col">Out/100</th></tr></thead><tbody></tbody></table></div>';
  document.body.append(dialog);
  const title = dialog.querySelector('h2'), status = dialog.querySelector('[role=status]');
  const scroll = dialog.querySelector('.whip-comparison-table'), body = dialog.querySelector('tbody');
@@ -30,7 +31,7 @@ export function mountWHIPComparison(document, getForecasts, entryForKey) {
   if (!entry) return;
   const request = ++generation;
   title.textContent = entry.name;
-  status.textContent = 'Loading WHIP forecasts…';
+  status.textContent = 'Loading model forecasts…';
   scroll.hidden = true;
   if (!dialog.open) dialog.showModal();
   try {
@@ -38,7 +39,7 @@ export function mountWHIPComparison(document, getForecasts, entryForKey) {
    if (request !== generation || !dialog.open) return;
    body.replaceChildren();
    const format = (value, scale, decimals) => Number.isFinite(value) ? (value * scale).toFixed(decimals) : '—';
-   for (const {label, whip, rates, fallback} of rows) {
+   for (const {label, era, whip, rates, fallback} of rows) {
     const tr = body.insertRow(), name = document.createElement('th');
     name.scope = 'row';
     name.textContent = label;
@@ -48,7 +49,8 @@ export function mountWHIPComparison(document, getForecasts, entryForKey) {
      name.append(note);
     }
     tr.append(name);
-    for (const value of [format(whip, 1, 3), ...['H_PA','BB_PA','OUT_PA'].map(rate => format(rates[rate], 100, 1))]) {
+    for (const value of [format(era, 1, 2), format(whip, 1, 3),
+                        ...['K_PA','H_PA','BB_PA','OUT_PA'].map(rate => format(rates[rate], 100, 1))]) {
      tr.insertCell().textContent = value;
     }
    }

@@ -5,7 +5,7 @@
  color: #a9e2d2;
 }
 .whip-comparison {
- width: min(34rem, calc(100% - 1.25rem));
+ width: min(43rem, calc(100% - 1.25rem));
  max-height: 85dvh;
  padding: 1rem;
  border: 1px solid #496272;
@@ -29,7 +29,8 @@
  color: #afc5d0;
 }
 .whip-comparison th, .whip-comparison td { position: static; padding: .45rem .4rem; }
-.whip-comparison th[scope=row] { background: transparent; white-space: normal; }
+.whip-comparison th:first-child { position: sticky; left: 0; z-index: 1; }
+.whip-comparison th[scope=row] { background: #16242e; min-width: 6rem; white-space: normal; }
 .whip-comparison th:not(:first-child), .whip-comparison td {
  text-align: right;
  font-variant-numeric: tabular-nums;
