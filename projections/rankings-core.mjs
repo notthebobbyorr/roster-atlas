@@ -1,14 +1,14 @@
-import {rotationContext} from './rotation-context.mjs?v=lineup-pa-20261111-1';
+import {rotationContext} from './rotation-context.mjs?v=combined-blend-20261119';
 import {hitterABPerPA} from './playing-time-preview.mjs?v=rotation-rates-20261104-1';
 import {projectInningsPerStart} from './pitcher-starts.mjs?v=hybrid-full-1';
 import {projectSaves} from './saves.mjs?v=closer-probability-20261115';
 import {roundInnings,roundWorkloadVariant} from './workload-rounding.mjs?v=workload-rounding-1';
 import {playerOrganizations} from './player-organizations.mjs?v=rr-20261113-1';
 import {projectWins} from './pitcher-wins.mjs?v=rr-20261113-1';
-import {completedProjection} from './complete-projection.mjs?v=pitcher-teams-20261118';
+import {completedProjection} from './complete-projection.mjs?v=combined-blend-20261119';
 import {hitterOutcomeStats} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherOutcomeStats} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
-import {universalHitterProfile} from './universal-hitter-context.mjs?v=universal-600pa-1';
+import {universalHitterProfile} from './universal-hitter-context.mjs?v=combined-blend-20261119';
 export const fantasyRoles=['SP','RP','All P','All Hitters','All Players','C','1B','2B','3B','SS','OF','CI','MI','UT-only'];
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export function rrRoleOptions(entries){

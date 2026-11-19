@@ -1,4 +1,4 @@
-import {rotationContext} from './rotation-context.mjs?v=rotation-rates-20261104-1';
+import {rotationContext} from './rotation-context.mjs?v=combined-blend-20261119';
 import {hitterHands} from './hitter-handedness.mjs?v=universal-600pa-1';
 // League PA totals within each batting-hand class; no personal protection adjustment.
 // 2024/2025/2026 weights = 1/6, 1/3, 1/2. All players of one hand share its prior.
@@ -12,7 +12,7 @@ function derived(r){
  return {...r,AVG,OBP,SLG,OPS:finite(OBP)&&finite(SLG)?OBP+SLG:null,BABIP};
 }
 export function universalHitterProfile(core,p){
- if(p?.kind!=='Hitter'||p.universal_context)return p;
+ if(p?.kind!=='Hitter'||p.universal_context||p.complete_projection?.hitting_research)return p;
  if(!cache.has(core))cache.set(core,new WeakMap());const profiles=cache.get(core);if(profiles.has(p))return profiles.get(p);
  const hand=[p.bat_hand,p.hand,hitterHands.players[String(p.mlbid)]].find(value=>universalHitterMix[value]),policy=universalHitterMix[hand],q=policy?.vs_R,oldq=p.platoon_usage?.vs_R,source={...(p.complete_projection?.rates||p.projected_batting?.combined||{})},L=p.projected_batting?.L,R=p.projected_batting?.R;
  if(!policy||!L||!R){profiles.set(p,p);return p;}

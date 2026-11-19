@@ -2,11 +2,13 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>2027 pitcher research models</title>
-<h1>2027 pitcher research models</h1>
+<title>2027 hitter and pitcher research models</title>
+<h1>2027 hitter and pitcher research models</h1>
 <p>The league tree uses league hit rates within launch-angle buckets. The trait tree also models how the pitcher's contact traits change those hit rates. Component Poisson fits each baserunner and outs rate separately.</p>
 <p>All three use the full-trust forecasts, with same- and opposite-handed MLB skill histories through 2026 and 2027 park and division context. Pitchers without usable MLB skill history use Full Atlas.</p>
 <p>The trees predict strikeouts as a plate-appearance outcome and convert their event rates into a forecast of earned runs. Component Poisson fits strikeouts and earned runs directly from the skills.</p>
-<p>Component Blend combines Full Atlas, League Tree, Trait Tree, and Component Poisson with fitted weights for each component. ERA and WHIP use the combined outs rate. Pitcher rates with sparse measured history and all hitter projections use Full Atlas.</p>
-<p>Compare Models shows ERA, WHIP, and strikeouts, hits, walks, and outs per 100 batters faced for Full Atlas, the three research models, and Component Blend.</p>
+<p>Hitter research models use derived SEAGER. They project Selectivity and Hittable Pitches Taken separately by matchup before deriving SEAGER. The hitter trees model plate appearances in branches, while Component Poisson fits each event rate directly.</p>
+<p>Component Blend combines Full Atlas, League Tree, Trait Tree, and Component Poisson with fitted weights for each component. Pitcher ERA and WHIP use the blended outs rate. Hitter Component Blend applies a center adjustment after blending, then derives AVG, OBP, SLG, OPS and BABIP from the final plate appearance rates.</p>
+<p>Atlas supplies fallback rates where measured MLB history is sparse. Hitter PA, R, RBI and SB use Atlas. Playing-time scenarios scale the modeled hitters using their projected rate lines and matchup mix.</p>
+<p>Compare Models shows the five forecasts for either role. Pitchers can also preview destination teams and parks.</p>
 </html>

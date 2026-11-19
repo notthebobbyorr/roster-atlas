@@ -1,13 +1,19 @@
 const escapeAttribute = value => String(value).replace(/[&"<>]/g, char => ({'&':'&amp;','"':'&quot;','<':'&lt;','>':'&gt;'}[char]));
 
-export function whipComparisonButton(entry, enabled) {
- if (!enabled || entry?.kind !== 'Pitcher' || !Number.isFinite(entry.profile?.complete_projection?.WHIP)) return '';
+export function whipComparisonButton(entry, enabled, hitters=false) {
+ const line = entry?.profile?.complete_projection;
+ const ready = entry?.kind === 'Hitter' ? hitters && Number.isFinite(line?.OPS) :
+  entry?.kind === 'Pitcher' && enabled && Number.isFinite(line?.WHIP);
+ if (!ready) return '';
  return '<button class="whip-compare" type="button" data-whip-compare="' + escapeAttribute(entry.key) +
   '" aria-label="Compare Models for ' + escapeAttribute(entry.name) + '">Compare Models</button>';
 }
 
-export function mountWHIPComparison(document, getForecasts, entryForKey, teams=null) {
- if (!getForecasts) return;
+const hitterColumns = ['Model','AVG','OBP','SLG','OPS','BABIP','K%','BB%','HR/600 PA'];
+const pitcherColumns = ['Model','ERA','WHIP','K/100','H/100','BB/100','Out/100'];
+
+export function mountWHIPComparison(document, getForecasts, entryForKey, teams=null, getHitters=null) {
+ if (!getForecasts && !getHitters) return;
  let generation = 0;
  const dialog = document.createElement('dialog');
  dialog.className = 'whip-comparison';
@@ -32,15 +38,25 @@ export function mountWHIPComparison(document, getForecasts, entryForKey, teams=n
 
  async function draw(entry, team) {
   const request = ++generation;
+  const hitter = entry.kind === 'Hitter';
   if (apply) apply.disabled = true;
   status.textContent = team ? 'Updating team context…' : 'Loading model forecasts…';
   scroll.hidden = true;
   try {
-   const rows = await getForecasts(entry.mlbid, team);
+   const rows = await (hitter ? getHitters(entry.mlbid) : getForecasts(entry.mlbid, team));
    if (request !== generation || !dialog.open) return;
+   if (getHitters) {
+    dialog.querySelector('caption').textContent = hitter ? '2027 hitter projections' : '2027 projections · component rates per 100 batters faced';
+    dialog.querySelector('thead tr').replaceChildren(...(hitter ? hitterColumns : pitcherColumns).map(label => {
+     const th = document.createElement('th');
+     th.scope = 'col';
+     th.textContent = label;
+     return th;
+    }));
+   }
    body.replaceChildren();
    const format = (value, scale, decimals) => Number.isFinite(value) ? (value * scale).toFixed(decimals) : '—';
-   for (const {label, era, whip, rates, fallback} of rows) {
+   for (const {label, era, whip, avg, obp, slg, ops, babip, rates, fallback} of rows) {
     const tr = body.insertRow(), name = document.createElement('th');
     name.scope = 'row';
     name.textContent = label;
@@ -50,14 +66,16 @@ export function mountWHIPComparison(document, getForecasts, entryForKey, teams=n
      name.append(note);
     }
     tr.append(name);
-    for (const value of [format(era, 1, 2), format(whip, 1, 3),
-                        ...['K_PA','H_PA','BB_PA','OUT_PA'].map(rate => format(rates[rate], 100, 1))]) {
+    const values = hitter ? [...[avg,obp,slg,ops,babip].map(rate=>format(rate,1,3)),
+      format(rates.K_PA,100,1),format(rates.BB_PA,100,1),format(rates.HR_PA,600,1)] :
+      [format(era, 1, 2),format(whip, 1, 3),...['K_PA','H_PA','BB_PA','OUT_PA'].map(rate=>format(rates[rate],100,1))];
+    for (const value of values) {
      tr.insertCell().textContent = value;
     }
    }
    status.textContent = '';
    scroll.hidden = false;
-   if (apply) apply.disabled = team === teams.get(entry.mlbid);
+   if (apply && !hitter) apply.disabled = team === teams.get(entry.mlbid);
   } catch (error) {
    if (request === generation && dialog.open) status.textContent = error.message;
   }
@@ -87,10 +105,10 @@ export function mountWHIPComparison(document, getForecasts, entryForKey, teams=n
   title.textContent = entry.name;
   if (controls) controls.hidden = true;
   if (!dialog.open) dialog.showModal();
-  currentSelection = teams?.get(entry.mlbid) ?? '';
+  currentSelection = entry.kind === 'Hitter' ? '' : teams?.get(entry.mlbid) ?? '';
   const drawing = draw(entry, currentSelection);
   const request = generation;
-  if (controls) {
+  if (controls && entry.kind !== 'Hitter') {
    try {
     const context = await teams.load();
     if (generation !== request || !dialog.open) return;
