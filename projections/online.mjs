@@ -1,4 +1,4 @@
-import {componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=blend-risk-20261120';
+import {componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=lineup-risk-20261121';
 import {attachSStats} from './sstats.mjs?v=sstats-rates-20261115';
 import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=pitcher-teams-20261118';
 import {attachHitterResearch,hitterComparisonRows,hitterResearchKind,hitterResearchSource,validateHitterResearch} from './hitter-research.mjs?v=combined-blend-20261119';
@@ -322,7 +322,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=blend-risk-20261120&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=lineup-risk-20261121&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
