@@ -1,5 +1,4 @@
-import {componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=lineup-risk-20261121';
-import {attachSStats} from './sstats.mjs?v=sstats-rates-20261115';
+import {attachOfficialComponentWorkload,componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=official-component-20261120';
 import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=pitcher-teams-20261118';
 import {attachHitterResearch,hitterComparisonRows,hitterResearchKind,hitterResearchSource,validateHitterResearch} from './hitter-research.mjs?v=combined-blend-20261119';
 import {pitcherTeamKind,pitcherTeamSource,previewPitcherTeam,validatePitcherTeamContext} from './pitcher-team-preview.mjs?v=pitcher-teams-20261118';
@@ -12,7 +11,7 @@ import {hitterOutcomeSource} from './hitter-outcomes-source.mjs?v=hitter-outcome
 import {attachHitterOutcomes} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {expectedHomeRunsSource} from './expected-home-runs-source.mjs?v=xhr-20261108-1';
 import {attachExpectedHomeRuns} from './expected-home-runs.mjs?v=single-hr-total-20261109-1';
-import * as skillRegistry from './skill-models.mjs?v=combined-blend-20261119';
+import * as skillRegistry from './skill-models.mjs?v=official-component-20261120';
 import {projectSaves,saveRoleOptions,savesExplainer} from './saves.mjs?v=closer-availability-20261116';
 import {closingOpportunitySource} from './closing-opportunities-source.mjs?v=closer-availability-20261116';
 import {attachDirectPitcherWorkloads} from './direct-pitcher-workloads.mjs?v=direct-workloads-20261111-1';
@@ -72,7 +71,8 @@ async function runtimeLoad({baseOnly=false}={}){
   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
   data.core=attachHitterOutcomes(data.core,outcomes);
   if(Number(data.core.projection_season??data.core.season)===componentRiskSource.season){
-   data.core.component_blend_risk=await supplementLoad(componentRiskSource,'atlas-component-risk',epoch,cache,componentRiskProfiles);
+   data.componentBaseline=await supplementLoad(componentRiskSource,'atlas-component-risk',epoch,cache);
+   data.core.component_blend_risk=componentRiskProfiles(data.componentBaseline);
    if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
   }
   if(data.core.projection_model==='complete_20261104' && Number(data.core.projection_season??data.core.season)===expectedHomeRunsSource.season){
@@ -143,12 +143,8 @@ async function runtimeLoad({baseOnly=false}={}){
   const [pitchers,hitters]=await Promise.all([loadWHIPResearch(epoch,cache,version),loadHitterResearch(epoch,cache,version)]);
   if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
   const core=attachWHIPResearch(result.core,pitchers,selectedModel.whipResearch);
-  return {...result,core:attachHitterResearch(core,hitters,selectedModel.whipResearch)};
- }
- if(selectedModel.sstats){
-  const payload=await supplementLoad({snapshot:selectedModel.sstats},'atlas-sstats-components',epoch,cache);
-  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
-  return {...result,core:attachSStats(result.core,payload,version)};
+  const combined={...result,core:attachHitterResearch(core,hitters,selectedModel.whipResearch)};
+  return selectedModel.whipResearch==='pitcher_composite'?attachOfficialComponentWorkload(combined,result.componentBaseline):combined;
  }
  return result;
 }
@@ -171,7 +167,7 @@ function loadHitterResearch(epoch,cache,version){
 }
 window.projectionHitterComparison=async mlbid=>{
  const epoch=sessionEpoch,generation=modelEpoch,cache=runtimes,version=activeModel().runtime;
- if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Complete Projections to compare hitter models.');
+ if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Component Blend to compare hitter models.');
  const [{core},payload]=await Promise.all([runtimeLoad({baseOnly:true}),loadHitterResearch(epoch,cache,version)]);
  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
  const profile=core.players.find(p=>p.kind==='Hitter'&&p.mlbid===mlbid&&p.complete_projection);
@@ -180,7 +176,7 @@ window.projectionHitterComparison=async mlbid=>{
 };
 window.projectionPitcherTeamContext=async()=>{
  const epoch=sessionEpoch,cache=runtimes,version=activeModel().runtime;
- if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Complete Projections to preview pitcher teams.');
+ if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Component Blend to preview pitcher teams.');
  return supplementLoad(pitcherTeamSource,pitcherTeamKind,epoch,cache,payload=>validatePitcherTeamContext(payload,version,whipResearchSource.snapshot));
 };
 window.projectionPitcherDestination=id=>authenticated?pitcherDestinations[String(id)]??'':'';
@@ -197,7 +193,7 @@ window.projectionSetPitcherDestination=(id,team,context)=>{
 };
 window.projectionWHIPComparison=async (mlbid,team='')=>{
  const epoch=sessionEpoch,generation=modelEpoch,cache=runtimes,version=activeModel().runtime;
- if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Complete Projections to compare pitcher models.');
+ if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Component Blend to compare pitcher models.');
  const [{core},payload,context]=await Promise.all([
   runtimeLoad({baseOnly:true}),loadWHIPResearch(epoch,cache,version),team?window.projectionPitcherTeamContext():null
  ]);
@@ -205,15 +201,9 @@ window.projectionWHIPComparison=async (mlbid,team='')=>{
  const profile=core.players.find(p=>p.kind==='Pitcher'&&p.mlbid===mlbid&&p.complete_projection);
  if(!profile)throw Error('No 2027 projection is available for this pitcher.');
  const rows=whipComparisonRows(profile,payload);
- let sstats;
- if(activeModel().sstats){
-  const selected=await runtimeLoad();
-  sstats=selected.core.players.find(p=>p.kind==='Pitcher'&&p.mlbid===mlbid)?.complete_projection;
-  if(sstats)rows.push({model:'sstats_2027',label:'sStats',era:sstats.ERA,whip:sstats.WHIP,rates:sstats.rates});
- }
  return team?rows.map(row=>{
   const atlas=profile.complete_projection;
-  const line=row.model==='sstats_2027'?sstats:row.model==='complete_20261104'||row.fallback?atlas:
+  const line=row.model==='complete_20261104'||row.fallback?atlas:
    {...atlas,ERA:row.era,WHIP:row.whip,atlas_era:atlas.ERA,pitching_research:row.rates};
   const preview=previewPitcherTeam({...profile,complete_projection:line},line,row.model,team,context);
   return {...row,era:preview.ERA,whip:preview.WHIP,rates:preview.team_preview??row.rates};
@@ -223,12 +213,12 @@ window.skillGradesLoad=async()=>(await runtimeLoad()).core;
 window.skillGradesWorkloadsLoad=async()=>(await runtimeLoad()).workloads;
 window.projectionContractsLoad=async()=>(await runtimeLoad()).contracts;
 window.projectionSavesLoad=async()=>(await runtimeLoad()).saves;
-window.projectionHitterLineup=id=>authenticated&&activeModel().runtime===hitterLineupSource.base
+window.projectionHitterLineup=id=>authenticated&&activeModel().whipResearch!=='pitcher_composite'&&activeModel().runtime===hitterLineupSource.base
  ?lineupSettings(lineupRuntime?.core.hitter_lineup_model,String(id),lineupOverrides):null;
 const lineupStorageKey=owner=>'ra-hitter-lineup:v1:'+owner;
 window.projectionSetHitterLineup=(id,field,value)=>{
  const owner=window.projectionRankingOwner;
- if(!authenticated||!owner||!lineupRuntime||activeModel().runtime!==hitterLineupSource.base)throw Error('Hitter lineup inputs unavailable.');
+ if(!authenticated||!owner||!lineupRuntime||activeModel().whipResearch==='pitcher_composite'||activeModel().runtime!==hitterLineupSource.base)throw Error('Hitter lineup inputs unavailable.');
  updateLineupOverride(lineupRuntime.core.hitter_lineup_model,lineupOverrides,String(id),field,value);
  applyHitterLineups(lineupRuntime,lineupRuntime.core.hitter_lineup_model,lineupOverrides);
  try{localStorage.setItem(lineupStorageKey(owner),JSON.stringify(lineupOverrides));return true;}
@@ -287,6 +277,7 @@ window.skillGradesDownload=async path=>{
 };
 async function downloadProjections(path){
  const model=activeModel();
+ if(model.whipResearch==='pitcher_composite')return download(componentRiskSource.snapshot,path);
  if(model.runtime===hitterLineupSource.base){
   const {core,saves}=await runtimeLoad();
   return download(hitterLineupSource.snapshot,path+'.gz',{gzip:true,name:path,transform:csv=>withRoleInningsCSV(csv,core,pitcherRosterRoles,saves)});
@@ -322,7 +313,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=lineup-risk-20261121&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=official-component-20261120&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }
@@ -367,7 +358,7 @@ if($('downloadRotation'))$('downloadRotation').onclick=async()=>{
  try{await downloadProjections(activeModel().downloads.rotation_csv);}
  catch(error){$('status').textContent=error.message;}
 };
-$('model').onchange=()=>{if(!authenticated||!Object.hasOwn(skillModels,$('model').value))return;modelKey=$('model').value;modelEpoch++;showView();};
+$('model').onchange=()=>{if(!authenticated||!Array.from($('model').options).some(option=>option.value===$('model').value))return;modelKey=$('model').value;modelEpoch++;showView();};
 window.addEventListener('hashchange',showView);
 window.addEventListener('storage',event=>{if(event.key===cloud.session_key&&!cloud.session){clear();$('status').textContent='Signed out.';}});
 if(!redirectRecovery(location,'../reset-password.html')&&cloud.session)open();

@@ -1,4 +1,4 @@
-import {componentRiskColumns} from './component-risk.mjs?v=lineup-risk-20261121';
+import {componentRiskColumns} from './component-risk.mjs?v=official-component-20261120';
 import {isSavedWorkload,validateWorkloadScenario} from './playing-time-scenarios.mjs?v=frozen-workloads-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 

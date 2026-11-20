@@ -19,7 +19,8 @@ export function completedProjection(core,pt,entry,{model,method='projected',view
  const kind=p.kind,record=pt.players[entry.key],mode=method==='fa_context'?'projected':method,
   variant=mode==='standard'?null:roundWorkloadVariant(record?.variants[mode==='projected'?record.selected:mode]),
   preview=workloadOverrides[entry.key],manual=finite(preview)&&preview>=0,
-  pa=kind==='Hitter'?(manual?Math.round(preview):mode==='standard'?600:variant?.PA??null):null,
+  official=core.official_component_workload&&method==='projected'&&!manual,
+  pa=kind==='Hitter'?(manual?Math.round(preview):mode==='standard'?600:official?p.complete_projection.PA:variant?.PA??null):null,
   ip=kind==='Pitcher'?roundInnings(manual?preview:mode==='standard'?(entry.role==='SP'?175:entry.role==='Swingman'?100:60):variant?.IP):null,
   load=kind==='Hitter'?pa:ip,ab=kind==='Hitter'&&finite(pa)?pa*line.rates.AB_PA:null,
   rates=line.rates,components=line.team_preview??line.pitching_research??rates,
@@ -27,7 +28,7 @@ export function completedProjection(core,pt,entry,{model,method='projected',view
   stats={},grades={},batting=kind==='Hitter'&&finite(pa)?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,pa*rates[c+'_PA']])):null;
  if(kind==='Hitter')Object.assign(stats,{Power:rates.HR_PA/rates.AB_PA,Speed:rates.SB_PA/rates.AB_PA,AVG:rates.H_PA/rates.AB_PA,OPS:line.OPS,
   HR:finite(pa)?rates.HR_PA*pa:null,SB:finite(pa)?rates.SB_PA*pa:null,R:pa===0?0:finite(pa)&&finite(rates.R_PA)?rates.R_PA*pa:null,RBI:pa===0?0:finite(pa)&&finite(rates.RBI_PA)?rates.RBI_PA*pa:null});
- else Object.assign(stats,{K:finite(ip)?strikeoutsPerIP*ip:null,HR_allowed:finite(ip)&&finite(rates.HR_IP)?rates.HR_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)?rates.W_IP*ip:null,SV:finite(ip)?rates.SV_IP*ip:null,
+ else Object.assign(stats,{K:finite(ip)?strikeoutsPerIP*ip:null,HR_allowed:finite(ip)&&finite(rates.HR_IP)?rates.HR_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)&&finite(rates.W_IP)?rates.W_IP*ip:null,SV:finite(ip)&&finite(rates.SV_IP)?rates.SV_IP*ip:null,
   H_per_100:finite(components.H_PA)?100*components.H_PA:null,OUT_per_100:finite(components.OUT_PA)?100*components.OUT_PA:null});
  stats.K_pct=finite(components.K_PA)?100*components.K_PA:null;stats.BB_pct=finite(components.BB_PA)?100*components.BB_PA:null;
  if(kind==='Hitter'){
@@ -39,7 +40,12 @@ export function completedProjection(core,pt,entry,{model,method='projected',view
  if(kind==='Pitcher'){
   if(useSaveModel)save=projectSaves(saves,p.mlbid,ip,savesRole,{method:mode,overrides:savesOverrides,workloadOverrides});
   else save={SV:stats.SV,role:line.role==='SP'?'starter':saves?.players?.[String(p.mlbid)]?.auto_role||'other',override:'auto',rate:rates.SV_IP,source:core.model_name||'Complete projections',teamAllocated:false,detailText:'Completed team-context saves forecast, scaled with innings.'};
-  if(useSaveModel)stats.SV=save?.SV??null;
+  if(useSaveModel&&!(official&&savesRole==='auto'&&!pitcherDestination)){
+   stats.SV=save?.SV??null;
+  }else if(official&&savesRole==='auto'&&!pitcherDestination){
+   stats.SV=finite(rates.SV_IP)?ip*rates.SV_IP:null;
+   if(save)save={...save,SV:stats.SV};
+  }
   stats.SVO_share_pct=finite(save?.teamOpportunityShare)?100*save.teamOpportunityShare:null;
   stats.closer_probability_pct=finite(save?.closerProbability)?100*save.closerProbability:null;
  }
