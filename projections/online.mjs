@@ -1,4 +1,4 @@
-import {attachOfficialComponentWorkload,componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=official-component-20261120';
+import {attachOfficialComponentWorkload,componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=pa-budget-20261120';
 import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=pitcher-teams-20261118';
 import {attachHitterResearch,hitterComparisonRows,hitterResearchKind,hitterResearchSource,validateHitterResearch} from './hitter-research.mjs?v=combined-blend-20261119';
 import {pitcherTeamKind,pitcherTeamSource,previewPitcherTeam,validatePitcherTeamContext} from './pitcher-team-preview.mjs?v=pitcher-teams-20261118';
@@ -168,11 +168,17 @@ function loadHitterResearch(epoch,cache,version){
 window.projectionHitterComparison=async mlbid=>{
  const epoch=sessionEpoch,generation=modelEpoch,cache=runtimes,version=activeModel().runtime;
  if(!authenticated||version!==skillModels.complete_20261104.runtime)throw Error('Choose Component Blend to compare hitter models.');
- const [{core},payload]=await Promise.all([runtimeLoad({baseOnly:true}),loadHitterResearch(epoch,cache,version)]);
+ const [{core,componentBaseline},payload]=await Promise.all([runtimeLoad({baseOnly:true}),loadHitterResearch(epoch,cache,version)]);
  if(!authenticated||epoch!==sessionEpoch||generation!==modelEpoch)throw Error('Model or session changed.');
  const profile=core.players.find(p=>p.kind==='Hitter'&&p.mlbid===mlbid&&p.complete_projection);
  if(!profile)throw Error('No 2027 projection is available for this hitter.');
- return hitterComparisonRows(profile,payload);
+ const rows=hitterComparisonRows(profile,payload);
+ const workload=componentBaseline?.hitting?.[mlbid];
+ if(!workload)return rows;
+ return rows.flatMap(row=>row.model!=='pitcher_composite'?[row]:[
+  {...row,label:'Component Blend · Budgeted PA',pa:workload[0]},
+  {...row,label:'Component Blend · Unbudgeted PA',pa:workload[4]}
+ ]);
 };
 window.projectionPitcherTeamContext=async()=>{
  const epoch=sessionEpoch,cache=runtimes,version=activeModel().runtime;
@@ -313,7 +319,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=official-component-20261120&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=pa-budget-20261120&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

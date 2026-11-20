@@ -16,18 +16,20 @@ export function completedProjection(core,pt,entry,{model,method='projected',view
  const p=method==='standard'?universalHitterProfile(core,entry.profile):entry.profile;
  const line=p?.kind==='Pitcher'?previewPitcherTeam(p,pitcherRoleProjection(core.pitcher_role_effects,p,savesRole),model,pitcherDestination,pitcherTeamContext):p?.complete_projection;
  if(!line)return {PA:null,AB:null,IP:null,stats:{},grades:{},sum:null,sum_full:null,sum_with_runs_rbi:null};
- const kind=p.kind,record=pt.players[entry.key],mode=method==='fa_context'?'projected':method,
+ const unbudgeted=method==='dynamic_unbudgeted',
+  kind=p.kind,record=pt.players[entry.key],mode=(method==='fa_context'||unbudgeted)?'projected':method,
   variant=mode==='standard'?null:roundWorkloadVariant(record?.variants[mode==='projected'?record.selected:mode]),
   preview=workloadOverrides[entry.key],manual=finite(preview)&&preview>=0,
-  official=core.official_component_workload&&method==='projected'&&!manual,
-  pa=kind==='Hitter'?(manual?Math.round(preview):mode==='standard'?600:official?p.complete_projection.PA:variant?.PA??null):null,
+  official=core.official_component_workload&&(method==='projected'||unbudgeted)&&!manual,
+  pa=kind==='Hitter'?(manual?Math.round(preview):mode==='standard'?600:official?(
+   unbudgeted?p.complete_projection.unbudgeted_PA??p.complete_projection.PA:p.complete_projection.PA):variant?.PA??null):null,
   ip=kind==='Pitcher'?roundInnings(manual?preview:mode==='standard'?(entry.role==='SP'?175:entry.role==='Swingman'?100:60):variant?.IP):null,
   load=kind==='Hitter'?pa:ip,ab=kind==='Hitter'&&finite(pa)?pa*line.rates.AB_PA:null,
   rates=line.rates,components=line.team_preview??line.pitching_research??rates,
   strikeoutsPerIP=components!==rates?3*components.K_PA/components.OUT_PA:rates.K_IP,
   stats={},grades={},batting=kind==='Hitter'&&finite(pa)?Object.fromEntries(['H','BB','AB','TB','HBP','SF'].map(c=>[c,pa*rates[c+'_PA']])):null;
  if(kind==='Hitter')Object.assign(stats,{Power:rates.HR_PA/rates.AB_PA,Speed:rates.SB_PA/rates.AB_PA,AVG:rates.H_PA/rates.AB_PA,OPS:line.OPS,
-  HR:finite(pa)?rates.HR_PA*pa:null,SB:finite(pa)?rates.SB_PA*pa:null,R:pa===0?0:finite(pa)&&finite(rates.R_PA)?rates.R_PA*pa:null,RBI:pa===0?0:finite(pa)&&finite(rates.RBI_PA)?rates.RBI_PA*pa:null});
+  HR:finite(pa)?rates.HR_PA*pa:null,SB:pa===0?0:finite(pa)&&finite(rates.SB_PA)?rates.SB_PA*pa:null,R:pa===0?0:finite(pa)&&finite(rates.R_PA)?rates.R_PA*pa:null,RBI:pa===0?0:finite(pa)&&finite(rates.RBI_PA)?rates.RBI_PA*pa:null});
  else Object.assign(stats,{K:finite(ip)?strikeoutsPerIP*ip:null,HR_allowed:finite(ip)&&finite(rates.HR_IP)?rates.HR_IP*ip:null,ERA:line.ERA,WHIP:line.WHIP,W:finite(ip)&&finite(rates.W_IP)?rates.W_IP*ip:null,SV:finite(ip)&&finite(rates.SV_IP)?rates.SV_IP*ip:null,
   H_per_100:finite(components.H_PA)?100*components.H_PA:null,OUT_per_100:finite(components.OUT_PA)?100*components.OUT_PA:null});
  stats.K_pct=finite(components.K_PA)?100*components.K_PA:null;stats.BB_pct=finite(components.BB_PA)?100*components.BB_PA:null;

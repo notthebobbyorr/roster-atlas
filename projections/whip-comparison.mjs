@@ -9,7 +9,7 @@ export function whipComparisonButton(entry, enabled, hitters=false) {
   '" aria-label="Compare Models for ' + escapeAttribute(entry.name) + '">Compare Models</button>';
 }
 
-const hitterColumns = ['Model','AVG','OBP','SLG','OPS','BABIP','K%','BB%','HR/600 PA'];
+const hitterColumns = ['Model','PA','HR','AVG','OBP','SLG','OPS','BABIP','K%','BB%','HR/600 PA'];
 const pitcherColumns = ['Model','ERA','WHIP','K/100','H/100','BB/100','Out/100'];
 
 export function mountWHIPComparison(document, getForecasts, entryForKey, teams=null, getHitters=null) {
@@ -56,7 +56,7 @@ export function mountWHIPComparison(document, getForecasts, entryForKey, teams=n
    }
    body.replaceChildren();
    const format = (value, scale, decimals) => Number.isFinite(value) ? (value * scale).toFixed(decimals) : '—';
-   for (const {label, era, whip, avg, obp, slg, ops, babip, rates, fallback} of rows) {
+   for (const {label, era, whip, avg, obp, slg, ops, babip, rates, fallback,pa} of rows) {
     const tr = body.insertRow(), name = document.createElement('th');
     name.scope = 'row';
     name.textContent = label;
@@ -66,7 +66,7 @@ export function mountWHIPComparison(document, getForecasts, entryForKey, teams=n
      name.append(note);
     }
     tr.append(name);
-    const values = hitter ? [...[avg,obp,slg,ops,babip].map(rate=>format(rate,1,3)),
+    const values = hitter ? [format(pa,1,0),format(pa*rates.HR_PA,1,1),...[avg,obp,slg,ops,babip].map(rate=>format(rate,1,3)),
       format(rates.K_PA,100,1),format(rates.BB_PA,100,1),format(rates.HR_PA,600,1)] :
       [format(era, 1, 2),format(whip, 1, 3),...['K_PA','H_PA','BB_PA','OUT_PA'].map(rate=>format(rates[rate],100,1))];
     for (const value of values) {

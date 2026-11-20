@@ -1,4 +1,4 @@
-export const componentRiskSource = {snapshot:'skills-2027-4ea86fb0bda5',season:2027};
+export const componentRiskSource = {snapshot:'skills-2027-fef229d3726c',season:2027};
 export const componentRiskColumns = [
  ['overall_risk_score','Overall risk %',1],
  ['performance_risk_score','Performance risk %',1],
@@ -26,7 +26,7 @@ export function attachOfficialComponentWorkload(data,payload) {
   const values=(hitter?payload.hitting:payload.pitching)?.[profile.mlbid];
   const line=profile.complete_projection;
   if(!values||!line)return profile;
-  if(values.length!==(hitter?4:3)||!Number.isFinite(values[0])||
+  if(values.length!==(hitter?5:3)||!Number.isFinite(values[0])||
      values.some(value=>value!==null&&(!Number.isFinite(value)||value<0)))throw Error('Invalid Component Blend workload.');
   const key=profile.mlbid+':'+profile.kind, old=workloads.players[key];
   if(!old)return profile;
@@ -41,7 +41,7 @@ export function attachOfficialComponentWorkload(data,payload) {
    [rates.W_IP,rates.SV_IP]=outcomes.map(total=>total===null?null:exposure>0?total/exposure:0);
   }
   workloads.players[key]={...old,variants:{...old.variants,[old.selected]:variant}};
-  return {...profile,complete_projection:{...line,rates,...(hitter?{PA:exposure}:{IP:exposure})}};
+  return {...profile,complete_projection:{...line,rates,...(hitter?{PA:exposure,unbudgeted_PA:values[4]}:{IP:exposure})}};
  });
  return {...data,workloads,core:{...data.core,players,official_component_workload:true,
   projection_note:'Official 2027 Component Blend. Hitter PA uses the dynamic role simulation, team redistribution and the regulars intercept. Risk uses the same baseline workload.'}};

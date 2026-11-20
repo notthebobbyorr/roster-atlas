@@ -1,4 +1,4 @@
-import {componentRiskColumns} from './component-risk.mjs?v=official-component-20261120';
+import {componentRiskColumns} from './component-risk.mjs?v=pa-budget-20261120';
 import {isSavedWorkload,validateWorkloadScenario} from './playing-time-scenarios.mjs?v=frozen-workloads-1';
 import {roundInnings} from './workload-rounding.mjs?v=workload-rounding-1';
 
@@ -103,7 +103,7 @@ export function teamTotals(rows){
 }
 export function validateTeam(raw){
  if(!plain(raw)||!text(raw.id,100)||!/^team:[A-Za-z0-9_-]+$/.test(raw.id)||!text(raw.name,80)||!raw.name.trim())throw Error('Invalid team identity or name.');
- if(!['27/23','28/22'].includes(raw.split)||(!['projected','fa_context','rotation_context','direct','ordered_ballast','standard'].includes(raw.method)&&!isSavedWorkload(raw.method))||!['current','neutral'].includes(raw.park)||!['contribution','quality'].includes(raw.view))throw Error('Invalid roster settings.');
+ if(!['27/23','28/22'].includes(raw.split)||(!['projected','dynamic_unbudgeted','fa_context','rotation_context','direct','ordered_ballast','standard'].includes(raw.method)&&!isSavedWorkload(raw.method))||!['current','neutral'].includes(raw.park)||!['contribution','quality'].includes(raw.view))throw Error('Invalid roster settings.');
  const workloadScenario=raw.workloadScenario?validateWorkloadScenario(raw.workloadScenario):null;
  if(isSavedWorkload(raw.method)&&workloadScenario?.id!==raw.method)throw Error('Missing saved playing-time scenario.');
  if(raw.sumSort!==undefined&&!['sum','sum_with_runs_rbi','sum_full'].includes(raw.sumSort))throw Error('Invalid Sum SD sort setting.');

@@ -1,20 +1,20 @@
-import {componentRiskColumns} from './component-risk.mjs?v=official-component-20261120';
+import {componentRiskColumns} from './component-risk.mjs?v=pa-budget-20261120';
 import {workloadProfile,universalHitterNote} from './universal-hitter-context.mjs?v=combined-blend-20261119';
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {withPitcherDifference} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=official-component-20261120';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=pa-budget-20261120';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {draftChampionsPace,draftChampionsHTML,draftChampionsCSV} from './draft-champions.mjs?v=sstats-rates-20261115';
 import {rotationContext} from './rotation-context.mjs?v=combined-blend-20261119';
 import {pitcherTeamControls} from './pitcher-team-preview.mjs?v=pitcher-teams-20261118';
-import {mountWHIPComparison,whipComparisonButton} from './whip-comparison.mjs?v=combined-blend-20261119';
+import {mountWHIPComparison,whipComparisonButton} from './whip-comparison.mjs?v=pa-budget-20261120';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
-import {compileLists,projection} from './rankings-core.mjs?v=official-component-20261120';
+import {compileLists,projection} from './rankings-core.mjs?v=pa-budget-20261120';
 import {starterRoles} from './starter-roles.mjs?v=rr-20261113-1';
 import {rosterStatus} from './roster-status.mjs?v=rr-20261113-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=official-component-20261120';
+import {assignmentOptions,createTeam,addPick,addPlaceholder,positionProgress,teamTotals,validateTeam,readTeamFile,cleanForecast,projectionAge,rosterAges} from './roster-builder-core.mjs?v=pa-budget-20261120';
 import {draftGuidelines} from './draft-guidelines.mjs?v=roster-builder-1';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=official-component-20261120';
@@ -50,6 +50,10 @@ try{
 }catch(error){$('status').textContent=error.message;throw error;}
 const model=parent.skillGradesModel(),season=core.projection_season||2027;
 if($('selected-model-note'))$('selected-model-note').textContent=core.projection_note||'';
+if(core.official_component_workload){
+ const option=$('workload').querySelector?.('[value=projected]');
+ if(option)option.textContent='Dynamic PA · team or league budget';
+}else $('workload').querySelector?.('[value=dynamic_unbudgeted]')?.remove();
 if(!core.runs_rbi_context)$('workload').querySelector?.('[value=fa_context]')?.remove();
 if(!core.rotation_context)$('workload').querySelector?.('[value=rotation_context]')?.remove();
 if(core.park_mode==='as_projected'){$('park').disabled=true;$('park').title='Open Compare Models for a pitcher to preview a destination team or neutral park.';}
@@ -79,6 +83,7 @@ try{
  }
 }catch(error){loadError='Saved teams could not be loaded: '+error.message;}
 if(!Object.keys(teams).length){const team=createTeam();teams[team.id]=team;}
+if(!core.official_component_workload)for(const team of Object.values(teams))if(team.method==='dynamic_unbudgeted')team.method='projected';
 if(!core.runs_rbi_context)for(const team of Object.values(teams))if(team.method==='fa_context')team.method='projected';
 if(!Object.hasOwn(teams,activeId))activeId=Object.keys(teams)[0];
 const totalsColumns=[['PA','PA',0],['AB','AB',0],['R','R',1],['HR','HR',1],['RBI','RBI',1],['SB','SB',1],['AVG','AVG',3],['OPS','OPS',3],['IP','IP',2],['K','K',1],['W','W',1],['SV','SV',1],['ERA','ERA',2],['WHIP','WHIP',3]];

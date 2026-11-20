@@ -1,8 +1,8 @@
-import {componentRiskColumns} from './component-risk.mjs?v=official-component-20261120';
+import {componentRiskColumns} from './component-risk.mjs?v=pa-budget-20261120';
 import {compareFreeAgentYears} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherRateColumns} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
-import {projectionAge} from './roster-builder-core.mjs?v=official-component-20261120';
+import {projectionAge} from './roster-builder-core.mjs?v=pa-budget-20261120';
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 export function rankingSortOptions(role){

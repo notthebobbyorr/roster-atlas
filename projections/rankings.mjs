@@ -1,21 +1,21 @@
-import {componentRiskColumns} from './component-risk.mjs?v=official-component-20261120';
+import {componentRiskColumns} from './component-risk.mjs?v=pa-budget-20261120';
 import {lineupRoles,lineupOrders} from './hitter-lineup-pa.mjs?v=lineup-pa-20261111-1';
 import {workloadProfile,universalHitterNote} from './universal-hitter-context.mjs?v=combined-blend-20261119';
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherRateColumns,withPitcherDifference} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=official-component-20261120';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=pa-budget-20261120';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {rotationContext} from './rotation-context.mjs?v=combined-blend-20261119';
 import {pitcherTeamControls} from './pitcher-team-preview.mjs?v=pitcher-teams-20261118';
-import {mountWHIPComparison,whipComparisonButton} from './whip-comparison.mjs?v=combined-blend-20261119';
+import {mountWHIPComparison,whipComparisonButton} from './whip-comparison.mjs?v=pa-budget-20261120';
 import {projectedSkillsHTML} from './projected-skills.mjs?v=universal-600pa-1';
 import {playerOrganizations} from './player-organizations.mjs?v=rr-20261113-1';
 import {rosterStatus} from './roster-status.mjs?v=rr-20261113-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=closer-availability-20261116';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {starterRoles} from './starter-roles.mjs?v=rr-20261113-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=official-component-20261120';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=pa-budget-20261120';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=official-component-20261120';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
@@ -48,6 +48,10 @@ try{
 }catch(error){$('status').textContent=error.message;throw error;}
 const model=parent.skillGradesModel(),positionLists=attachContracts(compileLists(starterRoles,core.players,parent.projectionEligiblePositions),contracts,core.projection_season||2027);
 if($('selected-model-note'))$('selected-model-note').textContent=core.projection_note||'';
+if(core.official_component_workload){
+ const option=$('workload').querySelector?.('[value=projected]');
+ if(option)option.textContent='Dynamic PA · team or league budget';
+}else $('workload').querySelector?.('[value=dynamic_unbudgeted]')?.remove();
 if(!core.runs_rbi_context)$('workload').querySelector?.('[value=fa_context]')?.remove();
 if(!core.rotation_context)$('workload').querySelector?.('[value=rotation_context]')?.remove();
 if(core.park_mode==='as_projected'){$('park').disabled=true;$('park').title='Open Compare Models for a pitcher to preview a destination team or neutral park.';}

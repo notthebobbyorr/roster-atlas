@@ -1,4 +1,4 @@
-import {teamTotals} from './roster-builder-core.mjs?v=official-component-20261120';
+import {teamTotals} from './roster-builder-core.mjs?v=pa-budget-20261120';
 const finite=x=>typeof x==='number'&&Number.isFinite(x);
 export const dcLevels=[50,80,90];
 // User-supplied category percentiles. Totals and rates are independent targets.
