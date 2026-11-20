@@ -1,9 +1,10 @@
+import {componentRiskColumns} from './component-risk.mjs?v=blend-risk-20261120';
 import {lineupRoles,lineupOrders} from './hitter-lineup-pa.mjs?v=lineup-pa-20261111-1';
 import {workloadProfile,universalHitterNote} from './universal-hitter-context.mjs?v=combined-blend-20261119';
 import {downsideBadgeHTML,mountDownsideTooltips} from './hitter-downside.mjs?v=downside-or-20261105-2';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherRateColumns,withPitcherDifference} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
-import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=pitcher-research-20261118';
+import {mountWorkloadScenarios} from './playing-time-scenarios-ui.mjs?v=blend-risk-20261120';
 import {playingTimePreviewStore,playingTimeInput,parsePlayingTime} from './playing-time-preview.mjs?v=saved-workloads-1';
 import {rotationContext} from './rotation-context.mjs?v=combined-blend-20261119';
 import {pitcherTeamControls} from './pitcher-team-preview.mjs?v=pitcher-teams-20261118';
@@ -14,12 +15,12 @@ import {rosterStatus} from './roster-status.mjs?v=rr-20261113-1';
 import {saveRoleOptions,savesExplainer} from './saves.mjs?v=closer-availability-20261116';
 import {pitcherHand,pitcherHandLabel} from './handedness.mjs?v=rotation-rates-20261104-1';
 import {starterRoles} from './starter-roles.mjs?v=rr-20261113-1';
-import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=combined-blend-20261119';
+import {fantasyRoles,rrRoleOptions,compileLists,reconcileOrder,moveRank,readBackup,readExclusions,projection} from './rankings-core.mjs?v=blend-risk-20261120';
 import {attachContracts} from './rankings-contracts.mjs?v=recommended-contracts-1';
-import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=pitcher-research-20261118';
+import {rankingSortOptions,normalizeRankingSort,sortRankingRows,rankingNumericValue} from './rankings-sort.mjs?v=blend-risk-20261120';
 import {uniqueRankingEntries,createCustomList,renameCustomList,addCustomMembers,removeCustomMember,customListEntries,normalizeCustomLists,readCustomLists} from './rankings-lists.mjs?v=unassigned-1';
 import {formatInnings} from './workload-rounding.mjs?v=workload-rounding-1';
-import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=pitcher-research-20261118';
+import {matchesTableFilters,mountTableFilters} from './table-filters.mjs?v=blend-risk-20261120';
 import {is2027Rookie,rookieFilterNote} from './rookie-status.mjs?v=table-filters-20261107-1';
 mountDownsideTooltips();
 document.getElementById('rookie-filter-note').textContent=rookieFilterNote;
@@ -241,6 +242,7 @@ function render(){
  categoryColumns=cats;
  const pitcherColumns=[['IP','IP',2],['IP_per_start','IP/Start est.',1],['K','K',0],['W','W',1],['SV','SV',0],['SVO_share_pct','Team SVO %',1],['closer_probability_pct','Closer %',1],['ERA','ERA',2],['WHIP','WHIP',3]];
  columns=mixed?[...withPitcherDifference(hitterOutcomeColumns),...pitcherColumns]:hitter?[...hitterOutcomeColumns]:[...pitcherColumns,...pitcherRateColumns];
+ columns.unshift(...componentRiskColumns);
  $('head').innerHTML='<tr><th><label class="select-all-control" title="Select or deselect all players matching the current filters across every page"><input id="select-all-displayed" class="select-player" type="checkbox" data-select-all aria-label="Select all matching players"><span>Select all matches</span></label></th><th class="player">Player</th>'+sortableHeader('Age (July 1)','age')+sortableHeader('Rank / reorder','rank')+(mixed?'<th>Player type</th>':'')+'<th>MLB org</th><th>RR role</th>'+sortableHeader('FA year','fa')+'<th>40-man</th><th>Options remaining</th><th>Eligibility</th>'+(!hitter?'<th>Throws</th><th>Saves role</th>':'')+columns.map(([key,name])=>sortableHeader(name,'stat:'+key)).join('')+cats.map(c=>sortableHeader(c+' SD','grade:'+c)).join('')+sortableHeader('Sum SD (base 3)','sum')+sortableHeader('Sum SD (with R/RBI)','sum_with_runs_rbi')+sortableHeader('Sum SD (all 5)','sum_full')+processColumns.map(([key,label])=>sortableHeader(label,'input:'+key)).join('')+'</tr>';
  const pages=Math.max(1,Math.ceil(displayed.length/pageSize));page=Math.min(page,pages-1);
  $('previous-page').disabled=page===0;$('next-page').disabled=page>=pages-1;
@@ -250,7 +252,7 @@ function render(){
  $('count').textContent=displayed.length+' of '+orders[role].length+' players · '+listLabel(role)+' · '+(({recommended:'Recommended cutoffs',hybrid_full:'Full skills-first hybrid'})[model]||model)+' · '+$('view').selectedOptions[0].text+(exclusions[role].size?' · '+exclusions[role].size+' excluded':'');
  renderCustomTools();
 }
-$('head').addEventListener('click',event=>{const button=event.target.closest('button[data-sort]');if(!button)return;const value=button.dataset.sort;if(!rankingSortOptions(sortRole()).some(option=>option.value===value))return;$('sort-direction').value=value==='rank'?'asc':$('sort').value===value?($('sort-direction').value==='asc'?'desc':'asc'):['stat:ERA','stat:WHIP','stat:BABIP_against','fa','age'].includes(value)?'asc':'desc';$('sort').value=value;dragged=null;render();persist();document.querySelector?.('button[data-sort="'+value+'"]')?.focus();});
+$('head').addEventListener('click',event=>{const button=event.target.closest('button[data-sort]');if(!button)return;const value=button.dataset.sort;if(!rankingSortOptions(sortRole()).some(option=>option.value===value))return;$('sort-direction').value=value==='rank'?'asc':$('sort').value===value?($('sort-direction').value==='asc'?'desc':'asc'):['stat:ERA','stat:WHIP','stat:BABIP_against','fa','age',...componentRiskColumns.map(([key])=>'stat:'+key)].includes(value)?'asc':'desc';$('sort').value=value;dragged=null;render();persist();document.querySelector?.('button[data-sort="'+value+'"]')?.focus();});
 $('head').addEventListener('change',event=>{const checkbox=event.target.closest('input[data-select-all]');if(!checkbox||!displayed.length)return;setDisplayedSelection(checkbox.checked);$('select-all-displayed')?.focus();});
 $('rows').addEventListener('click',event=>{const reset=event.target.closest('[data-reset-hitter-lineup]');if(reset){editHitterLineup(reset.dataset.resetHitterLineup,'all',null);}});
 $('rows').addEventListener('click',event=>{const reset=event.target.closest('button[data-reset-workload]');if(reset?.dataset?.resetWorkload){setWorkloadPreview(reset.dataset.resetWorkload,null);forecastCache.clear();render();$('status').textContent='Selected playing-time estimate restored.';return;}

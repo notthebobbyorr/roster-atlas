@@ -80,7 +80,13 @@ export function readExclusions(data,available){
  }
  return result;
 }
-export function projection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={},pitcherDestination,pitcherTeamContext}={}){
+export function projection(core,pt,entry,options={}){
+ const forecast=playerProjection(core,pt,entry,options);
+ const risk=core.component_blend_risk?.[entry.mlbid+':'+entry.kind];
+ if(risk)Object.assign(forecast.stats,risk);
+ return forecast;
+}
+function playerProjection(core,pt,entry,{model='original',method='projected',park='current',view='contribution',saves=null,savesRole='auto',savesOverrides={},workloadOverrides={},pitcherDestination,pitcherTeamContext}={}){
  if(core.projection_model==='complete_20261104')return completedProjection(core,pt,entry,{model,method,view,saves,savesRole,savesOverrides,workloadOverrides,pitcherDestination,pitcherTeamContext});
  if(method==='rotation_context'){
   const next=rotationContext(core,pt,entry);

@@ -1,4 +1,4 @@
-import {rankingSortOptions,rankingNumericValue} from './rankings-sort.mjs?v=pitcher-research-20261118';
+import {rankingSortOptions,rankingNumericValue} from './rankings-sort.mjs?v=blend-risk-20261120';
 
 const filterLabels={'grade:K':'K SD','stat:IP':'IP (decimal innings)',fa:'Free agent year'};
 export const filterCategories=rankingSortOptions('All Players').filter(option=>option.value!=='rank').map(option=>({...option,label:filterLabels[option.value]??option.label}));

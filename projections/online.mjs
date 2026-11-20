@@ -1,3 +1,4 @@
+import {componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=blend-risk-20261120';
 import {attachSStats} from './sstats.mjs?v=sstats-rates-20261115';
 import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=pitcher-teams-20261118';
 import {attachHitterResearch,hitterComparisonRows,hitterResearchKind,hitterResearchSource,validateHitterResearch} from './hitter-research.mjs?v=combined-blend-20261119';
@@ -70,6 +71,10 @@ async function runtimeLoad({baseOnly=false}={}){
   const outcomes=await supplementLoad(hitterOutcomeSource,'atlas-hitter-outcomes',epoch,cache);
   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
   data.core=attachHitterOutcomes(data.core,outcomes);
+  if(Number(data.core.projection_season??data.core.season)===componentRiskSource.season){
+   data.core.component_blend_risk=await supplementLoad(componentRiskSource,'atlas-component-risk',epoch,cache,componentRiskProfiles);
+   if(!authenticated||epoch!==sessionEpoch)throw Error('Session changed.');
+  }
   if(data.core.projection_model==='complete_20261104' && Number(data.core.projection_season??data.core.season)===expectedHomeRunsSource.season){
    try{
     const expected=await supplementLoad(expectedHomeRunsSource,'atlas-expected-home-runs',epoch,cache);
@@ -317,7 +322,7 @@ async function showView(){
   await window.skillGradesLoad();
   if(!authenticated||id!==requestId)return;
   $('dashboard').title=roster?'Roster builder':'Player rankings';
-  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=combined-blend-20261119&model='+encodeURIComponent(modelKey);
+  $('dashboard').src=(roster?'roster-builder.html':'rankings.html')+'?v=blend-risk-20261120&model='+encodeURIComponent(modelKey);
   $('dashboard').hidden=false;$('status').textContent='';
  }catch(error){if(id===requestId&&authenticated){$('status').textContent=error.message;$('retry').hidden=false;}}
 }

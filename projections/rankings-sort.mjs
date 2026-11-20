@@ -1,7 +1,8 @@
+import {componentRiskColumns} from './component-risk.mjs?v=blend-risk-20261120';
 import {compareFreeAgentYears} from './rankings-contracts.mjs?v=recommended-contracts-1';
 import {hitterOutcomeColumns} from './hitter-outcomes.mjs?v=single-hr-total-20261109-1';
 import {pitcherRateColumns} from './pitcher-outcomes.mjs?v=pitcher-research-20261118';
-import {projectionAge} from './roster-builder-core.mjs?v=pitcher-research-20261118';
+import {projectionAge} from './roster-builder-core.mjs?v=blend-risk-20261120';
 
 const finite=value=>typeof value==='number'&&Number.isFinite(value);
 export function rankingSortOptions(role){
@@ -12,7 +13,7 @@ export function rankingSortOptions(role){
  const grades=pitcher?[['K','Strikeouts SD'],['ERA','ERA SD'],['WHIP','WHIP SD'],['W','Wins SD'],['SV','Saves SD']]:[['Power','Power SD'],['Speed','Speed SD'],['AVG','AVG SD'],['R','Runs SD'],['RBI','RBI SD']];
  const inputs=pitcher?[['pitching_grade','ACE'],['stuff','Stuff (pitch grade)'],['SwStr','SwStr %']]:[['offense_grade','SLAM'],['damage_rate','Damage %'],['SEAGER','SEAGER'],['contact_vs_avg','Contact vs expected']];
  return [{value:'rank',label:'My ranking'},{value:'age',label:'Age (July 1)'},{value:'sum',label:'Sum SD · base 3 categories'},{value:'sum_with_runs_rbi',label:'Sum SD · with R/RBI'},{value:'sum_full',label:'Sum SD · all 5 categories'},
-  ...totals.map(([key,label])=>({value:'stat:'+key,label})),
+  ...[...componentRiskColumns,...totals].map(([key,label])=>({value:'stat:'+key,label})),
   ...(pitcher?pitcherRateColumns.map(([key,label])=>({value:'stat:'+key,label})):[]),
   ...splits,
   ...grades.map(([key,label])=>({value:'grade:'+key,label})),
