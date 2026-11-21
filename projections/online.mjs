@@ -1,4 +1,4 @@
-import {attachOfficialComponentWorkload,componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=pa-budget-20261120';
+import {attachOfficialComponentWorkload,componentRiskProfiles,componentRiskSource} from './component-risk.mjs?v=pitcher-outcomes-20261121';
 import {attachWHIPResearch, validateWHIPResearch, whipComparisonRows, whipResearchSource} from './whip-research.mjs?v=pitcher-teams-20261118';
 import {attachHitterResearch,hitterComparisonRows,hitterResearchKind,hitterResearchSource,validateHitterResearch} from './hitter-research.mjs?v=combined-blend-20261119';
 import {pitcherTeamKind,pitcherTeamSource,previewPitcherTeam,validatePitcherTeamContext} from './pitcher-team-preview.mjs?v=pitcher-teams-20261118';

@@ -1,4 +1,4 @@
-export const componentRiskSource = {snapshot:'skills-2027-fef229d3726c',season:2027};
+export const componentRiskSource = {snapshot:'skills-2027-a12230fe6b97',season:2027};
 export const componentRiskColumns = [
  ['overall_risk_score','Overall risk %',1],
  ['performance_risk_score','Performance risk %',1],
